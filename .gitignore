@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+dist/
+
+# Tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Aegis yerel verileri
+.aegis/
+.aegis.toml
+
+# Ortam / gizli dosyalar
+.env
+.env.*
+
+# Editör / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Değerlendirme çıktıları
+eval/reports/*
+!eval/reports/.gitkeep
