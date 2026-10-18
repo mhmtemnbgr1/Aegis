@@ -622,4 +622,4 @@ entropy_threshold_hex = 3.0
 
 ## Lisans
 
-Henüz belirlenmedi (öneri: MIT).
+[MIT](LICENSE)
