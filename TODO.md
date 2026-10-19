@@ -8,7 +8,7 @@
 - [x] GitHub Actions CI, issue/PR şablonları
 - [x] `aegis --version` komutu
 - [ ] mypy ve pre-commit kurulumu
-- [ ] Hedef repoların seçimi (geçmişi zengin ve test takımı olan 5–8 Python projesi)
+- [x] Hedef repoların seçimi: black, fastapi, httpie, scrapy, tornado, tqdm ([docs/target-repos.md](docs/target-repos.md))
 - [ ] Her ekip üyesi için Ollama kurulumu ve Gemini API anahtarı
 - [ ] GitHub Projects panosunun kurulması
 
