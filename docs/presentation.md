@@ -65,18 +65,26 @@ Analiz, düzeltme ve test ajanları ile deterministik bir doğrulayıcı birlikt
 | **RQ2** | Bug-fix hafızası tespit doğruluğunu hafızasız incelemeye göre artırır mı? Bu iyileşme hafızanın **içeriğinden** mi, yoksa yalnızca daha uzun bağlamdan mı gelir? |
 | **RQ3** | Testle doğrulanan çok ajanlı zincir, tek çağrıyla patch üretmeye göre daha fazla doğru patch üretir mi? |
 | **RQ4** | Aegis, aynı LLM'i kullanan mevcut bir PR botuna (PR-Agent) göre maliyet ve doğruluk açısından nerede durur? |
+| **RQ5** | Geliştiriciler Aegis'in yorumlarını PR-Agent'ın yorumlarına göre daha doğru ve faydalı buluyor mu? |
 
-**Başarı kriterleri (ilk hedefler; ilk veri gelince gözden geçirilecek):**
+**Gatekeeper sonucu nasıl sunulacak:** Tek bir "≥ %X recall" vaadi yerine **maliyet–recall eğrisinin tamamı** raporlanır ve üzerinde iki işletme noktası vurgulanır:
+
+- **Maliyet odaklı nokta:** PR'ların ~%60'ı elenir. Bu noktada hataların ne kadarının yakalandığı raporlanır.
+- **Güvenlik odaklı nokta:** Hataların ≥ %90'ı yakalanır. Bu noktada PR'ların ne kadarının elendiği raporlanır.
+
+Böylece model ne kadar iyi çıkarsa çıksın sonuç savunulabilir olur; ekip seçimini bir dengeye göre yapar. Kıyas noktası, aynı eğri üzerinde sezgisel kural ve ucuz LLM triage'dır.
+
+**Diğer hedefler (ilk veri gelince gözden geçirilecek):**
 
 | Metrik | Hedef |
 | --- | --- |
-| LLM'e gitmeden geçen PR oranı | ≥ %50 |
-| Hatalı değişikliklerin yakalanma oranı (recall) | ≥ %80 |
-| Hafızalı analizde F1 iyileşmesi | İstatistiksel olarak anlamlı; ≥ %10 göreli; plasebo hafızadan da anlamlı derecede iyi |
-| Plausible patch oranı (RQ3 alt kümesi) | ≥ %25 |
-| Doğrulanmamış suggestion yayını | 0 |
+| Gatekeeper ROC-AUC | Sezgisel kuraldan ve ucuz LLM triage'dan anlamlı derecede yüksek |
+| Hafızalı analizde F1 iyileşmesi | Hafızasız ve plasebo varyantlarından istatistiksel olarak anlamlı derecede iyi |
+| Plausible patch oranı (RQ3) | ≥ %25 |
+| Doğrulanmamış suggestion yayını | 0 (tasarım gereği) |
 | PR başına ortalama maliyet | ≤ 0,05 $ |
-| PR başına uçtan uca süre (p95) | ≤ 5 dk |
+| PR başına uçtan uca süre (p95) | ≤ 5 dk (test seçimi ve patch sınırıyla) |
+| Kullanıcı çalışması (RQ5) | Faydalılık puanında PR-Agent'tan anlamlı derecede yüksek |
 
 ---
 
@@ -84,14 +92,39 @@ Analiz, düzeltme ve test ajanları ile deterministik bir doğrulayıcı birlikt
 
 ### 5.1 Veri Setleri
 
-| ID | Veri seti | Kaynak | RQ |
-| --- | --- | --- | --- |
-| D1 | SZZ ile etiketlenmiş commit'ler | 6 hedef repo ([target-repos.md](target-repos.md)) | RQ1 |
-| D2 | Bug-inducing commit'ler (sonradan düzeltilen satırlar = beklenen bulgu) ve temiz commit'ler | D1'den türetilir; bir alt küme elle etiketlenir | RQ2, RQ4 |
-| D3 | BugsInPy hatalı/düzeltilmiş sürümler | Yalnızca **2–3 repo** (tqdm, black, httpie); BugsInPy'nin kendi checkout/test araçları kullanılır | RQ3 |
-| D4 | Demo ve dogfooding PR'ları | Ekip | Maliyet, süre, kullanıcı tepkisi |
+| ID | Veri seti | Kaynak | Hedef boyut | RQ |
+| --- | --- | --- | --- | --- |
+| D1 | SZZ ile etiketlenmiş commit ve PR'lar | 6 hedef repo ([target-repos.md](target-repos.md)), son 5 yıl | Tüm commit'ler (repo başına ≥ 200 pozitif) | RQ1 |
+| D2 | Bug-inducing commit'ler (sonradan düzeltilen satırlar = beklenen bulgu) ve temiz commit'ler | D1'den tabakalı örnekleme | ~300 hatalı + ~300 temiz; ~100'ü elle etiketli | RQ2, RQ4, RQ5 |
+| D3 | BugsInPy hataları | tqdm, black, httpie; ön elemeden geçenler | 30–60 hata | RQ3 |
+| D4 | Demo ve dogfooding PR'ları | Ekip | ≥ 30 PR | Maliyet, süre |
 
-> D2'de SZZ satırları gürültülü olabilir. Bu yüzden ~100 örnek elle etiketlenir ve sonuçlar hem otomatik hem elle etiketli alt küme için raporlanır.
+> D2'de SZZ satırları gürültülü olabilir. Bu yüzden ~100 örnek iki kişi tarafından elle etiketlenir ve sonuçlar hem otomatik hem elle etiketli alt küme için raporlanır. Eşleştirilmiş McNemar testinde birkaç yüz örnek, orta büyüklükteki farkları yakalamak için yeterlidir.
+
+### 5.1.1 RQ3 Deney Protokolü
+
+BugsInPy her hata için hatalı sürümü, düzeltilmiş sürümü ve hatayı gösteren testi verir, ama hatayı getiren diff'i vermez. Bu yüzden protokol şöyledir:
+
+1. **Ön eleme:** Seçilen repolarda BugsInPy'nin `checkout`, `compile` ve `test` komutları tüm hatalar için otomatik çalıştırılır. Ortamı kurulamayan hatalar listeden çıkarılır ve sayıları raporlanır. Çalışan her hata için bir Docker imajı oluşturulur.
+2. **Girdi:** BugsInPy'nin fix commit'inden SZZ ile bug-inducing commit bulunur; bu commit'in diff'i Aegis'e "PR" olarak verilir.
+3. **Gizli hakem:** BugsInPy'nin hatayı gösteren testi ajanlardan **gizlenir**. Yalnızca en sonda değerlendirme için kullanılır.
+4. **İki kol:**
+   - **Tespit + onarım:** Hattın tamamı çalışır. Analiz ajanı hatayı kendisi bulmalıdır.
+   - **Yeri bilinen onarım:** Hatalı fonksiyon doğrudan verilir. SZZ'nin inducing commit bulamadığı hatalar da bu kolda değerlendirilir. Bu kol, sonuçların APR literatürüyle karşılaştırılmasını sağlar.
+5. **Sonuç sınıfları:**
+   - **Doğru:** Gizli test patch sonrası geçiyor ve mevcut testler kırılmıyor.
+   - **Plausible:** Yalnızca Aegis'in kendi doğrulaması geçiyor.
+   - **Başarısız:** Diğer her durum.
+
+Doğru patch'lerin bir kısmı ayrıca elle incelenir. Testi geçen ama hatayı gerçekten düzeltmeyen "overfitting" patch'ler bu incelemede ayıklanır.
+
+### 5.1.2 Kullanıcı Çalışması (RQ5)
+
+- **Katılımcılar:** 6–10 geliştirici (bölüm öğrencileri, stajyerler, mezunlar).
+- **Malzeme:** D2'den 20 PR. Her PR için Aegis ve PR-Agent yorumları **kaynağı gizlenerek** ve rastgele sırayla gösterilir.
+- **Ölçek:** Her yorum için 1–5 Likert: doğru mu, faydalı mı, uygular mısın?
+- **Analiz:** Wilcoxon işaretli sıra testi.
+- **Araç:** Basit bir form (Google Forms veya benzeri). Etik açısından kişisel veri toplanmaz.
 
 ### 5.2 Taban Çizgileri ve Ablation Matrisi
 
@@ -115,6 +148,7 @@ Analiz, düzeltme ve test ajanları ile deterministik bir doğrulayıcı birlikt
 | RQ2 | Satır düzeyinde precision/recall/F1, temiz commit'lerde yanlış alarm oranı, getirme Recall@k ve MRR |
 | RQ3 | Uygulanabilir, plausible ve doğru patch oranları; hatayı yeniden üreten test başarısı; ortalama tekrar sayısı |
 | RQ4 | Aynı D2 alt kümesinde F1, PR başına token/$ ve süre |
+| RQ5 | Doğruluk, faydalılık ve uygulanabilirlik Likert puanları |
 
 **İstatistik:** Wilcoxon ve McNemar testleri; birden fazla seed.
 
@@ -129,6 +163,10 @@ Analiz, düzeltme ve test ajanları ile deterministik bir doğrulayıcı birlikt
 | LLM eğitim verisi kirliliği (popüler hataların düzeltmeleri ezberlenmiş olabilir) | Model bilgi kesim tarihinden sonraki commit'lerden ayrı alt küme |
 | Az sayıda repo (dış geçerlilik) | Farklı alanlardan 6 repo, leave-one-project-out |
 | Elle etiketlemede öznellik | İki kişi bağımsız etiketler; Cohen's κ raporlanır |
+| PR etiketinin commit etiketinden türetilmesi | Tanım açıkça yazılır (en az bir bug-inducing commit); squash-merge yapan ve yapmayan repolar ayrı raporlanır |
+| Özelliklerde zamansal sızıntı | Zorunlu `as_of` parametresi ve bunu doğrulayan birim testi |
+| Testi geçen ama hatayı düzeltmeyen patch'ler | Gizli BugsInPy testiyle hakemlik ve elle inceleme |
+| Kullanıcı çalışmasının küçük örneklemi | Sonuçlar keşif amaçlı sunulur; kör ve rastgele sıralı tasarım |
 
 ---
 
@@ -181,6 +219,15 @@ PR içeriği prompt'ta veri olarak işaretleniyor ve ajanların hiçbir araç ye
 
 ### "PR kodunu CI'da çalıştırmak güvenli mi?"
 `pull_request_target` kullanmıyoruz. Testler ağsız, kaynak sınırlı ve gizli anahtarsız bir Docker sandbox'ında koşuyor.
+
+### "İlk kurulum ne kadar sürüyor? Her PR'da tüm geçmiş mi taranıyor?"
+Hayır. İlk madencilik ve indeksleme yerelde bir kez yapılıyor ve GitHub Release asset'i olarak yükleniyor. Action bu arşivi indiriyor ve yalnızca yeni commit'leri işliyor. SZZ son 5 yılla sınırlı.
+
+### "Testi geçen patch gerçekten doğru mu?"
+Her zaman değil; buna "overfitting patch" deniyor. Bu yüzden RQ3'te BugsInPy'nin kendi testini ajanlardan gizleyip hakem olarak kullanıyor, doğru patch'lerin bir kısmını da elle inceliyoruz.
+
+### "Kullanıcılar bu yorumları gerçekten faydalı buluyor mu?"
+6–10 geliştiriciyle kör bir kullanıcı çalışması yaptık. Aegis ve PR-Agent yorumları kaynak gizlenerek puanlatıldı (RQ5).
 
 ### "Geçmişi olmayan yeni bir repoda ne olacak?"
 Repolar arası genel model kullanılıyor; hafıza boşsa analiz hafızasız yapılıyor.

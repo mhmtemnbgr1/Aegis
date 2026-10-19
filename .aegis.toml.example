@@ -9,8 +9,11 @@ bug_issue_labels = ["bug"]
 ignore_merge_commits = true
 max_files_per_commit = 50        # daha büyük commit'ler SZZ'den elenir
 label_delay_days = 180           # son N günün commit'leri eğitime alınmaz
+szz_variant = "ma"               # ma (pyszz MA-SZZ) | b (PyDriller B-SZZ)
+history_years = 5                # SZZ yalnızca son N yıla uygulanır
 
 [gatekeeper]
+mode = "heuristic"               # heuristic | model (model yoksa heuristic kullanılır)
 model_path = ".aegis/model.lgbm"
 low_threshold = 0.30             # altı: LLM çağrılmaz
 high_threshold = 0.70            # üstü: tam zincir (analiz + patch + test)
@@ -52,6 +55,13 @@ fail_open = true
 sandbox = "docker"
 timeout_seconds = 300
 network = false
+test_selection = "testmon"       # testmon | imports | all
+parallel = true                  # pytest-xdist
+max_patches_per_pr = 2
+
+[state]
+release_tag = "aegis-state"      # aegis publish-state ile yüklenen arşivin release etiketi
+use_actions_cache = true
 
 [budget]
 max_total_tokens_per_pr = 60000

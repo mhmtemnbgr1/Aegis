@@ -61,6 +61,7 @@ Her faz bir önceki fazın çalışan sistemini derinleştirir. Ayrıntılı gö
 aegis mine   .            # repo geçmişini tara, SZZ etiketlerini çıkar
 aegis train               # risk modelini eğit
 aegis index               # bug-fix hafızasını kur
+aegis publish-state       # model + indeksi Release asset olarak yükle
 aegis review --base main  # yerelde incele
 ```
 

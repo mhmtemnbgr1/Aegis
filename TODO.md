@@ -49,8 +49,9 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [ ] Miner: PyDriller ile commit, dosya ve fonksiyon değişiklikleri
 - [ ] Fix-commit tespiti
 - [ ] Fix-commit tespiti için 200 örneklik doğrulama seti
-- [ ] SZZ
+- [ ] SZZ (pyszz ile MA-SZZ; yedek PyDriller B-SZZ; son 5 yıl)
 - [ ] Kamei JIT metrikleri
+- [ ] Zaman kuralı: `as_of` ile sızıntısız özellik hesabı
 - [ ] Artımlı madencilik
 - [ ] Sentetik git deposu testleri
 - [ ] D1 veri setinin çıkarılması (6 repo, önce tqdm pilotu)
@@ -61,11 +62,12 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [ ] LR, Random Forest ve LightGBM
 - [ ] Sınıf dengesizliği yöntemleri
 - [ ] Repo içi ve repolar arası değerlendirme
+- [ ] PR düzeyinde etiket ve özellikler
 - [ ] Kalibrasyon, bütçe tabanlı eşik, risk bantları
 - [ ] SHAP açıklamaları
 - [ ] `aegis train` ve `aegis score`
 - [ ] Sezgisel gatekeeper'ın eğitilmiş modelle değiştirilmesi
-- [ ] Bütçe–recall eğrisi (ilk sonuçlar)
+- [ ] Maliyet–recall eğrisi ve iki işletme noktası (ilk sonuçlar)
 
 ## Faz 4 — Bug-Fix Hafızası
 
@@ -78,26 +80,29 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [ ] `aegis index` ve artımlı güncelleme
 - [ ] Hata kartlarının analiz prompt'una eklenmesi (`memory_refs`)
 - [ ] Hafıza sinyalinin gatekeeper'a özellik olarak eklenmesi
-- [ ] Model ve indeksin `actions/cache` ile taşınması
+- [ ] Durum arşivinin Release asset olarak yayınlanması (`aegis publish-state`) ve cache
 - [ ] `main` merge'lerinde hafıza ve model güncelleme workflow'u
 
 ## Faz 5 — Patch Üretimi ve Doğrulama
 
 - [ ] Düzeltme ajanı
 - [ ] Test ajanı
-- [ ] Docker sandbox (RQ3 repoları: tqdm, black, httpie)
+- [ ] BugsInPy ön elemesi ve hata başına Docker imajları (tqdm, black, httpie)
+- [ ] Docker sandbox
 - [ ] Doğrulayıcı
+- [ ] Test seçimi (pytest-testmon) ve paralel koşum (pytest-xdist)
 - [ ] Geri besleme döngüsü
 - [ ] Orkestratör durum makinesi
-- [ ] Suggestion blokları ve statüye göre yayın
+- [ ] Suggestion blokları, statüye göre yayın ve üretilen testin yorumda verilmesi
 
 ## Faz 6 — Değerlendirme
 
-- [ ] D1–D4 veri setlerinin tamamlanması (D2'de ~100 elle etiketli örnek)
+- [ ] D1–D4 veri setlerinin tamamlanması (D2: ~300 + ~300, ~100 elle etiketli; D3: 30–60 hata)
 - [ ] RQ1: ucuz LLM triage taban çizgisi
 - [ ] RQ2: hafızasız / plasebo / vektör / hibrit karşılaştırması
-- [ ] RQ3: tek çağrı ile çok ajanlı zincirin karşılaştırması
+- [ ] RQ3: iki kollu protokol (tespit + onarım, yeri bilinen), gizli BugsInPy testiyle hakemlik
 - [ ] RQ4: PR-Agent karşılaştırması
+- [ ] RQ5: kör kullanıcı çalışması (6–10 geliştirici)
 - [ ] `aegis eval` ile tüm deneyler
 - [ ] İstatistiksel testler, tablolar, grafikler
 - [ ] Patch'lerin elle doğruluk incelemesi

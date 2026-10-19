@@ -88,7 +88,12 @@ flowchart LR
 | Deneyim | EXP, REXP, SEXP | Kamei vd. 2013 |
 | **Aegis'e özgü** | Dokunulan fonksiyonların geçmiş hata kartı sayısı, riskli yol (`auth`, `db`, `payment`…), riskli API (`eval`, `subprocess`, SQL string birleştirme…), test değişim oranı | — |
 
-- **Etiketler:** SZZ ile bulunan bug-inducing commit'ler pozitif sınıftır.
+- **SZZ varyantı:** MA-SZZ (meta-change aware), [pyszz](https://github.com/grosa1/pyszz) ile çalıştırılır. Bu varyant boşluk/yorum değişikliklerini, merge'leri ve meta değişiklikleri (dosya taşıma, satır sonu, biçimlendirme) yok sayar. pyszz kurulamazsa PyDriller'ın B-SZZ uygulamasına (`get_commits_last_modified_lines`) geri dönülür. Hangi varyantın kullanıldığı her veri sürümüne yazılır.
+- **Geçmiş sınırı:** SZZ yalnızca son N yıla uygulanır (varsayılan 5). Böylece büyük repolarda madencilik saatler değil dakikalar sürer.
+- **Commit etiketi:** SZZ ile bulunan bug-inducing commit'ler pozitif sınıftır.
+- **PR etiketi:** Bir PR, içindeki commit'lerden **en az biri** bug-inducing ise hatalıdır. Squash-merge yapan repolarda PR ile commit zaten aynı şeydir.
+- **PR özellikleri:** Kamei metrikleri PR'ın birleştirilmiş diff'i üzerinden hesaplanır. Bunlara commit sayısı ve PR'daki farklı yazar sayısı eklenir. **Yalnızca PR açıldığı veya güncellendiği anda bilinen** bilgiler kullanılır. PR süresi, review sayısı ve yorum sayısı gibi sonradan oluşan bilgiler kullanılmaz.
+- **Zaman kuralı (`as_of`):** Her özellik, değerlendirilen commit veya PR'ın tarihinde bilinen veriyle hesaplanır. Özellik fonksiyonları zorunlu bir `as_of: datetime` parametresi alır; hafızadan gelen hata yoğunluğu da bu kurala tabidir. Geleceğe tarihli bir kart eklendiğinde özellik değerinin değişmediğini doğrulayan bir birim testi bulunur. Böylece sızıntı kod düzeyinde engellenir.
 - **Doğrulama:** Zaman sıralı bölme. Son N günün commit'leri eğitimden çıkarılır, çünkü hataları henüz keşfedilmemiş olabilir (*etiket gecikmesi*).
 - **Modeller:** Lojistik regresyon (taban çizgisi), Random Forest, LightGBM.
 - **Karar:** Skor üç banda ayrılır: düşük, orta, yüksek. Eşik ya doğrudan verilir ya da "PR'ların en fazla %X'i LLM'e gitsin" bütçesinden hesaplanır.
@@ -122,7 +127,17 @@ flowchart LR
 - **Getirme:** (1) Aynı dosya/fonksiyon için yapısal eşleşme, (2) BM25, (3) vektör benzerliği. Sonuçlar RRF ile birleştirilir; en iyi *k* kart (varsayılan 3) seçilir.
 - **Zamansal filtre:** Yalnızca `fix_date < PR tarihi` olan kartlar getirilir.
 - **Embedding:** Yerel bir kod embedding modeli (sentence-transformers) kullanılır.
-- **Saklama:** LanceDB (gömülü, dosya tabanlı). Action'da `actions/cache` ile taşınır; cache yoksa yeniden kurulur.
+- **Saklama:** LanceDB (gömülü, dosya tabanlı).
+
+### Dağıtım ve kalıcılık
+
+Tüm geçmişi CI'da taramak büyük repolarda çok uzun sürer. Bu yüzden:
+
+1. **İlk kurulum yerelde yapılır:** `aegis mine` + `aegis train` + `aegis index`. Ortaya çıkan model, indeks ve son işlenen SHA tek bir arşivde toplanır ve repo'nun bir **GitHub Release asset**'i olarak yüklenir (`aegis publish-state`).
+2. **Her PR'da** Action, `actions/cache`'te durum varsa onu kullanır; yoksa Release asset'ini indirir. Hiçbir durumda tüm geçmişi yeniden taramaz.
+3. **`main`'e her merge'de** yalnızca son SHA'dan sonraki commit'ler işlenir. Güncellenen durum cache'e yazılır.
+4. **Modelin yeniden eğitimi** haftalık zamanlanmış bir workflow'da yapılır ve Release asset'i güncellenir.
+5. Asset de cache de yoksa Action sezgisel gatekeeper ile, hafızasız çalışır (fail-open).
 
 ---
 
@@ -140,7 +155,15 @@ flowchart LR
 | --- | --- | --- |
 | `verified` | Patch uygulanıyor, mevcut testler geçiyor, üretilen test patch öncesi başarısız ve sonrası başarılı | ` ```suggestion ` bloğu |
 | `plausible` | Patch uygulanıyor ve mevcut testler geçiyor, ancak hatayı yeniden üreten test yazılamadı | Uyarı etiketli öneri |
-| `unverified` | Patch uygulanamadı veya testler kırıldı | Yalnızca bulgu açıklaması (kodsuz) |
+| `unverified` | Patch uygulanamadı, testler kırıldı veya doğrulama süre sınırını aştı | Yalnızca bulgu açıklaması (kodsuz) |
+
+**Süre bütçesi:** Tüm test takımını her bulgu için koşturmak büyük repolarda dakikalar sürer. Bu yüzden:
+
+- **Test seçimi:** Yalnızca değişen kodu etkileyen testler koşturulur. Birincil yöntem [pytest-testmon](https://github.com/tarpas/pytest-testmon)'dur: kapsama (coverage) verisine dayanır ve testmon veritabanı da durum arşivinde taşınır. Testmon verisi yoksa değişen modülü import eden test dosyaları seçilir.
+- **Paralellik:** `pytest-xdist` kullanılır.
+- **Sınırlar:** PR başına en fazla 2 patch denenir (en yüksek severity × confidence). Diğer bulgular kodsuz yayınlanır. Doğrulama başına süre sınırı vardır; aşılırsa statü `unverified` olur.
+
+**Üretilen testin teslimi:** GitHub suggestion bloğu yeni dosya oluşturamaz. Bu yüzden üretilen test, satır yorumunun altında açılır-kapanır bir bölümde, önerilen dosya yoluyla birlikte verilir. Testi otomatik commit eden bir komut v1 kapsamı dışındadır (bkz. [ideas.md](ideas.md)).
 
 **Orkestrasyon:** Zincir, Pydantic modelleri üzerinde çalışan küçük bir durum makinesiyle yönetilir. Hazır bir ajan çerçevesi kullanılmaz; bu sayede bağımlılık az kalır ve her adım birim testle doğrulanabilir.
 
@@ -199,7 +222,15 @@ Bu fonksiyonda #89'da aynı sorun yaşanmış ve `finally` ile çözülmüştü 
             await self.release(conn)
 ```
 
-✅ Doğrulandı: `tests/aegis/test_pool_timeout.py` patch öncesi başarısız, sonrası başarılı · mevcut 142 test geçti.
+✅ Doğrulandı: üretilen test patch öncesi başarısız, sonrası başarılı · seçilen 38 test geçti.
+
+<details><summary>Üretilen test — önerilen yol: tests/test_pool_timeout.py</summary>
+
+```python
+async def test_release_on_timeout(pool):
+    ...
+```
+</details>
 ````
 
 ---
@@ -231,17 +262,19 @@ Bu fonksiyonda #89'da aynı sorun yaşanmış ve `finally` ile çözülmüştü 
 | --- | --- | --- |
 | FR-01 | `aegis mine <repo>` commit geçmişini PyDriller ile tarar; commit, dosya ve fonksiyon düzeyindeki değişiklikleri Parquet'e yazar. | Must |
 | FR-02 | Fix commit'leri mesaj kalıpları (`fix`, `bug`, `regression`, `leak`, `crash`, `closes #N`) ve GitHub issue etiketleriyle tespit edilir. | Must |
-| FR-03 | SZZ ile bug-inducing commit'ler bulunur. Boşluk/yorum değişiklikleri yok sayılır; merge commit'leri ve çok büyük commit'ler elenir. | Must |
+| FR-03 | SZZ (MA-SZZ, pyszz; yedek: PyDriller B-SZZ) ile bug-inducing commit'ler bulunur. Meta değişiklikler yok sayılır; merge commit'leri ve çok büyük commit'ler elenir; yalnızca son N yıl işlenir. | Must |
 | FR-04 | 14 Kamei JIT metriği hesaplanır. | Must |
-| FR-05 | Madencilik artımlıdır. | Should |
+| FR-05 | Madencilik artımlıdır: yalnızca son işlenen SHA'dan sonraki commit'ler işlenir. | Must |
+| FR-07 | `aegis publish-state` model, indeks, testmon verisi ve son SHA'yı tek arşivde toplayıp GitHub Release asset'i olarak yükler. Action bu arşivi kullanır. | Must |
 
 **Gatekeeper**
 
 | ID | Gereksinim | Öncelik |
 | --- | --- | --- |
 | FR-10 | `aegis train` zaman sıralı doğrulamayla model eğitir. | Must |
-| FR-11 | PR düzeyinde 0–1 arası risk skoru üretilir. | Must |
-| FR-12 | Ek özellikler: hafızadan gelen hata yoğunluğu, riskli yol/API, test değişim oranı. | Should |
+| FR-11 | PR düzeyinde 0–1 arası risk skoru üretilir. PR etiketi: içindeki commit'lerden en az biri bug-inducing ise hatalı. Yalnızca PR açılış/güncelleme anında bilinen bilgiler kullanılır. | Must |
+| FR-12 | Ek özellikler: hafızadan gelen hata yoğunluğu, riskli yol/API, test değişim oranı, commit ve yazar sayısı. | Should |
+| FR-18 | Tüm özellikler zorunlu `as_of` parametresiyle, yalnızca o tarihte bilinen veriyle hesaplanır. | Must |
 | FR-13 | Üç risk bandı vardır. Eşikler config'den veya bütçeden belirlenir. | Must |
 | FR-14 | SHAP ile en etkili 3 özellik açıklanır. | Should |
 | FR-15 | Soğuk başlangıçta repolar arası genel model kullanılır. | Should |
@@ -270,6 +303,8 @@ Bu fonksiyonda #89'da aynı sorun yaşanmış ve `finally` ile çözülmüştü 
 | FR-35 | Doğrulama başarısızsa en fazla 2 tekrar yapılır. | Must |
 | FR-36 | Testler ağsız, kaynak sınırlı bir Docker sandbox'ında koşar. | Must |
 | FR-37 | Her ajan için model ayrı seçilebilir. | Should |
+| FR-38 | Doğrulamada yalnızca etkilenen testler koşar (pytest-testmon; yedek: import tabanlı seçim) ve testler paralel çalışır (pytest-xdist). | Must |
+| FR-39 | PR başına en fazla 2 patch denenir; doğrulama süre sınırını aşarsa statü `unverified` olur. | Must |
 
 **GitHub ve CLI**
 
@@ -279,6 +314,7 @@ Bu fonksiyonda #89'da aynı sorun yaşanmış ve `finally` ile çözülmüştü 
 | FR-41 | Tek bir özet yorumu yazılır ve yeni push'larda güncellenir. | Must |
 | FR-42 | `verified` patch'ler suggestion bloğu olarak yayınlanır; hunk'a sığmayanlar açılır-kapanır diff olarak verilir. | Must |
 | FR-43 | `plausible` patch'ler uyarı etiketiyle, `unverified` olanlar kodsuz olarak yayınlanır. | Must |
+| FR-47 | Üretilen test, satır yorumunun altında açılır-kapanır bölümde önerilen dosya yoluyla verilir. | Must |
 | FR-44 | `aegis review --base main` aynı hattı yerelde çalıştırır. | Must |
 | FR-45 | Çalıştırma metrikleri JSONL olarak kaydedilir. | Should |
 | FR-46 | Öneriler 👍/👎 tepkisiyle değerlendirilebilir. | Could |
@@ -304,7 +340,7 @@ Bu fonksiyonda #89'da aynı sorun yaşanmış ve `finally` ile çözülmüştü 
 
 | Modül | Sorumluluk |
 | --- | --- |
-| `cli` | `mine`, `train`, `score`, `index`, `review`, `eval` |
+| `cli` | `mine`, `train`, `score`, `index`, `publish-state`, `review`, `eval` |
 | `diff` | Unified diff modeli, ön filtre, hunk → fonksiyon eşleme |
 | `mining` | PyDriller tarayıcı, fix-commit sınıflandırıcı, SZZ |
 | `features` | Kamei metrikleri ve ek özellikler |
@@ -340,15 +376,15 @@ src/aegis/
 | Dil ve paketleme | Python 3.12+, uv |
 | CLI ve UI | Typer, Rich |
 | Modeller ve config | Pydantic v2, tomllib |
-| Repo madenciliği | PyDriller |
+| Repo madenciliği | PyDriller, pyszz (MA-SZZ) |
 | Veri | pandas / polars, pyarrow (Parquet) |
 | ML | scikit-learn, LightGBM, imbalanced-learn, SHAP |
 | Kod ayrıştırma | `ast` (ileride tree-sitter), unidiff |
 | Embedding ve vektör DB | sentence-transformers, LanceDB |
 | LLM | `openai`, `anthropic`, `google-genai`, `ollama`; httpx, tenacity |
 | GitHub | PyGithub veya httpx ile REST |
-| Sandbox | Docker |
+| Doğrulama | pytest-testmon (test seçimi), pytest-xdist (paralellik), Docker |
 | Test ve kalite | pytest, pytest-cov, pytest-mock, syrupy, ruff, mypy (strict), pre-commit |
 | Deneyler | matplotlib, scipy |
 
-LLM modelleri `.aegis.toml` içinde parametredir. Geliştirmede Ollama (`qwen2.5-coder:7b` sınıfı) ve Gemini Flash ücretsiz kotası kullanılır; deneylerde küçük bulut modelleri eklenir.
+LLM modelleri `.aegis.toml` içinde parametredir. Geliştirmede Ollama ile çalışan güncel bir açık kod modeli (ör. `qwen2.5-coder:7b` veya Ollama'daki daha yeni bir Qwen Coder sürümü) ve Gemini Flash ücretsiz kotası kullanılır; deneylerde küçük bulut modelleri eklenir. Tüm sağlayıcılar JSON Schema ile yapılandırılmış çıktı destekler (Ollama'da `format` parametresi).
