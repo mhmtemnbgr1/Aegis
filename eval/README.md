@@ -1,6 +1,6 @@
 # Değerlendirme
 
-Ayrıntılar için ana README'deki [Değerlendirme](../README.md#9-değerlendirme) bölümüne bakın.
+Ayrıntılar için docs/presentation.md dosyasındaki [Değerlendirme Planı](../docs/presentation.md#5-değerlendirme-planı) bölümüne bakın.
 
 ```
 eval/

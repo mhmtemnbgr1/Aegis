@@ -1,97 +1,117 @@
 # Yapılacaklar Listesi
 
-> Ayrıntılı açıklamalar için [README](README.md#8-faz-faz-geliştirme-planı) dosyasına bakın. Tamamlanan maddeler `[x]` ile işaretlenir.
+Fazlar mantıksal sıradadır. **Faz 1'den itibaren her zaman çalışan, demo yapılabilir bir sistem vardır**; sonraki fazlar onun parçalarını derinleştirir. Görevlerin ayrıntıları ve kabul kriterleri [GitHub Issues](https://github.com/mhmtemnbgr1/Aegis/issues) altında.
 
-## Faz 0 — Hazırlık ve İskelet (1. hafta)
+## Kesme Çizgileri
+
+Geride kalınırsa önceden kararlaştırılmış sırayla kesilir:
+
+1. Test ajanı çıkarılır. Patch'ler en fazla `plausible` düzeyinde yayınlanır.
+2. Patch üretimi (Faz 5) tamamen çıkarılır. K3 "gelecek çalışma" olur; K1 ve K2 savunulur.
+3. Hafızada yalnızca yapısal + vektör arama kalır; BM25 ve RRF çıkarılır.
+
+Faz 1–4 ve Faz 6 kesilmez.
+
+---
+
+## Faz 0 — Altyapı
 
 - [x] Depo yapısı, `pyproject.toml`, `uv` ortamı
 - [x] GitHub Actions CI, issue/PR şablonları
 - [x] `aegis --version` komutu
-- [ ] mypy ve pre-commit kurulumu
-- [x] Hedef repoların seçimi: black, fastapi, httpie, scrapy, tornado, tqdm ([docs/target-repos.md](docs/target-repos.md))
-- [ ] Her ekip üyesi için Ollama kurulumu ve Gemini API anahtarı
-- [ ] GitHub Projects panosunun kurulması
+- [x] Hedef repoların seçimi ([docs/target-repos.md](docs/target-repos.md))
+- [ ] mypy ve pre-commit
+- [ ] Geliştirme ortamı: Ollama ve Gemini API anahtarı
+- [ ] GitHub Projects panosu ve branch koruması
+- [ ] Görev dağılımı
+- [ ] Proje yönünün danışmana onaylatılması
 
-## Faz 1 — Repo Madenciliği ve Veri Hattı (2.–3. hafta)
+## Faz 1 — Uçtan Uca İskelet
 
-- [ ] `aegis mine`: PyDriller ile commit, dosya ve fonksiyon değişikliklerini Parquet'e yazma
-- [ ] Fix-commit tespiti (mesaj kalıpları + issue etiketleri)
-- [ ] Fix-commit tespiti için 200 örneklik elle etiketlenmiş doğrulama seti
-- [ ] SZZ: boşluk/yorum filtreleme, merge ve büyük commit eleme
-- [ ] Kamei JIT metrikleri (NS, ND, NF, Entropy, LA, LD, LT, FIX, NDEV, AGE, NUC, EXP, REXP, SEXP)
-- [ ] Artımlı madencilik
-- [ ] SZZ ve metrikler için sentetik git deposu testleri
-- [ ] Seçilen repolardan D1 veri setinin çıkarılması
+Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → PR yorumu.
 
-## Faz 2 — ML Gatekeeper (4.–5. hafta)
-
-- [ ] Zaman sıralı veri bölme ve etiket gecikmesi tamponu
-- [ ] Lojistik regresyon, Random Forest ve LightGBM modelleri
-- [ ] Sınıf dengesizliği yöntemlerinin karşılaştırılması
-- [ ] Repo içi ve repolar arası (cross-project) değerlendirme
-- [ ] Kalibrasyon, bütçe tabanlı eşik seçimi, risk bantları (düşük / orta / yüksek)
-- [ ] SHAP açıklamaları
-- [ ] `aegis train` ve `aegis score <base>..<head>` komutları
-- [ ] RQ1 ilk sonuçları: bütçe–recall eğrisi
-
-## Faz 3 — Bug-Fix Hafızası (6.–7. hafta)
-
-- [ ] Hata kartı (BugCard) modeli ve oluşturucu
-- [ ] Fonksiyon düzeyinde parçalama (`ast`)
-- [ ] Yerel embedding modeli ve LanceDB indeksi
-- [ ] Hibrit arama: yapısal + BM25 + vektör, RRF ile birleştirme
-- [ ] Zamansal filtre (yalnızca PR tarihinden önceki kartlar)
-- [ ] Getirme değerlendirmesi (Recall@k, MRR)
-- [ ] `aegis index` komutu ve artımlı güncelleme
-- [ ] Hafıza sinyalinin gatekeeper'a özellik olarak eklenmesi
-
-## Faz 4 — LLM Katmanı ve Analiz Ajanı (8.–9. hafta)
-
-- [ ] `LLMProvider` protokolü
-- [ ] Ollama, Gemini, OpenAI ve Anthropic adaptörleri
-- [ ] Structured output, retry, yanıt cache'i
-- [ ] Analiz ajanı prompt'ları (versiyonlu, few-shot, "neleri raporlama" listesi)
-- [ ] Hata kartlarının prompt'a eklenmesi ve `memory_refs` atfı
-- [ ] Kanıt (`evidence`) ve satır doğrulama filtreleri
-- [ ] `aegis review --base main` ile yerelde uçtan uca inceleme
-- [ ] RQ2 deneyi: hafızasız, yalnızca vektör ve hibrit hafıza karşılaştırması
-
-## Faz 5 — Düzeltme ve Test Ajanları, Doğrulayıcı (10.–11. hafta)
-
-- [ ] Düzeltme ajanı (minimal unified diff)
-- [ ] Test ajanı (hatayı yeniden üreten pytest testi)
-- [ ] Docker sandbox (ağ kapalı, CPU/bellek/süre sınırlı)
-- [ ] Doğrulayıcı: apply → lint → mevcut testler → üretilen test (önce/sonra) → statü
-- [ ] Geri besleme döngüsü (en fazla 2 tekrar)
-- [ ] Orkestratör durum makinesi ve birim testleri
-- [ ] RQ3 deneyi: BugsInPy alt kümesinde tek çağrı ile çok ajanlı zincirin karşılaştırması
-
-## Faz 6 — GitHub Action ve Yayıncı (12. hafta)
-
+- [ ] Diff ayrıştırma ve ön filtre (binary, lock, üretilmiş dosyalar)
+- [ ] Sezgisel gatekeeper (değişen satır + riskli yol/API); deneylerde taban çizgisi olarak da kullanılır
+- [ ] `LLMProvider` protokolü ve 4 sağlayıcı adaptörü
+- [ ] Structured output, retry ve yanıt cache'i
+- [ ] Analiz ajanı prompt'ları (versiyonlu)
+- [ ] Kanıt ve satır doğrulama filtreleri
+- [ ] Prompt injection önlemleri ve saldırı testleri
+- [ ] `aegis review --base main`
 - [ ] `action.yml` (composite action)
+- [ ] Özet yorumu (oluştur / güncelle)
+- [ ] Bulguların satır yorumu olarak yayınlanması
+- [ ] Fail-open ve check run sonucu
+- [ ] Kendi repomuzda dogfooding
+
+## Faz 2 — Repo Madenciliği
+
+- [ ] Miner: PyDriller ile commit, dosya ve fonksiyon değişiklikleri
+- [ ] Fix-commit tespiti
+- [ ] Fix-commit tespiti için 200 örneklik doğrulama seti
+- [ ] SZZ
+- [ ] Kamei JIT metrikleri
+- [ ] Artımlı madencilik
+- [ ] Sentetik git deposu testleri
+- [ ] D1 veri setinin çıkarılması (6 repo, önce tqdm pilotu)
+
+## Faz 3 — ML Gatekeeper
+
+- [ ] Zaman sıralı bölme ve etiket gecikmesi tamponu
+- [ ] LR, Random Forest ve LightGBM
+- [ ] Sınıf dengesizliği yöntemleri
+- [ ] Repo içi ve repolar arası değerlendirme
+- [ ] Kalibrasyon, bütçe tabanlı eşik, risk bantları
+- [ ] SHAP açıklamaları
+- [ ] `aegis train` ve `aegis score`
+- [ ] Sezgisel gatekeeper'ın eğitilmiş modelle değiştirilmesi
+- [ ] Bütçe–recall eğrisi (ilk sonuçlar)
+
+## Faz 4 — Bug-Fix Hafızası
+
+- [ ] Hata kartı modeli ve oluşturucu
+- [ ] Fonksiyon düzeyinde parçalama
+- [ ] Embedding ve LanceDB indeksi
+- [ ] Hibrit arama (yapısal + BM25 + vektör, RRF)
+- [ ] Zamansal filtre
+- [ ] Getirme değerlendirmesi (Recall@k, MRR)
+- [ ] `aegis index` ve artımlı güncelleme
+- [ ] Hata kartlarının analiz prompt'una eklenmesi (`memory_refs`)
+- [ ] Hafıza sinyalinin gatekeeper'a özellik olarak eklenmesi
 - [ ] Model ve indeksin `actions/cache` ile taşınması
-- [ ] Özet yorumu (oluşturma ve güncelleme)
-- [ ] Satır yorumları ve ` ```suggestion ` blokları
-- [ ] Suggestion aralığının diff hunk'ına sığma kontrolü ve yedek biçim
-- [ ] Fail-open davranışı, check run sonucu (`neutral` / `success`)
 - [ ] `main` merge'lerinde hafıza ve model güncelleme workflow'u
-- [ ] Fork PR güvenliği (`pull_request_target` yok, sandbox'ta anahtar yok)
-- [ ] Demo reposu ve kendi depomuzda kullanım (dogfooding)
 
-## Faz 7 — Değerlendirme (13. hafta)
+## Faz 5 — Patch Üretimi ve Doğrulama
 
-- [ ] D1–D4 veri setlerinin tamamlanması
-- [ ] Tüm deneylerin son konfigürasyonlarla koşturulması (`aegis eval`)
-- [ ] İstatistiksel testler (Wilcoxon, McNemar)
-- [ ] Tablolar ve grafikler (`eval/reports/`)
-- [ ] Patch'lerin elle doğruluk incelemesi (iki kişi, uyuşma oranı)
-- [ ] LLM eğitim verisi kirliliği için bilgi kesim tarihi sonrası alt küme
-- [ ] Dogfooding verileri: PR başına süre, maliyet, 👍/👎
+- [ ] Düzeltme ajanı
+- [ ] Test ajanı
+- [ ] Docker sandbox (RQ3 repoları: tqdm, black, httpie)
+- [ ] Doğrulayıcı
+- [ ] Geri besleme döngüsü
+- [ ] Orkestratör durum makinesi
+- [ ] Suggestion blokları ve statüye göre yayın
 
-## Faz 8 — Tez Yazımı ve Jüri Demosu (14. hafta)
+## Faz 6 — Değerlendirme
 
-- [ ] Tez metni: problem, ilgili çalışmalar, mimari, RQ1–RQ4 sonuçları, geçerlilik tehditleri
-- [ ] Kaynakçanın doğrulanması ve genişletilmesi
-- [ ] Canlı demo senaryosu (~5 dk)
-- [ ] Kayıtlı yedek demo videosu
-- [ ] `docs/jury-faq.md` güncellemesi
+- [ ] D1–D4 veri setlerinin tamamlanması (D2'de ~100 elle etiketli örnek)
+- [ ] RQ1: ucuz LLM triage taban çizgisi
+- [ ] RQ2: hafızasız / plasebo / vektör / hibrit karşılaştırması
+- [ ] RQ3: tek çağrı ile çok ajanlı zincirin karşılaştırması
+- [ ] RQ4: PR-Agent karşılaştırması
+- [ ] `aegis eval` ile tüm deneyler
+- [ ] İstatistiksel testler, tablolar, grafikler
+- [ ] Patch'lerin elle doğruluk incelemesi
+- [ ] LLM eğitim verisi kirliliği alt kümesi
+- [ ] Dogfooding verileri
+
+## Faz 7 — Sunum ve Tez
+
+Gereklilikler: [docs/presentation.md](docs/presentation.md)
+
+- [ ] Tez metni
+- [ ] Kaynakçanın doğrulanması
+- [ ] Demo reposu ve demo PR'ları
+- [ ] Canlı demo provası ve yedek video
+- [ ] Jüri sorularının sonuç rakamlarıyla güncellenmesi
+- [ ] Veri setinin açık lisansla yayınlanması
+- [ ] Bildiri (UYMS veya benzeri)
