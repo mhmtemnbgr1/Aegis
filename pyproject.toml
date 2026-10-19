@@ -1,7 +1,7 @@
 [project]
 name = "aegis-review"
 version = "0.0.1"
-description = "LLM destekli pre-push kod inceleme aracı"
+description = "Risk odaklı, hafızalı ve çok ajanlı PR inceleme sistemi"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.12"

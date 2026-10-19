@@ -1,31 +1,58 @@
 # Aegis yapılandırma örneği.
 # Kullanmak için: cp .aegis.toml.example .aegis.toml
 # API anahtarları buraya YAZILMAZ; ortam değişkeni kullanın:
-#   GEMINI_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY
+#   GEMINI_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY / GITHUB_TOKEN
 
-[llm]
-provider = "ollama"              # ollama | gemini | openai | anthropic
-model = "qwen2.5-coder:7b"
-timeout_seconds = 30
-temperature = 0.0
+[mining]
+fix_patterns = ["fix", "bug", "regression", "leak", "crash", "hotfix"]
+bug_issue_labels = ["bug"]
+ignore_merge_commits = true
+max_files_per_commit = 50        # daha büyük commit'ler SZZ'den elenir
+label_delay_days = 180           # son N günün commit'leri eğitime alınmaz
 
-[budget]
-max_input_tokens_per_request = 8000
-max_total_tokens_per_push = 40000
-max_requests_per_push = 6
-chunking = "ast"                 # truncate | hunk | ast
+[gatekeeper]
+model_path = ".aegis/model.lgbm"
+low_threshold = 0.30             # altı: LLM çağrılmaz
+high_threshold = 0.70            # üstü: tam zincir (analiz + patch + test)
+# Eşikler yerine bütçe verilebilir:
+# max_llm_pr_ratio = 0.4
+explain = true                   # SHAP açıklaması
 
-[policy]
-block_on_severity = "critical"
-min_confidence = 0.8
-verify_blocking_findings = true
-fail_open = true
+[memory]
+index_path = ".aegis/memory"
+embedding_model = "local"        # local | openai
+top_k = 3
+retrieval = "hybrid"             # hybrid | vector | structural
 
 [filters]
 max_changed_lines_per_file = 1500
-languages = ["python", "typescript"]
+languages = ["python"]
 
-[secrets]
-enabled = true
-entropy_threshold_base64 = 4.5
-entropy_threshold_hex = 3.0
+[agents.analyst]
+provider = "ollama"              # ollama | gemini | openai | anthropic
+model = "qwen2.5-coder:7b"
+temperature = 0.0
+timeout_seconds = 60
+
+[agents.fixer]
+provider = "ollama"
+model = "qwen2.5-coder:7b"
+max_retries = 2
+
+[agents.tester]
+provider = "ollama"
+model = "qwen2.5-coder:7b"
+
+[policy]
+patch_min_severity = "high"      # bu seviye ve üstü için patch üretilir
+patch_min_confidence = 0.7
+fail_open = true
+
+[verify]
+sandbox = "docker"
+timeout_seconds = 300
+network = false
+
+[budget]
+max_total_tokens_per_pr = 60000
+max_llm_requests_per_pr = 12

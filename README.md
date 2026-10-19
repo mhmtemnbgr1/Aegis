@@ -1,166 +1,310 @@
-# 🛡️ Aegis — LLM Destekli Pre-Push Kod İnceleme Aracı
+# 🛡️ Aegis — Risk Odaklı, Hafızalı ve Çok Ajanlı PR İnceleme Sistemi
 
-> Geliştiricinin `git push` komutunu çalıştırdığı anda devreye giren, değişiklikleri (diff) önce yerel statik kontrollerden, ardından bir LLM'den geçirerek **yalnızca gerçekten kritik** sorunlarda push'u durduran bir CLI aracı.
+> Pull Request açıldığında önce **klasik bir ML modeliyle** değişikliğin riskini ölçen, yalnızca riskli değişiklikleri LLM'e ileten, LLM'e **reponun kendi geçmiş hatalarını** hatırlatan ve sonunda geliştiricinin tek tıkla kabul edebileceği, **test ile doğrulanmış** bir GitHub *suggestion* bloğu üreten hibrit kod inceleme sistemi.
 
-**Durum:** Planlama aşaması · **Tür:** Bitirme Projesi · **Hedef diller (v1):** Python, TypeScript
+**Durum:** Planlama aşaması · **Tür:** Bitirme Projesi · **Teslim şekli:** GitHub Action + CLI · **Hedef dil (v1):** Python
 
 ---
 
 ## İçindekiler
 
-1. [Problem ve Amaç](#1-problem-ve-amaç)
-2. [Kapsam](#2-kapsam)
-3. [Gereksinimler](#3-gereksinimler)
-4. [Mimari](#4-mimari)
-5. [Teknoloji Yığını](#5-teknoloji-yığını)
-6. [Faz Faz Geliştirme Planı](#6-faz-faz-geliştirme-planı)
-7. [Değerlendirme ve Benchmark](#7-değerlendirme-ve-benchmark)
-8. [Maliyet Planı](#8-maliyet-planı)
-9. [Riskler ve Önlemler](#9-riskler-ve-önlemler)
-10. [Dizin Yapısı](#10-dizin-yapısı)
-11. [Yapılandırma Örneği](#11-yapılandırma-örneği)
-12. [Ekip ve Çalışma Düzeni](#12-ekip-ve-çalışma-düzeni)
+1. [Problem ve Motivasyon](#1-problem-ve-motivasyon)
+2. [Mevcut Çözümler ve Boşluk](#2-mevcut-çözümler-ve-boşluk)
+3. [Katkılar, Araştırma Soruları ve Başarı Kriterleri](#3-katkılar-araştırma-soruları-ve-başarı-kriterleri)
+4. [Kapsam](#4-kapsam)
+5. [Gereksinimler](#5-gereksinimler)
+6. [Mimari](#6-mimari)
+7. [Teknoloji Yığını](#7-teknoloji-yığını)
+8. [Faz Faz Geliştirme Planı](#8-faz-faz-geliştirme-planı)
+9. [Değerlendirme](#9-değerlendirme)
+10. [Maliyet Planı](#10-maliyet-planı)
+11. [Riskler ve Önlemler](#11-riskler-ve-önlemler)
+12. [Dizin Yapısı](#12-dizin-yapısı)
+13. [Yapılandırma Örneği](#13-yapılandırma-örneği)
+14. [Ekip ve Çalışma Düzeni](#14-ekip-ve-çalışma-düzeni)
+15. [Kaynakça](#15-kaynakça)
 
 ---
 
-## 1. Problem ve Amaç
+## 1. Problem ve Motivasyon
 
-Kod incelemesi (code review) genellikle push/PR **sonrasında** yapılır. Bu durumda:
+Endüstride ve akademide kod incelemesi otomasyonu iki ayrı dünyada gelişti ve bu iki dünya birbirine dokunmuyor:
 
-- Sızdırılmış şifre/token gibi hatalar uzak depoya (remote) çoktan ulaşmış olur.
-- Basit ama kritik mantık hataları CI'a veya insan incelemesine kadar fark edilmez.
-- İnceleyicinin zamanı, otomatik yakalanabilecek sorunlarla harcanır.
+- **LLM tabanlı PR botları** her PR'ı (5 satırlık bir CSS düzeltmesini bile) büyük bir modele gönderiyor. Bu hem **token israfı** hem gecikme demek. Üstelik kodu yalnızca o anki diff bağlamında inceliyorlar: repoda 6 ay önce aynı modülde yaşanmış bir race condition'dan ya da regression'dan habersizler.
+- **Akademik Just-In-Time (JIT) hata tahmini** modelleri (SZZ + Git metrikleri + Random Forest/XGBoost) yıllardır "bu commit %75 ihtimalle hatalı" diyebiliyor. Ancak hatanın **ne olduğunu söylemiyor, düzeltme önermiyor**. Bu yüzden geliştirici için çıktıları kullanışsız kalıyor ve endüstride karşılık bulamıyor.
 
-**Aegis'in amacı:** Sorunları push anında, geliştiricinin kendi makinesinde yakalamak.
+**Aegis'in tezi:** Bu iki yaklaşımı tek bir hattın ardışık katmanları olarak birleştirmek.
 
-- Ucuz ve deterministik kontroller (regex, parser) → **önce ve yerelde**.
-- Pahalı ve olasılıksal analiz (LLM) → **yalnızca iş mantığı ve mimari** için.
-- Push'u engelleme kararı → **sadece yüksek güvenli, kritik bulgularda**.
+1. Ucuz, hızlı ve açıklanabilir bir ML modeli **hangi PR'ın incelenmeye değer olduğuna** karar verir (*gatekeeper*).
+2. Pahalı LLM yalnızca riskli PR'larda ve **reponun kendi bug-fix geçmişiyle beslenerek** çalışır (*repo hafızası*).
+3. Çıktı bir olasılık yüzdesi değil, **test ile doğrulanmış bir düzeltme önerisidir** (*çok ajanlı patch üretimi*).
 
-### Başarı Kriterleri (Tez için ölçülebilir hedefler)
+> "Tekerleği yeniden icat etmiyoruz. Endüstrideki iki büyük kopukluğu (maliyet-körü LLM botları ile aksiyonsuz akademik tahmin modelleri) hibrit bir mimaride birleştiriyoruz."
+
+---
+
+## 2. Mevcut Çözümler ve Boşluk
+
+| Yaklaşım | Örnekler | Ne yapıyor? | Eksik kalan |
+| --- | --- | --- | --- |
+| LLM PR botları | PR-Agent (Qodo/Codium), CodeRabbit, GitHub Copilot code review | Diff'i LLM'e gönderip özet ve bulgu yorumu üretiyor | Repo geçmişi hafızası yok, her PR'a LLM çağırıyor, öneriler doğrulanmıyor |
+| JIT hata tahmini (MSR) | Kamei vd. (2013), DeepJIT, CC2Vec, JITLine; PyDriller + SZZ ile kurulan modeller | Commit'in hatalı olma olasılığını tahmin ediyor | Hatanın ne olduğunu açıklamıyor, düzeltme önermiyor, iş akışına girmiyor |
+| Statik analiz / kural tabanlı | Semgrep, CodeQL, gitleaks, Ruff | Bilinen kalıpları deterministik olarak yakalıyor | İş mantığı hatalarını ve repoya özgü geçmişi göremiyor |
+| Otomatik program onarımı (APR) | LLM tabanlı APR çalışmaları, BugsInPy/Defects4J üzerindeki benchmark'lar | Bilinen bir hata için patch üretiyor | Hatanın **nerede** olduğunu önceden bilmeyi varsayıyor, PR akışına bağlı değil |
+
+**Aegis'in konumu:** JIT tahminini **kapı (triage)**, bug-fix geçmişini **bağlam (RAG)**, APR'yi **aksiyon** olarak kullanan; üçünü PR iş akışında birleştiren ilk bütüncül açık kaynak araç olmayı hedefler.
+
+> Bu karşılaştırma tablosu, tezin "İlgili Çalışmalar" bölümünde güncel literatür taramasıyla doğrulanacak ve genişletilecektir.
+
+---
+
+## 3. Katkılar, Araştırma Soruları ve Başarı Kriterleri
+
+### 3.1 Üç Temel Katkı
+
+**K1 — Gatekeeper ile maliyet optimizasyonu.**
+Kamei metrikleri ve repo geçmişinden çıkarılan özelliklerle eğitilmiş bir sınıflandırıcı, her PR'a bir risk skoru verir. Düşük riskli PR'lar LLM'e hiç gitmez, orta riskliler yalnızca analiz edilir, yüksek riskliler tam ajan zincirinden geçer. Böylece maliyet/performans dengesi **ölçülebilir ve ayarlanabilir** hale gelir.
+
+**K2 — Repo'ya özgü bug-fix hafızası.**
+Reponun geçmişteki `fix:` / `bug:` commit'leri, SZZ ile bulunan hatayı-getiren (bug-inducing) commit'leri ve bağlı issue'ları bir vektör veritabanında "hata kartları" olarak saklanır. LLM'e şu bağlam verilebilir: *"Bu fonksiyon 4 ay önce değiştirildiğinde #89 numaralı bellek sızıntısı oluştu ve şu şekilde düzeltildi."*
+
+**K3 — Tahminden aksiyona: doğrulanmış patch.**
+Analiz → Düzeltme → Test ajanları zinciri ve deterministik bir doğrulayıcı, hatayı yeniden üreten bir test yazar, patch'i uygular ve testleri koşturur. Yalnızca doğrulanan patch'ler GitHub'da tek tıkla kabul edilebilen `suggestion` bloğu olarak yayınlanır.
+
+### 3.2 Araştırma Soruları
+
+| ID | Soru |
+| --- | --- |
+| **RQ1** | Gatekeeper, LLM çağrılarını ve maliyeti ne kadar azaltır; bu sırada hatalı değişikliklerin ne kadarı kaçırılır? |
+| **RQ2** | Repo'ya özgü bug-fix hafızası, LLM'in hata tespit doğruluğunu (precision/recall) hafızasız incelemeye göre artırır mı? |
+| **RQ3** | Test ile doğrulanan çok ajanlı zincir, tek çağrıyla patch üretmeye göre daha fazla **doğru** patch üretir mi? |
+| **RQ4** | Uçtan uca sistem, PR başına maliyet ve gecikme açısından pratikte kullanılabilir mi? |
+
+### 3.3 Başarı Kriterleri (ilk hedefler)
+
+> Hedefler Faz 1 sonunda pilot veriyle gözden geçirilip revize edilecektir.
 
 | Metrik | Hedef |
 | --- | --- |
-| Secret tespiti recall (benchmark seti) | ≥ %95 |
-| Engelleyici (blocking) bulguların precision değeri | ≥ %80 |
-| Ortalama push gecikmesi (≤ 10 dosya, bulut model) | ≤ 15 sn |
-| Push başına ortalama maliyet (bulut, küçük model) | ≤ 0,01 $ |
-| Statik ön filtre süresi | ≤ 1 sn |
+| Gatekeeper: LLM'e gitmeden geçen PR oranı | ≥ %50 |
+| Gatekeeper: hatalı (SZZ ile etiketli) değişikliklerin yakalanma oranı (recall) | ≥ %80 |
+| Hafızalı analiz: tespit F1'inde hafızasız analize göre iyileşme | istatistiksel olarak anlamlı, ≥ %10 göreli |
+| Patch: BugsInPy alt kümesinde testleri geçen (plausible) patch oranı | ≥ %25 |
+| Yayınlanan suggestion'ların doğrulanmış olma oranı | %100 (doğrulanmayan patch suggestion olarak yayınlanmaz) |
+| PR başına ortalama maliyet (gatekeeper açık) | ≤ 0,05 $ |
+| PR başına uçtan uca süre (p95, test koşumu dahil) | ≤ 5 dk |
 
 ---
 
-## 2. Kapsam
+## 4. Kapsam
 
-### Kapsam İçi (v1)
+### 4.1 Neden PR Botu?
 
-- `pre-push` git hook kurulumu/kaldırılması (`aegis install` / `aegis uninstall`)
-- Push edilecek commit aralığının diff'ini çıkarma ve ayrıştırma
-- Ön filtreleme: binary, lock, minified, üretilmiş (generated) dosyaları eleme
-- Secret scanner: API anahtarları, token'lar, private key'ler, yüksek entropili string'ler
-- Basit syntax kontrolü (Python ve TypeScript)
-- LLM ile yapılandırılmış (JSON Schema) inceleme çıktısı
-- Token bütçeleme, dosya önceliklendirme ve diff parçalama (chunking)
-- Önem derecesi (severity) + güven (confidence) tabanlı engelleme politikası
-- Etkileşimli terminal arayüzü: `[A] Abort` / `[I] Ignore and push` / `[D] Details`
-- Bypass: `git push --no-verify` ve `AEGIS_SKIP=1`
+| Seçenek | Karar | Gerekçe |
+| --- | --- | --- |
+| **GitHub Action (PR botu)** | ✅ Ana teslim şekli | Suggestion bloğu PR'da bulunuyor; hafıza CI'da güncellenebiliyor; patch testleri izole bir runner'da koşuyor; MSR literatürü commit/PR düzeyinde değerlendirme yapıyor |
+| **CLI** | ✅ Destekleyici | Modeli eğitmek, indeksi kurmak, yerelde inceleme yapmak ve benchmark koşturmak için gerekli. Action da aynı CLI'ı çağırıyor |
+| Pre-push hook | ❌ v1 dışı | Test koşturmak ve hafızayı güncellemek geliştiricinin push anında pratik değil; katkılara bir şey eklemiyor |
+| GitHub App | ❌ v1 dışı | Sunucu barındırma gerektiriyor; Action aynı değeri altyapısız sağlıyor |
+
+### 4.2 Kapsam İçi (v1)
+
+- **Repo madenciliği:** PyDriller ile commit geçmişi, fix-commit tespiti, SZZ ile bug-inducing commit eşlemesi
+- **Gatekeeper:** Kamei JIT metrikleri ve ek özelliklerle model eğitimi, zamana duyarlı doğrulama, SHAP açıklamaları, risk bantları
+- **Bug-fix hafızası:** hata kartları, fonksiyon düzeyinde parçalama, hibrit arama (yapısal + BM25 + vektör), zamansal sızıntı koruması
+- **Ajanlar:** Analiz, Düzeltme ve Test ajanları; deterministik Doğrulayıcı; sınırlı geri besleme döngüsü
+- **GitHub entegrasyonu:** Action, özet yorumu, satır yorumları, `suggestion` blokları
+- **CLI:** `mine`, `train`, `index`, `score`, `review`, `eval`
 - Birden fazla LLM sağlayıcısı: Ollama (yerel), Gemini, OpenAI, Anthropic
-- Benchmark/değerlendirme altyapısı
+- Değerlendirme altyapısı ve tez deneyleri
 
-### Kapsam Dışı (bilinçli olarak)
+### 4.3 Kapsam Dışı (bilinçli olarak)
 
-- Python ve TypeScript dışındaki diller (mimari genişletilebilir olacak ama v1'de test edilmeyecek)
-- IDE eklentileri, web arayüzü
-- Sunucu tarafı (server-side) hook / GitHub App
-- Kodu otomatik düzeltme (auto-fix)
-- Tüm depo üzerinde (repo-wide) semantik indeksleme / RAG
+- Python dışındaki diller için patch üretimi ve test doğrulaması. Gatekeeper metrikleri dilden bağımsız olduğu için risk skoru her repoda çalışır, ancak v1'de yalnızca Python değerlendirilir.
+- Pre-push hook, IDE eklentisi, GitHub App, GitLab/Bitbucket desteği
+- LLM veya embedding modeli ince ayarı (fine-tuning)
+- Fork'tan gelen PR'larda gizli anahtar gerektiren bulut LLM'leri (bkz. [Riskler](#11-riskler-ve-önlemler))
 
-> ⚠️ En büyük risk finansal değil **kapsam kontrolüdür (scope creep)**. Yeni özellik fikirleri `docs/ideas.md` dosyasına yazılır, v1 bitmeden uygulanmaz.
+> ⚠️ Üç katmanlı bu mimaride en büyük risk **kapsam kaymasıdır (scope creep)**. Her katman tek başına bir bitirme projesi olabilir. Yeni fikirler `docs/ideas.md` dosyasına yazılır ve v1 bitmeden uygulanmaz.
 
 ---
 
-## 3. Gereksinimler
+## 5. Gereksinimler
 
-### 3.1 Fonksiyonel Gereksinimler
+### 5.1 Fonksiyonel Gereksinimler
+
+**Repo madenciliği**
 
 | ID | Gereksinim | Öncelik |
 | --- | --- | --- |
-| FR-01 | `aegis install` komutu, mevcut depoya `pre-push` hook'u kurar; var olan hook'u yedekler. | Must |
-| FR-02 | Hook, git'in stdin'den verdiği `<local ref> <local sha> <remote ref> <remote sha>` satırlarını okuyup push edilecek commit aralığını belirler. | Must |
-| FR-03 | Yeni branch push'unda (remote sha = `000…0`) karşılaştırma tabanı olarak varsayılan branch ile merge-base kullanılır. | Must |
-| FR-04 | Diff, dosya ve hunk seviyesinde ayrıştırılır (eklenen/silinen satırlar, satır numaraları). | Must |
-| FR-05 | Binary, lock (`package-lock.json`, `poetry.lock`, `uv.lock` vb.), minified ve `.aegisignore` ile eşleşen dosyalar elenir. | Must |
-| FR-06 | Secret scanner, eklenen satırlarda bilinen token kalıplarını ve yüksek entropili string'leri arar; bulgu varsa **LLM'e gitmeden** push'u durdurur. | Must |
-| FR-07 | Secret içeren satırlar LLM'e **asla** gönderilmez (maskelenir). | Must |
-| FR-08 | Python (`ast`) ve TypeScript (tree-sitter) dosyalarında syntax hatası yerelde yakalanır. | Should |
-| FR-09 | LLM çıktısı tanımlı JSON Schema'ya uymak zorundadır; uymayan yanıt bir kez yeniden denenir, yine uymazsa inceleme "uyarı" olarak atlanır (push engellenmez). | Must |
-| FR-10 | Toplam diff token bütçesini aşarsa dosyalar önceliklendirilir ve parçalara bölünür. | Must |
-| FR-11 | Her bulgu: dosya, satır, kategori, severity (`critical/high/medium/low/info`), confidence (0–1), açıklama ve öneri içerir. | Must |
-| FR-12 | Push yalnızca politika eşiğini geçen bulgularda engellenir (varsayılan: `severity=critical` ve `confidence ≥ 0.8`). | Must |
-| FR-13 | Kullanıcıya etkileşimli seçim sunulur: Abort / Ignore and push / Details. TTY yoksa (CI vb.) etkileşimsiz moda geçilir. | Must |
-| FR-14 | `--no-verify` ve `AEGIS_SKIP=1` ile inceleme tamamen atlanabilir; atlamalar yerel log'a yazılır. | Must |
-| FR-15 | Sağlayıcı ve model `.aegis.toml` ile seçilir; API anahtarları yalnızca ortam değişkeninden okunur. | Must |
-| FR-16 | Her çalıştırmanın sonucu (süre, token, maliyet, bulgular) `.aegis/history.jsonl` dosyasına yazılır. | Should |
-| FR-17 | `aegis review --staged` / `aegis review <range>` ile hook olmadan manuel inceleme yapılabilir. | Should |
-| FR-18 | Aynı diff için LLM yanıtı önbelleğe alınır (hash tabanlı cache); tekrar push'ta yeniden ücret ödenmez. | Could |
-| FR-19 | Kullanıcı bir bulguyu "yanlış pozitif" olarak işaretleyebilir (`aegis dismiss <id>`); bu geri bildirim değerlendirmede kullanılır. | Could |
+| FR-01 | `aegis mine <repo>` komutu commit geçmişini PyDriller ile tarar ve commit, dosya ve fonksiyon düzeyindeki değişiklikleri kaydeder. | Must |
+| FR-02 | Fix commit'leri mesaj kalıplarıyla (`fix`, `bug`, `regression`, `leak`, `crash`, `closes #N` vb.) ve varsa GitHub issue etiketleriyle (`bug`) tespit edilir. | Must |
+| FR-03 | Her fix commit'i için SZZ ile bug-inducing commit'ler bulunur. Boşluk, yorum ve boş satır değişiklikleri yok sayılır; merge commit'leri ve çok büyük commit'ler elenir. | Must |
+| FR-04 | Kamei vd. (2013) tarafından tanımlanan 14 JIT metriği (NS, ND, NF, Entropy, LA, LD, LT, FIX, NDEV, AGE, NUC, EXP, REXP, SEXP) her commit için hesaplanır. | Must |
+| FR-05 | Madencilik artımlıdır: yalnızca son taramadan sonraki commit'ler işlenir. | Should |
 
-### 3.2 Fonksiyonel Olmayan Gereksinimler
+**Gatekeeper**
+
+| ID | Gereksinim | Öncelik |
+| --- | --- | --- |
+| FR-10 | `aegis train` komutu, madencilik verisinden risk modeli eğitir. Doğrulama zaman sıralıdır; rastgele çapraz doğrulama kullanılmaz. | Must |
+| FR-11 | Model, PR düzeyinde 0–1 arası bir risk skoru üretir. PR'daki commit'ler birleştirilmiş diff üzerinden değerlendirilir. | Must |
+| FR-12 | Ek özellikler: dokunulan dosya/fonksiyonların geçmiş hata yoğunluğu (hafızadan), riskli yol ve API kalıpları, test dosyası değişim oranı. | Should |
+| FR-13 | Risk skoru üç banda ayrılır: **düşük** (LLM yok), **orta** (yalnızca Analiz ajanı), **yüksek** (tam zincir). Eşikler config'den veya "PR'ların en fazla %X'i LLM'e gitsin" bütçesinden belirlenir. | Must |
+| FR-14 | Her skor için en etkili 3 özellik SHAP ile açıklanır ve PR yorumunda gösterilir. | Should |
+| FR-15 | Geçmişi az olan repolarda (soğuk başlangıç) diğer repolarda eğitilmiş genel model kullanılır. | Should |
+| FR-16 | PR'a `aegis:force` etiketi eklenerek gatekeeper atlanır ve tam inceleme zorlanır. | Could |
+
+**Bug-fix hafızası**
+
+| ID | Gereksinim | Öncelik |
+| --- | --- | --- |
+| FR-20 | `aegis index` her fix commit'inden bir **hata kartı** üretir: fix SHA ve tarihi, bug-inducing SHA'lar, dosyalar, fonksiyonların nitelikli adları, commit mesajı, issue no/başlığı, fonksiyonun önceki/sonraki hali, fix diff'i. | Must |
+| FR-21 | Kod fonksiyon düzeyinde parçalanır (Python `ast`). | Must |
+| FR-22 | Arama hibrittir: (1) aynı dosya/fonksiyon eşleşmesi, (2) BM25 ile tanımlayıcı araması, (3) vektör benzerliği. Sonuçlar Reciprocal Rank Fusion ile birleştirilir. | Must |
+| FR-23 | **Zamansal koruma:** Bir PR için yalnızca PR tarihinden önce oluşturulmuş hata kartları getirilir. Değerlendirmede de aynı kural geçerlidir. | Must |
+| FR-24 | `main`'e her merge'de yeni fix commit'leri hafızaya artımlı olarak eklenir. | Should |
+| FR-25 | Hata kartına indeksleme sırasında ucuz bir modelle kısa bir "kök neden / düzeltme kalıbı" özeti eklenir. | Could |
+
+**Ajanlar ve doğrulama**
+
+| ID | Gereksinim | Öncelik |
+| --- | --- | --- |
+| FR-30 | **Analiz ajanı** diff'i, çevre bağlamı, gatekeeper açıklamasını ve getirilen hata kartlarını alır; JSON Schema'ya uygun bulgular üretir. Her bulgu kullandığı hata kartlarını (`memory_refs`) belirtir. | Must |
+| FR-31 | Bulgunun `evidence` alanı diff'te birebir yoksa veya bulgu satırı değişen satırlara denk gelmiyorsa bulgu düşürülür (halüsinasyon filtresi). | Must |
+| FR-32 | **Düzeltme ajanı**, eşiği geçen her bulgu için yalnızca ilgili hunk bölgesini değiştiren minimal bir unified diff üretir. | Must |
+| FR-33 | **Test ajanı**, hatayı yeniden üreten bir pytest testi yazar: test PR'ın son halinde başarısız olmalı, patch uygulandıktan sonra geçmelidir. | Must |
+| FR-34 | **Doğrulayıcı** (LLM değil, deterministik): `git apply --check`, syntax/lint kontrolü, mevcut testler ve üretilen test (patch öncesi ve sonrası). Sonuç: `verified` / `plausible` / `unverified`. | Must |
+| FR-35 | Doğrulama başarısızsa hata çıktısı Düzeltme ajanına geri verilir; en fazla 2 tekrar denenir. | Must |
+| FR-36 | Testler ağ erişimi olmayan, kaynak ve süre sınırlı bir sandbox'ta (Docker) koşturulur. | Must |
+| FR-37 | Her ajan için sağlayıcı ve model ayrı seçilebilir (ör. analiz için güçlü, test için ucuz model). | Should |
+
+**GitHub entegrasyonu ve CLI**
+
+| ID | Gereksinim | Öncelik |
+| --- | --- | --- |
+| FR-40 | Aegis, `pull_request` olayında çalışan bir GitHub Action olarak paketlenir. | Must |
+| FR-41 | PR'a tek bir **özet yorumu** yazılır: risk skoru ve bandı, SHAP açıklaması, kullanılan hata kartları, bulgu sayısı, token ve maliyet. Yeni push'ta yorum güncellenir, tekrar eklenmez. | Must |
+| FR-42 | `verified` patch'ler, değişen satırlarla örtüşen ardışık bir aralığa sığıyorsa satır yorumu içinde ` ```suggestion ` bloğu olarak yayınlanır. Sığmıyorsa açılır-kapanır bir diff olarak yayınlanır. | Must |
+| FR-43 | `plausible` patch'ler uyarı etiketiyle, `unverified` olanlar yalnızca bulgu açıklaması olarak (kodsuz) yayınlanır. | Must |
+| FR-44 | `aegis review --base main` aynı hattı yerelde çalıştırır ve sonucu terminale basar. | Must |
+| FR-45 | Her çalıştırmanın metrikleri (aşama süreleri, token, maliyet, karar, bulgular) JSONL olarak kaydedilir. | Should |
+| FR-46 | Geliştirici bir öneriyi 👍/👎 tepkisiyle değerlendirebilir; tepkiler değerlendirme için toplanır. | Could |
+
+### 5.2 Fonksiyonel Olmayan Gereksinimler
 
 | ID | Gereksinim |
 | --- | --- |
-| NFR-01 | **Performans:** Statik aşama < 1 sn; LLM aşaması varsayılan 30 sn zaman aşımına sahip. Zaman aşımında push engellenmez (fail-open). |
-| NFR-02 | **Güvenilirlik:** Aracın kendi hatası (ağ yok, API hatası, parse hatası) push'u asla engellemez; uyarı basılır. |
-| NFR-03 | **Gizlilik:** Kod yalnızca kullanıcının seçtiği sağlayıcıya gider. `provider = "ollama"` ile tamamen çevrimdışı çalışır. |
-| NFR-04 | **Taşınabilirlik:** Windows (Git Bash), macOS ve Linux'ta çalışır. |
-| NFR-05 | **Kurulum:** Tek komutla kurulum (`pipx install aegis-review` veya `uv tool install`). |
-| NFR-06 | **Test edilebilirlik:** Çekirdek modüllerde ≥ %80 test kapsamı; LLM çağrıları mock'lanabilir. |
-| NFR-07 | **Genişletilebilirlik:** Yeni dil, yeni sağlayıcı ve yeni statik kural eklemek tek bir arayüzü (interface/protocol) uygulamakla mümkün olmalı. |
+| NFR-01 | **Güvenilirlik (fail-open):** Aracın kendi hatası (API, ağ, model) PR'ı asla bloklamaz. Yalnızca bir uyarı yorumu bırakılır ve check "neutral" sonuçlanır. |
+| NFR-02 | **Güvenlik:** `pull_request_target` kullanılmaz. Üretilen testler gizli anahtarlara erişimi olmayan, ağı kapalı bir sandbox'ta çalışır. |
+| NFR-03 | **Gizlilik:** Kod yalnızca seçilen sağlayıcıya gider. `provider = "ollama"` ve yerel embedding modeliyle tamamen çevrimdışı çalışır. |
+| NFR-04 | **Tekrarlanabilirlik:** Madencilik verisi, model ve indeks sürümlenir; her deney config + commit SHA + veri sürümüyle yeniden koşturulabilir. |
+| NFR-05 | **Açıklanabilirlik:** Her karar (atlandı / analiz edildi / patch üretildi) PR yorumunda gerekçesiyle gösterilir. |
+| NFR-06 | **Test edilebilirlik:** Çekirdek modüllerde ≥ %80 test kapsamı; LLM ve GitHub çağrıları mock'lanabilir. |
+| NFR-07 | **Genişletilebilirlik:** Yeni dil, sağlayıcı, ajan veya özellik eklemek tek bir protokolü uygulamakla mümkündür. |
 
 ---
 
-## 4. Mimari
+## 6. Mimari
 
-### 4.1 Akış
+### 6.1 Genel Bakış: Çevrimdışı ve Çevrimiçi Hatlar
 
 ```mermaid
-flowchart TD
-    A[git push] --> B[pre-push hook]
-    B --> C{AEGIS_SKIP / --no-verify?}
-    C -- evet --> Z[Push devam]
-    C -- hayır --> D[Diff Extractor<br/>commit aralığı + unidiff]
-    D --> E[Pre-Filter<br/>binary / lock / ignore]
-    E --> F[Static Analyzers<br/>Secret Scanner + Syntax]
-    F -- kritik bulgu --> X[Push ENGELLENDİ<br/>LLM çağrılmaz]
-    F -- temiz --> G[Context Builder<br/>maskeleme + çevre satırlar]
-    G --> H[Token Budgeter<br/>önceliklendirme + chunking]
-    H --> I[LLM Reviewer<br/>Structured Output]
-    I --> J[Post-Processor<br/>doğrulama + tekilleştirme + FP filtreleri]
-    J --> K[Policy Engine<br/>severity × confidence]
-    K -- engelleyici yok --> Z
-    K -- engelleyici var --> L[Interactive TUI<br/>Abort / Ignore / Details]
-    L -- Ignore --> Z
-    L -- Abort --> Y[Push iptal]
+flowchart LR
+    subgraph OFF["Çevrimdışı hat (ilk kurulum + main'e her merge)"]
+        R[(Git geçmişi)] --> M[Miner<br/>PyDriller]
+        M --> FX[Fix-commit tespiti]
+        FX --> SZZ[SZZ<br/>bug-inducing eşleme]
+        M --> FE[Özellik çıkarımı<br/>Kamei metrikleri]
+        SZZ --> FE
+        FE --> TR[Model eğitimi<br/>LR / RF / LightGBM]
+        SZZ --> BC[Hata kartları]
+        BC --> IDX[(Bug-Fix Hafızası<br/>LanceDB)]
+        TR --> MOD[(Risk modeli)]
+    end
+
+    subgraph ON["Çevrimiçi hat (her PR)"]
+        PR[PR açıldı / güncellendi] --> PF[Ön filtre<br/>binary / lock / üretilmiş]
+        PF --> GK{Gatekeeper<br/>risk skoru}
+        GK -- düşük --> S1[Özet yorumu<br/>LLM çağrılmaz]
+        GK -- orta / yüksek --> RET[Hafızadan getirme<br/>hibrit + zamansal filtre]
+        RET --> AN[Analiz ajanı]
+        AN --> PP[Kanıt + satır doğrulama]
+        PP -- orta --> PUB
+        PP -- yüksek --> FIX[Düzeltme ajanı]
+        FIX --> TST[Test ajanı]
+        TST --> VER[Doğrulayıcı<br/>sandbox]
+        VER -- başarısız, ≤2 tekrar --> FIX
+        VER --> PUB[Yayıncı<br/>özet + suggestion]
+    end
+
+    MOD -.-> GK
+    IDX -.-> RET
 ```
 
-### 4.2 Modüller
+### 6.2 Katman 1 — Gatekeeper
 
-| Modül | Sorumluluk |
-| --- | --- |
-| `cli` | Komutlar: `install`, `uninstall`, `review`, `config`, `dismiss`, `stats` |
-| `git` | Hook stdin'ini okuma, commit aralığını bulma, `git diff` çalıştırma (subprocess) |
-| `diff` | Unified diff'i dosya/hunk/satır modeline çevirme |
-| `filters` | Dosya eleme kuralları (uzantı, boyut, glob, generated header tespiti) |
-| `static` | `SecretScanner`, `SyntaxChecker` — her biri `Analyzer` protokolünü uygular |
-| `context` | Hunk etrafına bağlam satırları ekleme, secret maskeleme, dil tespiti |
-| `budget` | Token sayımı, dosya önceliklendirme, chunk oluşturma |
-| `llm` | Sağlayıcı adaptörleri (Ollama, Gemini, OpenAI, Anthropic), retry, timeout, cache |
-| `prompts` | Sistem prompt'u, few-shot örnekler, JSON Schema |
-| `postprocess` | Şema doğrulama, satır numarası doğrulama, tekilleştirme, FP sezgileri |
-| `policy` | Engelleme kararı |
-| `ui` | Rich tabanlı terminal çıktısı ve etkileşimli seçim |
-| `telemetry` | Yerel `history.jsonl` kaydı (dışarı veri göndermez) |
+| Grup | Özellikler | Kaynak |
+| --- | --- | --- |
+| Yayılım (diffusion) | NS (alt sistem), ND (dizin), NF (dosya), Entropy (değişikliğin dosyalara dağılımı) | Kamei vd. 2013 |
+| Boyut | LA (eklenen), LD (silinen), LT (dosyanın önceki boyutu) | Kamei vd. 2013 |
+| Amaç | FIX (değişiklik bir düzeltme mi) | Kamei vd. 2013 |
+| Geçmiş | NDEV (dosyaya dokunan geliştirici sayısı), AGE (son değişiklikten bu yana süre), NUC (benzersiz değişiklik sayısı) | Kamei vd. 2013 |
+| Deneyim | EXP, REXP, SEXP (geliştiricinin genel, yakın dönem ve alt sistem deneyimi) | Kamei vd. 2013 |
+| **Aegis'e özgü** | Dokunulan fonksiyonların geçmiş hata kartı sayısı, riskli yol (`auth`, `db`, `payment`…), riskli API (`eval`, `subprocess`, SQL string birleştirme…), test değişim oranı | Bu çalışma |
 
-### 4.3 LLM Çıktı Şeması (taslak)
+- **Etiketler:** SZZ ile bulunan bug-inducing commit'ler pozitif sınıftır. SZZ etiketlerinin gürültülü olduğu bilinir; bu durum tezde bir geçerlilik tehdidi olarak tartışılır.
+- **Doğrulama:** Zaman sıralı bölme (eğitim < doğrulama < test). Son N aylık commit'ler eğitimden çıkarılır, çünkü bu commit'lerin hataları henüz keşfedilip düzeltilmemiş olabilir (*etiket gecikmesi*).
+- **Dengesizlik:** Sınıf ağırlıkları ve yeniden örnekleme yöntemleri karşılaştırılır.
+- **Modeller:** Lojistik regresyon (yorumlanabilir taban çizgisi), Random Forest, LightGBM.
+- **Karar:** Skor → bant. Eşik ya doğrudan verilir ya da LLM'e gidecek PR oranı için belirlenen bütçeden hesaplanır.
+
+### 6.3 Katman 2 — Bug-Fix Hafızası
+
+```json
+{
+  "id": "BC-0142",
+  "fix_sha": "a1b2c3d",
+  "fix_date": "2026-03-14T10:22:00Z",
+  "inducing_shas": ["9f8e7d6"],
+  "issue": { "number": 89, "title": "Memory leak in connection pool" },
+  "files": ["app/db/pool.py"],
+  "functions": ["app.db.pool.ConnectionPool.release"],
+  "message": "fix: release connections on timeout (#89)",
+  "before": "def release(self, conn): ...",
+  "after": "def release(self, conn): ...",
+  "fix_diff": "@@ -40,6 +40,9 @@ ...",
+  "summary": "Zaman aşımında bağlantı havuza iade edilmiyordu; finally bloğu eklendi."
+}
+```
+
+- **Sorgu:** PR'da değişen fonksiyonların kodu, nitelikli adı ve diff'i.
+- **Getirme:** (1) Aynı dosya veya fonksiyon için yapısal eşleşme, (2) BM25, (3) vektör benzerliği → RRF ile birleştirme → en iyi *k* kart (varsayılan 3).
+- **Zamansal filtre:** `fix_date < PR tarihi`.
+- **Embedding:** Yerel bir kod embedding modeli (sentence-transformers). CI runner'ın CPU'sunda ücretsiz çalışır. API tabanlı embedding'ler isteğe bağlıdır.
+- **Saklama:** LanceDB (gömülü, dosya tabanlı, sunucusuz). Indeks Action'da `actions/cache` ile taşınır; cache yoksa yeniden kurulur.
+
+### 6.4 Katman 3 — Ajanlar ve Doğrulama
+
+| Bileşen | Tür | Girdi | Çıktı |
+| --- | --- | --- | --- |
+| Analiz ajanı | LLM | Diff + bağlam + gatekeeper açıklaması + hata kartları | `findings[]` (JSON Schema) |
+| Düzeltme ajanı | LLM | Bulgu + ilgili fonksiyon + (varsa) önceki doğrulama hatası | Unified diff |
+| Test ajanı | LLM | Bulgu + fonksiyon + mevcut test örnekleri | pytest test dosyası |
+| Doğrulayıcı | Deterministik | Patch + test | `verified` / `plausible` / `unverified` + log |
+| Yayıncı | Deterministik | Bulgular + doğrulama sonuçları | GitHub özet yorumu, satır yorumları, suggestion'lar |
+
+Doğrulama statüleri:
+
+| Statü | Koşul | Yayın biçimi |
+| --- | --- | --- |
+| `verified` | Patch uygulanıyor, mevcut testler geçiyor, üretilen test patch öncesi **başarısız** ve sonrası **başarılı** | ` ```suggestion ` bloğu |
+| `plausible` | Patch uygulanıyor ve mevcut testler geçiyor, ancak hatayı yeniden üreten test yazılamadı | Uyarı etiketli öneri |
+| `unverified` | Uygulanamadı veya testler kırıldı | Yalnızca bulgu açıklaması (kodsuz) |
+
+**Orkestrasyon:** Ajan zinciri Pydantic modelleri üzerinde çalışan, kendi yazdığımız küçük bir durum makinesidir. LangGraph gibi çerçeveler değerlendirildi. Bu tercih bağımlılığı azaltıyor, her adımı birim testle doğrulanabilir kılıyor ve jüriye "kara kutu yok" diyebilmemizi sağlıyor.
+
+**Analiz ajanı çıktı şeması (taslak):**
 
 ```json
 {
@@ -172,17 +316,18 @@ flowchart TD
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["file", "line", "category", "severity", "confidence", "title", "explanation"],
+        "required": ["file", "line", "category", "severity", "confidence", "title", "explanation", "evidence"],
         "properties": {
           "file":        { "type": "string" },
           "line":        { "type": "integer", "minimum": 1 },
-          "category":    { "enum": ["bug", "security", "concurrency", "resource-leak", "error-handling", "api-misuse", "performance", "maintainability"] },
-          "severity":    { "enum": ["critical", "high", "medium", "low", "info"] },
+          "end_line":    { "type": "integer", "minimum": 1 },
+          "category":    { "enum": ["bug", "security", "concurrency", "resource-leak", "error-handling", "api-misuse", "regression", "performance"] },
+          "severity":    { "enum": ["critical", "high", "medium", "low"] },
           "confidence":  { "type": "number", "minimum": 0, "maximum": 1 },
           "title":       { "type": "string", "maxLength": 120 },
           "explanation": { "type": "string" },
-          "suggestion":  { "type": "string" },
-          "evidence":    { "type": "string", "description": "Bulgunun dayandığı diff satırının birebir alıntısı" }
+          "evidence":    { "type": "string", "description": "Bulgunun dayandığı diff satırının birebir alıntısı" },
+          "memory_refs": { "type": "array", "items": { "type": "string" }, "description": "Kullanılan hata kartı kimlikleri" }
         }
       }
     }
@@ -190,226 +335,199 @@ flowchart TD
 }
 ```
 
-> `evidence` alanı kritik bir FP önlemidir: model, diff'te **birebir bulunmayan** bir satıra dayanıyorsa bulgu otomatik düşürülür (halüsinasyon filtresi).
+### 6.5 PR'da Görünecek Çıktı (örnek)
+
+Özet yorumu:
+
+> **🛡️ Aegis — Risk: 0.82 (yüksek)**
+> Neden: bu fonksiyonda geçmişte 2 hata düzeltilmiş · 3 alt sisteme yayılan değişiklik · yazar bu modülde yeni
+> Hafıza: `BC-0142` (#89, bağlantı havuzu sızıntısı)
+> Sonuç: 1 bulgu · 1 doğrulanmış öneri · 4.120 token · 0,006 $
+
+Satır yorumu:
+
+````markdown
+**[resource-leak · critical · 0.86]** Zaman aşımı yolunda bağlantı havuza iade edilmiyor.
+Bu fonksiyonda #89'da aynı sorun yaşanmış ve `finally` ile çözülmüştü (BC-0142).
+
+```suggestion
+        try:
+            return await conn.execute(query, timeout=timeout)
+        finally:
+            await self.release(conn)
+```
+
+✅ Doğrulandı: `tests/aegis/test_pool_timeout.py` patch öncesi başarısız, sonrası başarılı · mevcut 142 test geçti.
+````
+
+### 6.6 Modüller
+
+| Modül | Sorumluluk |
+| --- | --- |
+| `cli` | `mine`, `train`, `index`, `score`, `review`, `eval` komutları |
+| `mining` | PyDriller tarayıcı, fix-commit sınıflandırıcı, SZZ, veri saklama (Parquet) |
+| `features` | Kamei metrikleri ve Aegis'e özgü özellikler; commit → PR birleştirme |
+| `gatekeeper` | Eğitim, kalibrasyon, eşik/bant seçimi, SHAP açıklamaları, model kaydı |
+| `memory` | Hata kartı oluşturma, fonksiyon parçalama, embedding, LanceDB, hibrit arama |
+| `diff` | Unified diff modeli, ön filtre, hunk → fonksiyon eşleme |
+| `llm` | Sağlayıcı adaptörleri (Ollama, Gemini, OpenAI, Anthropic), structured output, retry, cache |
+| `agents` | Analiz, Düzeltme, Test ajanları; prompt'lar; orkestratör (durum makinesi) |
+| `verify` | Patch uygulama, Docker sandbox, test koşturma, statü belirleme |
+| `github` | Olay yükü okuma, PR diff'i, yorum ve suggestion yayını, yorum güncelleme |
+| `telemetry` | Çalıştırma kayıtları (JSONL), maliyet hesabı |
 
 ---
 
-## 5. Teknoloji Yığını
+## 7. Teknoloji Yığını
 
-### 5.1 Ana Dil: **Python 3.12+**
+### 7.1 Ana Dil: **Python 3.12+**
 
-**Neden Python?** LLM SDK'ları, tokenizer'lar ve değerlendirme araçları en olgun halde Python'da; ekip prototipi hızlı çıkarabilir; hedef dillerden biri olduğu için kendi kodumuzu da (dogfooding) inceleyebiliriz.
+MSR araçları (PyDriller), ML (scikit-learn, LightGBM, SHAP), embedding ve LLM SDK'ları en olgun halleriyle Python'da bulunuyor. v1'in hedef dili de Python olduğu için aracı kendi deposunda kullanabiliyoruz (dogfooding).
 
-> Alternatif: **Go** (tek binary, hızlı başlangıç). Hook başlangıç süresi kritik hale gelirse v2'de CLI çekirdeği Go'ya taşınabilir. v1 için Python seçildi.
-
-### 5.2 Kütüphaneler
+### 7.2 Kütüphaneler
 
 | Alan | Teknoloji | Kullanım Amacı |
 | --- | --- | --- |
-| Paket/ortam yönetimi | **uv** | Bağımlılık yönetimi, sanal ortam, `uv tool install` ile dağıtım |
-| CLI | **Typer** | Komut tanımları, argüman ayrıştırma |
-| Terminal UI | **Rich** | Renkli tablolar, syntax highlight, spinner, etkileşimli prompt |
-| Veri modelleri | **Pydantic v2** | Bulgu modelleri, config doğrulama, JSON Schema üretimi |
-| Config | **tomllib** (stdlib) | `.aegis.toml` okuma |
-| Diff ayrıştırma | **unidiff** | Unified diff → PatchSet |
-| Git erişimi | **subprocess** (`git` CLI) | GitPython yerine doğrudan CLI: daha az bağımlılık, daha öngörülebilir |
-| Syntax/AST | **ast** (stdlib), **tree-sitter** + `tree-sitter-typescript` | Python ve TS syntax kontrolü, fonksiyon sınırı tespiti (akıllı chunking) |
-| Secret tespiti | Kendi regex kural seti + **Shannon entropisi**; referans: gitleaks / detect-secrets kural setleri | Token, anahtar, private key yakalama |
-| HTTP | **httpx** | Sağlayıcı API çağrıları, timeout, retry |
-| LLM SDK'ları | `openai`, `anthropic`, `google-genai`, `ollama` | Sağlayıcı adaptörleri (tek bir `LLMProvider` protokolü arkasında) |
-| Token sayımı | **tiktoken** (+ sağlayıcıya göre yaklaşık oran) | Bütçe hesaplama |
-| Retry | **tenacity** | Exponential backoff |
-| Cache | **diskcache** veya SQLite | Diff hash → LLM yanıtı |
-| Test | **pytest**, `pytest-cov`, `pytest-mock`, **syrupy** (snapshot) | Birim/entegrasyon testleri |
-| Kalite | **ruff** (lint+format), **mypy** (strict), **pre-commit** | Kod kalitesi |
-| CI | **GitHub Actions** | Test, lint, tip kontrolü (Windows + Ubuntu + macOS matrisi) |
-| Değerlendirme | **pandas**, **matplotlib** | Benchmark sonuç tabloları ve tez grafikleri |
-| Dokümantasyon | Markdown + **Mermaid** | Mimari diyagramlar |
+| Paket/ortam | **uv** | Bağımlılık yönetimi, dağıtım |
+| CLI / UI | **Typer**, **Rich** | Komutlar, terminal çıktısı |
+| Veri modelleri | **Pydantic v2** | Config, bulgu, hata kartı modelleri; JSON Schema üretimi |
+| Repo madenciliği | **PyDriller** | Commit gezinme, değişiklik metrikleri, SZZ (`get_commits_last_modified_lines`) |
+| Veri işleme | **pandas** / **polars**, **pyarrow** | Özellik tabloları, Parquet saklama |
+| ML | **scikit-learn**, **LightGBM**, **imbalanced-learn** | Gatekeeper modelleri, dengesizlik yönetimi |
+| Açıklanabilirlik | **SHAP** | Risk skorunun özellik katkıları |
+| Kod ayrıştırma | **ast** (stdlib); ileride **tree-sitter** | Fonksiyon sınırları, nitelikli adlar |
+| Diff | **unidiff** | Unified diff ayrıştırma |
+| Embedding | **sentence-transformers** + yerel kod embedding modeli | Hata kartı ve sorgu vektörleri |
+| Vektör DB | **LanceDB** | Gömülü vektör + tam metin (BM25) arama |
+| LLM SDK'ları | `openai`, `anthropic`, `google-genai`, `ollama` | Tek bir `LLMProvider` protokolü arkasında adaptörler |
+| HTTP / retry | **httpx**, **tenacity** | API çağrıları, backoff |
+| GitHub | **PyGithub** (veya httpx ile REST) | PR diff'i, review yorumları, suggestion |
+| Sandbox | **Docker** | Ağsız, kaynak sınırlı test koşumu |
+| Test | **pytest**, `pytest-cov`, `pytest-mock`, **syrupy** | Birim, entegrasyon, snapshot testleri |
+| Kalite | **ruff**, **mypy** (strict), **pre-commit** | Lint, format, tip kontrolü |
+| CI | **GitHub Actions** | CI + Aegis Action'ının kendisi |
+| Değerlendirme | **matplotlib**, **scipy** | Grafikler, istatistiksel testler (Wilcoxon, McNemar) |
 
-### 5.3 LLM Modelleri
+### 7.3 Modeller
 
-| Aşama | Model | Maliyet |
+| Kullanım | Model | Maliyet |
 | --- | --- | --- |
-| Yerel geliştirme | **Ollama** + `qwen2.5-coder:7b` veya `deepseek-coder:6.7b` | 0 TL |
-| Günlük geliştirme / entegrasyon | **Google AI Studio** — Gemini Flash ailesi (ücretsiz kota) | 0 TL |
-| Final benchmark ve jüri demosu | OpenAI `gpt-4o-mini` sınıfı, Anthropic Haiku sınıfı küçük modeller | ~5–10 $ |
+| Gatekeeper | LightGBM / RF / LR (CPU, saniyeler içinde) | 0 TL |
+| Embedding | Yerel kod embedding modeli (sentence-transformers) | 0 TL |
+| Geliştirme sırasında LLM | **Ollama** + `qwen2.5-coder:7b` sınıfı yerel model; Gemini Flash ücretsiz kota | 0 TL |
+| Final deneyler ve demo | Küçük/ucuz bulut modelleri (Gemini Flash, Claude Haiku, GPT mini sınıfı); ajan bazında seçilebilir | ~15–25 $ |
 
-> Model adları `.aegis.toml` içinde parametredir; kod hiçbir modele sabit bağlı değildir. Tezde en az **3 model** karşılaştırılacaktır (1 yerel + 2 bulut).
-
----
-
-## 6. Faz Faz Geliştirme Planı
-
-Toplam süre: **~14 hafta**. Her faz sonunda çalışan bir sürüm (`v0.x`) etiketlenir.
+> Model adları `.aegis.toml` içinde parametredir; kod hiçbir modele sabit bağlı değildir. Tezde en az **3 LLM** karşılaştırılacaktır (1 yerel + 2 bulut).
 
 ---
+
+## 8. Faz Faz Geliştirme Planı
+
+Toplam süre: **~14 hafta**. Her faz sonunda çalışan bir sürüm (`v0.x`) etiketlenir. Değerlendirme veri setleri **Faz 1'den itibaren paralel olarak** hazırlanır.
 
 ### Faz 0 — Hazırlık ve İskelet (1. hafta)
 
-**Amaç:** Herkesin aynı ortamda çalışabildiği, CI'ı yeşil boş bir proje.
-
-- [ ] Depo yapısı, `pyproject.toml`, `uv` ortamı
-- [ ] ruff, mypy, pytest, pre-commit kurulumu
-- [ ] GitHub Actions: lint + test (3 işletim sistemi)
-- [ ] Branch stratejisi (`main` korumalı, `feat/*` branch'leri, PR zorunlu)
-- [ ] Issue/PR şablonları, GitHub Projects panosu
+- [x] Depo yapısı, `pyproject.toml`, `uv` ortamı
+- [x] GitHub Actions CI, issue/PR şablonları
+- [x] `aegis --version` çalışıyor
+- [ ] mypy ve pre-commit kurulumu
+- [ ] Hedef repoların seçimi: geçmişi zengin ve test takımı olan 5–8 Python projesi (BugsInPy projeleriyle örtüşenler tercih edilir)
 - [ ] Ollama kurulumu ve Gemini API anahtarı (her ekip üyesi için)
-- [ ] `aegis --version` çalışıyor
 
-**Çıktı:** `v0.0.1` · **Kabul kriteri:** CI yeşil, `uv run aegis --help` çalışıyor.
+**Çıktı:** `v0.0.1`
 
----
+### Faz 1 — Repo Madenciliği ve Veri Hattı (2.–3. hafta) · Zorluk 5/10
 
-### Faz 1 — Git & CLI Entegrasyonu (2.–3. hafta) · Zorluk 3/10
+- [ ] `aegis mine`: PyDriller ile commit, dosya ve fonksiyon değişiklikleri → Parquet
+- [ ] Fix-commit sınıflandırıcı (mesaj kalıpları + issue etiketleri); 200 örneklik elle etiketlenmiş doğrulama seti
+- [ ] SZZ: boşluk/yorum filtreleme, merge ve büyük commit eleme
+- [ ] Kamei metrikleri
+- [ ] Artımlı madencilik
+- [ ] Seçilen repolarda ilk veri setlerinin çıkarılması
 
-**Amaç:** Hook kurulsun, push edilecek değişiklikler doğru şekilde çıkarılsın.
+**Testler:** Bilinen geçmişe sahip sentetik git depolarıyla SZZ ve metrik doğruluğu.
+**Çıktı:** `v0.1.0`. Etiketli commit veri seti hazır.
 
-- [ ] `aegis install` / `uninstall` (mevcut hook'u `pre-push.aegis-backup` olarak yedekle)
-- [ ] Hook script'i: POSIX sh, Windows Git Bash uyumlu, `aegis hook pre-push "$@"` çağırır
-- [ ] stdin'den ref satırlarını okuma; birden fazla ref push'u
-- [ ] Commit aralığı hesaplama: normal push, yeni branch, silinen branch (atla), force push
-- [ ] `git diff --no-color --unified=3 <base>..<head>` çıktısını `unidiff` ile modele dönüştürme
-- [ ] Rename, binary ve silinen dosyaların doğru işlenmesi
-- [ ] `aegis review --staged` ve `aegis review <range>` manuel komutları
-- [ ] Bypass: `--no-verify` (git yerleşik) ve `AEGIS_SKIP=1`
+### Faz 2 — ML Gatekeeper (4.–5. hafta) · Zorluk 6/10
 
-**Testler:** Geçici git depoları oluşturan pytest fixture'ları (`tmp_path` + gerçek `git`) ile her push senaryosu.
+- [ ] Zaman sıralı bölme ve etiket gecikmesi tamponu
+- [ ] LR, RF ve LightGBM; dengesizlik yöntemleri
+- [ ] Repo içi ve repolar arası (cross-project) değerlendirme
+- [ ] Kalibrasyon, bütçe tabanlı eşik seçimi, risk bantları
+- [ ] SHAP açıklamaları
+- [ ] `aegis train`, `aegis score <base>..<head>`
 
-**Çıktı:** `v0.1.0` — hook kuruluyor ve diff'i ekrana basıyor.
+**Deney:** RQ1'in ilk sonuçları. Bütçe–recall eğrisi.
+**Çıktı:** `v0.2.0`
 
----
+### Faz 3 — Bug-Fix Hafızası (6.–7. hafta) · Zorluk 6/10
 
-### Faz 2 — Ön Filtreleme & Statik Analiz (4.–5. hafta) · Zorluk 4/10
+- [ ] Hata kartı modeli ve oluşturucu
+- [ ] Fonksiyon düzeyinde parçalama (`ast`)
+- [ ] Embedding ve LanceDB indeksi
+- [ ] Hibrit arama (yapısal + BM25 + vektör, RRF)
+- [ ] Zamansal filtre
+- [ ] Getirme değerlendirmesi: Recall@k, MRR
+- [ ] `aegis index`, artımlı güncelleme
+- [ ] Hafıza sinyalinin gatekeeper'a özellik olarak eklenmesi
 
-**Amaç:** Ucuz, deterministik ve hızlı kontroller; kritik sızıntıda push'u **anında** kes.
+**Çıktı:** `v0.3.0`
 
-- [ ] Dosya filtreleri: binary tespiti, lock dosyaları, `*.min.js`, `dist/`, `build/`, `node_modules/`, üretilmiş dosya başlıkları (`// Code generated`, `@generated`)
-- [ ] `.aegisignore` (gitignore sözdizimi, `pathspec` kütüphanesi)
-- [ ] Boyut limiti (ör. tek dosyada > 1500 değişen satır → LLM'e gönderme, uyar)
-- [ ] **Secret Scanner:**
-  - [ ] Kural seti: AWS, GCP, Azure, GitHub, GitLab, Slack, Stripe, OpenAI/Anthropic anahtarları, JWT, private key blokları, `.env` atamaları, bağlantı dizeleri (DB URL içinde şifre)
-  - [ ] Shannon entropisi (base64 ve hex için ayrı eşik)
-  - [ ] Allowlist: test fixture'ları, `example`, `dummy`, `xxx` placeholder'ları; satır içi `# aegis:allow`
-  - [ ] Yalnızca **eklenen** satırlar taranır
-- [ ] **Syntax Checker:** Python için `ast.parse`, TS için tree-sitter hata düğümleri
-- [ ] Bulguların ortak `Finding` modeline dönüştürülmesi
-- [ ] Secret bulunan satırların maskelenmesi (`sk-****`)
+### Faz 4 — LLM Katmanı ve Analiz Ajanı (8.–9. hafta) · Zorluk 6/10
 
-**Testler:** Her kural için pozitif + negatif örnek; ~200 satırlık sentetik secret veri seti.
+- [ ] `LLMProvider` protokolü ve 4 adaptör; structured output; retry; cache
+- [ ] Analiz ajanı prompt'ları (versiyonlu: `prompts/v1/…`); "neleri raporlama" listesi; "bulgu yok" içeren few-shot örnekler
+- [ ] Hata kartlarının prompt'a eklenmesi ve atıf (`memory_refs`)
+- [ ] Kanıt ve satır doğrulama filtreleri
+- [ ] `aegis review --base main`: gatekeeper + hafıza + analiz yerelde uçtan uca
 
-**Çıktı:** `v0.2.0` — Aegis, LLM olmadan bile secret sızıntısını engelleyen kullanılabilir bir araç.
-
----
-
-### Faz 3 — LLM Entegrasyonu & Prompt Mühendisliği (6.–7. hafta) · Zorluk 5/10
-
-**Amaç:** Diff'i LLM'e gönder, şemaya uygun ve güvenilir bulgular al.
-
-- [ ] `LLMProvider` protokolü: `review(request) -> ReviewResponse`
-- [ ] Adaptörler: Ollama, Gemini, OpenAI, Anthropic
-- [ ] Structured Output: sağlayıcının yerel JSON Schema / tool-use desteği; desteklemeyenlerde (Ollama) `format=json` + Pydantic doğrulama
-- [ ] Geçersiz JSON → 1 kez "düzelt" retry → yine olmazsa fail-open
-- [ ] Timeout, exponential backoff (tenacity), rate-limit (429) yönetimi
-- [ ] Prompt tasarımı:
-  - [ ] Sistem prompt'u: rol, **neyi raporlamamalı** listesi (stil, isimlendirme, yorum eksikliği, "daha iyi olabilir" önerileri)
-  - [ ] Severity tanımları ve somut örnekler
-  - [ ] Dil bazlı ipuçları (Python: mutable default arg, bare except; TS: `any`, unhandled promise, `==`)
-  - [ ] 2–3 few-shot örnek (biri "bulgu yok" örneği — modelin her şeye hata bulma eğilimini kırmak için)
-- [ ] Context Builder: hunk + çevre satırlar + dosya yolu + dil
-- [ ] Prompt'ların versiyonlanması (`prompts/v1/…`) — benchmark'ta prompt versiyonları karşılaştırılacak
-- [ ] Diff hash tabanlı yanıt cache'i
-
-**Çıktı:** `v0.3.0` — küçük diff'lerde uçtan uca LLM incelemesi çalışıyor.
-
----
-
-### Faz 4 — Token Bütçeleme & Büyük Diff'ler (8.–9. hafta) · Zorluk 7/10
-
-**Amaç:** 40 dosyalık bir push'ta bile maliyeti ve süreyi kontrol altında tutmak.
-
-- [ ] Token sayacı (tiktoken + sağlayıcı bazlı düzeltme katsayısı)
-- [ ] Bütçe parametreleri: `max_input_tokens_per_request`, `max_total_tokens_per_push`, `max_requests_per_push`
-- [ ] **Dosya önceliklendirme skoru:**
-  - Kaynak kod > test > config > doküman
-  - Riskli yollar yüksek puan (`auth`, `payment`, `crypto`, `db`, `api`, `security`)
-  - Değişen satır sayısı (çok küçük ve çok büyük değişiklik düşük puan)
-  - Eklenen satır oranı (salt silmeler düşük puan)
-  - Riskli API kullanımı (`eval`, `exec`, `subprocess`, `innerHTML`, SQL string birleştirme)
-- [ ] **Chunking stratejileri:**
-  1. Dosya bazlı gruplama (bin-packing ile bütçeye sığdırma)
-  2. Büyük dosyalarda hunk bazlı bölme
-  3. tree-sitter ile fonksiyon/sınıf sınırına göre bölme (bir fonksiyonu ortadan kesmemek için)
-- [ ] Paralel chunk istekleri (`asyncio`, eşzamanlılık limiti)
-- [ ] Bütçe dışı kalan dosyaların kullanıcıya raporlanması ("12 dosya incelenmedi")
-- [ ] Bulgu birleştirme ve tekilleştirme (chunk'lar arası)
-
-**Deney:** Aynı büyük diff'te (a) kesme, (b) hunk chunking, (c) AST chunking — maliyet, süre ve bulgu kalitesi karşılaştırması. **Tezin ana deneylerinden biri.**
-
+**Deney:** RQ2. Hafızasız, yalnızca vektör ve hibrit hafıza karşılaştırması.
 **Çıktı:** `v0.4.0`
 
----
+### Faz 5 — Düzeltme ve Test Ajanları, Doğrulayıcı (10.–11. hafta) · Zorluk 8/10
 
-### Faz 5 — Yanlış Pozitif (False Positive) Azaltma (10.–11. hafta) · Zorluk 8/10
+**Projenin en riskli fazı.**
 
-**Amaç:** Aracı "her şeye itiraz eden" bir araç olmaktan çıkarmak. **Projenin en kritik fazı.**
+- [ ] Düzeltme ajanı (minimal unified diff)
+- [ ] Test ajanı (hatayı yeniden üreten pytest testi)
+- [ ] Docker sandbox: ağ kapalı, CPU/bellek/süre sınırlı
+- [ ] Doğrulayıcı: apply → lint → mevcut testler → üretilen test (önce/sonra) → statü
+- [ ] Geri besleme döngüsü (≤ 2 tekrar)
+- [ ] Orkestratör durum makinesi ve birim testleri
 
-- [ ] **Policy Engine:** varsayılan olarak yalnızca `critical` + `confidence ≥ 0.8` engeller; `high` uyarı verir, altı bilgi amaçlı (veya gizli)
-- [ ] **Kanıt doğrulama:** `evidence` diff'te birebir yoksa bulgu düşürülür
-- [ ] **Satır doğrulama:** bulgu satırı, değişen satırlara (veya ±N bağlamına) denk gelmiyorsa düşürülür — sadece değişen kod eleştirilir
-- [ ] **Kategori filtresi:** stil/isimlendirme gibi kategoriler hiçbir zaman engelleyici olamaz
-- [ ] **Self-consistency (opsiyonel):** kritik bulgular için ikinci, odaklı bir doğrulama çağrısı ("Bu bulgu gerçekten bir hata mı? Evet/Hayır + gerekçe"); yalnızca engelleme adayı bulgularda çalışır, maliyet sınırlı
-- [ ] **Ensemble (deneysel):** iki farklı modelin hemfikir olduğu kritik bulgular
-- [ ] Kullanıcı geri bildirimi: `aegis dismiss <id>`, `.aegis/feedback.jsonl`
-- [ ] Prompt iterasyonları — her iterasyon benchmark üzerinde precision/recall ile ölçülür
-
-**Deney:** Policy eşikleri ve doğrulama adımlarının precision/recall üzerindeki etkisi (ablation study).
-
+**Deney:** RQ3. BugsInPy alt kümesinde tek çağrı ile çok ajanlı + doğrulamalı zincirin karşılaştırması.
 **Çıktı:** `v0.5.0`
 
----
+### Faz 6 — GitHub Action ve Yayıncı (12. hafta) · Zorluk 5/10
 
-### Faz 6 — Kullanıcı Deneyimi & Sağlamlaştırma (12. hafta)
-
-- [ ] Rich ile bulgu tablosu, syntax-highlight edilmiş kod parçası, özet satırı
-- [ ] Etkileşimli seçim: `[A] Abort push` · `[I] Ignore and push anyway` · `[D] Show details`
-- [ ] TTY yoksa etkileşimsiz mod (`--ci` / `AEGIS_NONINTERACTIVE=1`)
-- [ ] `aegis stats`: toplam push, engellenen, atlanan, ortalama süre/maliyet
-- [ ] `aegis config init`: etkileşimli config oluşturucu
-- [ ] Hata durumlarında açıklayıcı mesajlar (ağ yok, anahtar yok, model yok)
-- [ ] Windows Git Bash ve PowerShell üzerinden uçtan uca test
-- [ ] Paketleme: `uv build`, PyPI (TestPyPI) yayını
-- [ ] Kullanıcı dokümantasyonu: kurulum, yapılandırma, SSS
+- [ ] `action.yml` (composite action): kurulum, cache'ten model ve indeksi alma, `aegis review --github`
+- [ ] Özet yorumu (oluştur/güncelle), satır yorumları, ` ```suggestion ` blokları
+- [ ] Suggestion aralığının diff hunk'ına sığma kontrolü; sığmayan patch'ler için yedek biçim
+- [ ] Fail-open, check run sonucu (`neutral` / `success`)
+- [ ] `main` merge'lerinde hafıza ve model güncelleme workflow'u
+- [ ] Demo reposu ve Aegis'in kendi deposunda kullanımı (dogfooding)
 
 **Çıktı:** `v1.0.0-rc`
 
----
+### Faz 7 — Değerlendirme (13. hafta)
 
-### Faz 7 — Değerlendirme & Benchmark (13. hafta)
-
-Ayrıntılar [Bölüm 7](#7-değerlendirme-ve-benchmark)'de.
-
-- [ ] Benchmark veri setinin tamamlanması ve etiketlenmesi
-- [ ] Tüm model × prompt × chunking kombinasyonlarının koşturulması
-- [ ] Sonuç tabloları ve grafikler (`eval/reports/`)
-- [ ] Ekip içi kullanım (dogfooding) verilerinin toplanması
+- [ ] Tüm deneylerin son konfigürasyonlarla koşturulması (`aegis eval`)
+- [ ] İstatistiksel testler, tablolar, grafikler (`eval/reports/`)
+- [ ] Patch'lerin elle doğruluk incelemesi (iki ekip üyesi, uyuşma oranı)
+- [ ] Dogfooding verileri: PR başına süre, maliyet, 👍/👎
 
 **Çıktı:** `v1.0.0` + değerlendirme raporu
 
----
+### Faz 8 — Tez Yazımı ve Jüri Demosu (14. hafta)
 
-### Faz 8 — Tez Yazımı & Jüri Demosu (14. hafta)
-
-- [ ] Tez metni: problem, ilgili çalışmalar (gitleaks, Semgrep, CodeRabbit vb. araçlarla karşılaştırma), mimari, deneyler, sonuçlar, kısıtlar
-- [ ] Demo senaryosu (canlı, ~5 dk):
-  1. Secret içeren push → LLM'e gitmeden anında engellenir
-  2. Temiz push → saniyeler içinde geçer
-  3. Kritik mantık hatası içeren push → engellenir, açıklama gösterilir
-  4. "Acil hotfix" → `Ignore and push` / `--no-verify`
-  5. Ollama ile tamamen çevrimdışı çalışma
-- [ ] Demo için kayıtlı yedek video (internet/API sorununa karşı)
-- [ ] Olası jüri soruları ve cevapları (`docs/jury-faq.md`)
-
----
+- [ ] Tez metni: problem, ilgili çalışmalar, mimari, RQ1–RQ4 sonuçları, geçerlilik tehditleri
+- [ ] Canlı demo senaryosu (~5 dk):
+  1. README typo PR'ı → gatekeeper "düşük risk" der, LLM çağrılmaz, 0 $
+  2. Orta riskli PR → yalnızca analiz yorumu
+  3. Geçmişte hata yaşanmış bir fonksiyonu bozan PR → hafıza geçmiş issue'yu hatırlatır, doğrulanmış suggestion çıkar, tek tıkla kabul edilir
+  4. Maliyet karşılaştırması: "Her PR'a LLM" ile "Aegis" arasındaki fark
+- [ ] Kayıtlı yedek video (internet veya API sorununa karşı)
+- [ ] `docs/jury-faq.md` güncellemesi
 
 ### Zaman Çizelgesi Özeti
 
@@ -417,120 +535,129 @@ Ayrıntılar [Bölüm 7](#7-değerlendirme-ve-benchmark)'de.
 gantt
     dateFormat  YYYY-MM-DD
     title Aegis Geliştirme Planı (14 hafta)
-    section Temel
-    Faz 0 Hazırlık            :f0, 2026-10-19, 7d
-    Faz 1 Git & CLI           :f1, after f0, 14d
-    Faz 2 Statik Analiz       :f2, after f1, 14d
-    section LLM
-    Faz 3 LLM Entegrasyonu    :f3, after f2, 14d
-    Faz 4 Token Bütçeleme     :f4, after f3, 14d
-    Faz 5 FP Azaltma          :f5, after f4, 14d
+    section Veri ve ML
+    Faz 0 Hazırlık              :f0, 2026-10-19, 7d
+    Faz 1 Repo Madenciliği      :f1, after f0, 14d
+    Faz 2 Gatekeeper            :f2, after f1, 14d
+    section Hafıza ve Ajanlar
+    Faz 3 Bug-Fix Hafızası      :f3, after f2, 14d
+    Faz 4 Analiz Ajanı          :f4, after f3, 14d
+    Faz 5 Düzeltme ve Test      :f5, after f4, 14d
     section Teslim
-    Faz 6 UX & Sağlamlaştırma :f6, after f5, 7d
-    Faz 7 Benchmark           :f7, after f6, 7d
-    Faz 8 Tez & Demo          :f8, after f7, 7d
+    Faz 6 GitHub Action         :f6, after f5, 7d
+    Faz 7 Değerlendirme         :f7, after f6, 7d
+    Faz 8 Tez ve Demo           :f8, after f7, 7d
 ```
 
-> Benchmark veri seti **Faz 2'den itibaren paralel olarak** büyütülür; Faz 7'ye bırakılmaz.
+> Faz 2 ve Faz 3 bağımsızdır (ikisi de yalnızca Faz 1 verisine ihtiyaç duyar). 3 kişilik ekipte paralel yürütülerek 2 hafta tampon kazanılabilir.
 
 ---
 
-## 7. Değerlendirme ve Benchmark
+## 9. Değerlendirme
 
-### 7.1 Veri Seti
+### 9.1 Veri Setleri
 
-| Kaynak | Açıklama | Hedef Boyut |
-| --- | --- | --- |
-| Sentetik secret seti | Gerçekçi ama sahte anahtarlar + yanıltıcı negatifler | ~300 örnek |
-| Enjekte edilmiş hatalar | Gerçek açık kaynak Python/TS projelerine elle eklenen bilinen hatalar (off-by-one, null check eksikliği, SQL injection, await unutma, kaynak sızıntısı vb.) | ~100 diff |
-| Gerçek düzeltme commit'leri | Açık kaynak projelerde "fix" commit'lerinin **öncesi** (hatalı hali) | ~50 diff |
-| Temiz diff'ler | Hatasız refactor/özellik commit'leri (FP ölçümü için **çok önemli**) | ~100 diff |
+| ID | Veri seti | Kaynak | Kullanıldığı RQ |
+| --- | --- | --- | --- |
+| D1 | **JIT veri seti:** 5–8 Python projesinin SZZ ile etiketlenmiş commit'leri | Bizim madenciliğimiz (Faz 1) | RQ1 |
+| D2 | **Tespit veri seti:** SZZ ile doğrulanmış bug-inducing commit'ler (sonradan düzeltilen satırlar = beklenen bulgu) ve aynı dönemden temiz commit'ler | D1'den türetilir, örneklem elle kontrol edilir | RQ2 |
+| D3 | **Onarım veri seti:** BugsInPy'deki hatalı/düzeltilmiş sürümler ve başarısız testler | BugsInPy | RQ3 |
+| D4 | **Uçtan uca:** demo reposu ve dogfooding PR'ları | Ekip | RQ4 |
 
-Her örnek `eval/dataset/<id>/` altında: `diff.patch`, `labels.json` (beklenen bulgular, dosya, satır, kategori, severity).
+### 9.2 Metrikler
 
-### 7.2 Metrikler
+| RQ | Metrikler |
+| --- | --- |
+| RQ1 | ROC-AUC, PR-AUC, F1, MCC; efor-duyarlı metrikler (Recall@%20 efor, P<sub>opt</sub>); **LLM'e gönderilen PR oranı – yakalanan hatalı PR oranı eğrisi** |
+| RQ2 | Satır düzeyinde precision/recall/F1 (bulgu, sonradan düzeltilen satırlarla örtüşüyor mu?), temiz commit'lerde yanlış alarm oranı, getirme Recall@k / MRR |
+| RQ3 | Uygulanabilir patch oranı, plausible oranı (testler geçiyor), doğru patch oranı (elle inceleme / geliştirici düzeltmesine anlamsal denklik), hatayı yeniden üreten test başarısı, ortalama tekrar sayısı |
+| RQ4 | PR başına token ve $, aşama bazında p50/p95 süre, PR başına yorum sayısı, 👍/👎 oranı |
 
-- **Precision / Recall / F1** — hem tüm bulgular hem yalnızca engelleyici bulgular için
-- **Engelleme FP oranı** — temiz diff'lerde push'un engellenme oranı (*en önemli UX metriği*)
-- **Gecikme** — p50 / p95, aşama bazında (statik, LLM, post-process)
-- **Maliyet** — push başına token ve $
-- **Şema uyum oranı** — ilk denemede geçerli JSON dönen yanıt yüzdesi
-
-### 7.3 Deney Matrisi
+### 9.3 Deney Matrisi (ablation)
 
 | Boyut | Varyantlar |
 | --- | --- |
-| Model | Qwen2.5-Coder 7B (yerel), Gemini Flash, gpt-4o-mini sınıfı, Haiku sınıfı |
-| Prompt | v1 (temel), v2 (+ negatif liste), v3 (+ few-shot) |
-| Chunking | truncate, hunk, AST |
-| FP katmanları | yok, evidence+satır doğrulama, + self-consistency |
+| Gatekeeper | yok (her PR'a LLM) · sezgisel (değişen satır sayısı) · LR · RF · LightGBM |
+| Hafıza | yok · yalnızca vektör · yalnızca yapısal · hibrit |
+| Patch hattı | tek çağrı · çok ajanlı · çok ajanlı + doğrulama + geri besleme |
+| LLM | 1 yerel + 2 bulut model |
 
-`aegis-eval` komutu ile tek komutta koşturulur, sonuçlar CSV + grafik olarak `eval/reports/` altına yazılır.
+### 9.4 Sızıntı ve Geçerlilik Önlemleri
+
+- **Zamansal sızıntı:** Model eğitimi ve hafıza getirme, değerlendirilen commit'in tarihinden önceki verilerle sınırlıdır.
+- **LLM eğitim verisi kirliliği:** Popüler açık kaynak hataların düzeltmeleri modelin eğitim verisinde bulunabilir. Bunun için modelin bilgi kesim tarihinden sonraki commit'lerden ayrı bir alt küme oluşturulur ve sonuçlar ayrıca raporlanır.
+- **SZZ gürültüsü:** Rastgele örneklenen SZZ etiketleri elle kontrol edilir ve hata oranı raporlanır.
+- **İstatistik:** Eşleştirilmiş karşılaştırmalarda Wilcoxon ve McNemar testleri; birden fazla tohum (seed) ile tekrar.
+
+`aegis eval <deney.toml>` ile tek komutta koşturulur. Sonuçlar CSV ve grafik olarak `eval/reports/` altına yazılır.
 
 ---
 
-## 8. Maliyet Planı
+## 10. Maliyet Planı
 
 | Dönem | Kaynak | Tahmini Maliyet |
 | --- | --- | --- |
-| Geliştirme (Faz 0–6) | Ollama (yerel) + Gemini ücretsiz kota | **0 TL** |
-| Benchmark (Faz 7) | Küçük bulut modelleri, ~250 diff × ~12 konfigürasyon | **~5–10 $** |
+| Geliştirme (Faz 0–6) | Ollama (yerel), Gemini ücretsiz kota, yerel embedding, CPU'da ML | **0 TL** |
+| Deneyler (Faz 7) | Küçük bulut modelleri × ablation matrisi. Gatekeeper'ın kendisi deney maliyetini de azaltır. | **~15–25 $** |
 | Demo | Küçük bulut modeli + Ollama yedeği | **< 1 $** |
+| CI | GitHub Actions (açık kaynak repolarda ücretsiz dakikalar) | **0 TL** |
 
-**Maliyet koruma önlemleri:** cache, token bütçesi, `max_requests_per_push`, sağlayıcı panelinde harcama limiti, benchmark'ta önce küçük alt kümede "kuru koşu" (dry run).
+**Koruma önlemleri:** yanıt cache'i, PR başına token ve istek sınırı, sağlayıcı panelinde harcama limiti, deneylerde önce küçük alt kümede kuru koşu (dry run).
 
 ---
 
-## 9. Riskler ve Önlemler
+## 11. Riskler ve Önlemler
 
 | Risk | Olasılık | Etki | Önlem |
 | --- | --- | --- | --- |
-| Kapsam kayması (scope creep) | Yüksek | Yüksek | v1 kapsamı sabit; yeni fikirler `docs/ideas.md`'ye |
-| Yüksek yanlış pozitif oranı | Yüksek | Yüksek | Faz 5, katı policy, evidence doğrulama, temiz diff benchmark'ı |
-| Büyük diff'lerde maliyet/süre patlaması | Orta | Yüksek | Faz 4 bütçeleme, önceliklendirme, cache |
-| Kod gizliliği endişesi | Orta | Orta | Ollama ile tam yerel mod, secret maskeleme |
-| Ücretsiz kotanın kesilmesi/değişmesi | Orta | Orta | Sağlayıcıdan bağımsız mimari; Ollama her zaman yedek |
-| Yerel modelin yetersiz kalması | Orta | Orta | Tezde bulgu olarak raporlanır; bulut modelle karşılaştırılır |
-| Windows uyumluluk sorunları | Orta | Orta | CI'da Windows matrisi, hook'un POSIX sh ile yazılması |
-| LLM'in geçersiz JSON üretmesi | Orta | Düşük | Structured output, retry, fail-open |
-| Aracın kendisinin push'u kilitlemesi | Düşük | Yüksek | Fail-open prensibi, timeout, `--no-verify` |
+| Kapsam kayması (üç katman, üç ayrı proje kadar iş) | Yüksek | Yüksek | Her faz tek başına sunulabilir bir çıktı üretir; ideas.md disiplini; Faz 5 gecikirse `plausible` düzeyinde durulur |
+| SZZ etiketlerinin gürültülü olması | Yüksek | Orta | Filtreler, elle örneklem kontrolü, geçerlilik tehdidi olarak raporlama |
+| Gatekeeper'ın hatalı PR'ı kaçırması | Orta | Yüksek | Bütçe–recall eğrisiyle bilinçli eşik seçimi; `aegis:force` etiketi; düşük bantta da özet yorumu |
+| Python projelerinde test ortamını kurmanın zorluğu | Yüksek | Yüksek | BugsInPy'nin hazır ortamları; v1'de kurulumu bilinen repolar; başarısızlıkta `unverified` statüsü |
+| LLM'in yanlış veya zararlı patch üretmesi | Orta | Yüksek | Doğrulanmayan patch suggestion olarak yayınlanmaz; hiçbir şey otomatik merge edilmez |
+| Fork PR'larında güvenlik (gizli anahtar sızması) | Orta | Yüksek | `pull_request_target` yok; sandbox'ta ağ ve anahtar yok; fork PR'larında yalnızca gatekeeper + yerel model |
+| Soğuk başlangıç (geçmişi az repo) | Orta | Orta | Repolar arası genel model; hafıza boşsa yalnızca analiz |
+| LLM eğitim verisi kirliliği | Orta | Orta | Model bilgi kesim tarihi sonrası alt küme; ayrı raporlama |
+| Ücretsiz kotaların değişmesi | Orta | Orta | Sağlayıcıdan bağımsız mimari; Ollama her zaman yedek |
 | Demo günü internet/API sorunu | Düşük | Yüksek | Ollama ile çevrimdışı demo + kayıtlı video |
 
 ---
 
-## 10. Dizin Yapısı
+## 12. Dizin Yapısı
 
 ```
 Aegis/
 ├── README.md
 ├── pyproject.toml
-├── uv.lock
+├── action.yml                 # GitHub Action tanımı (Faz 6)
 ├── .aegis.toml.example
 ├── .github/
 │   ├── workflows/ci.yml
 │   ├── ISSUE_TEMPLATE/
 │   └── pull_request_template.md
 ├── src/aegis/
-│   ├── __init__.py
 │   ├── cli.py
 │   ├── config.py
-│   ├── models.py              # Finding, ReviewRequest, ReviewResponse
-│   ├── git/
-│   │   ├── hook.py            # install / uninstall / hook entry
-│   │   └── diff.py            # aralık hesaplama + git diff
-│   ├── filters/
-│   │   └── files.py
-│   ├── static/
-│   │   ├── base.py            # Analyzer protocol
-│   │   ├── secrets.py
-│   │   ├── secret_rules.toml
-│   │   └── syntax.py
-│   ├── context/
-│   │   └── builder.py
-│   ├── budget/
-│   │   ├── tokens.py
-│   │   ├── priority.py
-│   │   └── chunker.py
+│   ├── models.py              # Finding, BugCard, RiskScore, Patch, Verdict
+│   ├── mining/
+│   │   ├── miner.py           # PyDriller tarayıcı
+│   │   ├── fixes.py           # fix-commit tespiti
+│   │   └── szz.py
+│   ├── features/
+│   │   ├── kamei.py
+│   │   └── extra.py
+│   ├── gatekeeper/
+│   │   ├── train.py
+│   │   ├── score.py
+│   │   └── explain.py         # SHAP
+│   ├── memory/
+│   │   ├── cards.py
+│   │   ├── chunker.py
+│   │   ├── embed.py
+│   │   └── retrieve.py        # hibrit + RRF + zamansal filtre
+│   ├── diff/
+│   │   ├── parse.py
+│   │   └── filters.py
 │   ├── llm/
 │   │   ├── base.py            # LLMProvider protocol
 │   │   ├── ollama.py
@@ -538,24 +665,27 @@ Aegis/
 │   │   ├── openai.py
 │   │   ├── anthropic.py
 │   │   └── cache.py
-│   ├── prompts/
-│   │   ├── v1/system.md
-│   │   └── schema.py
-│   ├── postprocess/
-│   │   └── validators.py
-│   ├── policy/
-│   │   └── engine.py
-│   ├── ui/
-│   │   └── terminal.py
+│   ├── agents/
+│   │   ├── analyst.py
+│   │   ├── fixer.py
+│   │   ├── tester.py
+│   │   ├── orchestrator.py    # durum makinesi
+│   │   └── prompts/v1/
+│   ├── verify/
+│   │   ├── sandbox.py         # Docker
+│   │   └── verifier.py
+│   ├── github/
+│   │   ├── event.py
+│   │   └── publisher.py       # özet yorumu, suggestion
 │   └── telemetry/
-│       └── history.py
+│       └── runs.py
 ├── tests/
 │   ├── unit/
-│   ├── integration/           # geçici git depolarıyla uçtan uca
+│   ├── integration/           # geçici git depoları, mock LLM/GitHub
 │   └── fixtures/
 ├── eval/
-│   ├── dataset/
-│   ├── runner.py
+│   ├── datasets/              # D1–D4
+│   ├── experiments/           # deney.toml dosyaları
 │   └── reports/
 └── docs/
     ├── architecture.md
@@ -565,48 +695,45 @@ Aegis/
 
 ---
 
-## 11. Yapılandırma Örneği
+## 13. Yapılandırma Örneği
 
-`.aegis.toml`:
+Tam örnek: [`.aegis.toml.example`](.aegis.toml.example)
 
 ```toml
-[llm]
-provider = "ollama"              # ollama | gemini | openai | anthropic
+[gatekeeper]
+model_path = ".aegis/model.lgbm"
+low_threshold = 0.30             # altı: LLM yok
+high_threshold = 0.70            # üstü: tam zincir (patch + test)
+# veya eşikler yerine bütçe:
+# max_llm_pr_ratio = 0.4
+
+[memory]
+index_path = ".aegis/memory"
+embedding_model = "local"        # local | openai | ...
+top_k = 3
+
+[agents.analyst]
+provider = "ollama"
 model = "qwen2.5-coder:7b"
-timeout_seconds = 30
-temperature = 0.0
-# API anahtarları buraya YAZILMAZ — ortam değişkeni:
-# GEMINI_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY
 
-[budget]
-max_input_tokens_per_request = 8000
-max_total_tokens_per_push = 40000
-max_requests_per_push = 6
-chunking = "ast"                 # truncate | hunk | ast
+[agents.fixer]
+provider = "ollama"
+model = "qwen2.5-coder:7b"
+max_retries = 2
 
-[policy]
-block_on_severity = "critical"
-min_confidence = 0.8
-verify_blocking_findings = true  # self-consistency doğrulaması
-fail_open = true
-
-[filters]
-max_changed_lines_per_file = 1500
-languages = ["python", "typescript"]
-
-[secrets]
-enabled = true
-entropy_threshold_base64 = 4.5
-entropy_threshold_hex = 3.0
+[verify]
+sandbox = "docker"
+timeout_seconds = 300
+network = false
 ```
 
 ---
 
-## 12. Ekip ve Çalışma Düzeni
+## 14. Ekip ve Çalışma Düzeni
 
 - **Branch stratejisi:** `main` korumalı; her iş `feat/<kısa-ad>` veya `fix/<kısa-ad>` branch'inde; PR + en az 1 onay.
-- **Commit mesajları:** Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`).
-- **Dogfooding:** Faz 2'den itibaren Aegis, kendi deposunda pre-push hook olarak çalıştırılır.
+- **Commit mesajları:** Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`). Bu, Aegis'in kendi fix-commit tespitini de kolaylaştırır.
+- **Dogfooding:** Faz 4'ten itibaren Aegis kendi PR'larımızda çalışır.
 - **Haftalık:** Kısa ilerleme toplantısı + GitHub Projects panosunun güncellenmesi.
 - **Tanım (Definition of Done):** Kod + test + tip kontrolü + dokümantasyon + CI yeşil.
 
@@ -614,9 +741,25 @@ entropy_threshold_hex = 3.0
 
 | Üye | Ana Sorumluluk |
 | --- | --- |
-| Üye 1 | Git/CLI entegrasyonu, UI, paketleme (Faz 1, 6) |
-| Üye 2 | Statik analiz, secret scanner, token bütçeleme (Faz 2, 4) |
-| Üye 3 | LLM adaptörleri, prompt mühendisliği, FP azaltma, benchmark (Faz 3, 5, 7) |
+| Üye 1 | Repo madenciliği, SZZ, özellikler, gatekeeper (Faz 1, 2) · RQ1 |
+| Üye 2 | Bug-fix hafızası, GitHub Action ve yayıncı (Faz 3, 6) · RQ2'nin getirme kısmı |
+| Üye 3 | LLM katmanı, ajanlar, sandbox ve doğrulayıcı (Faz 4, 5) · RQ2, RQ3 |
+
+Değerlendirme (Faz 7) ve tez yazımı (Faz 8) ortaktır.
+
+---
+
+## 15. Kaynakça
+
+> Başlangıç listesidir; künyeler tez yazımında doğrulanıp genişletilecektir.
+
+- Śliwerski, Zimmermann, Zeller — *When do changes induce fixes?* (MSR 2005). SZZ algoritması.
+- Kamei vd. — *A Large-Scale Empirical Study of Just-in-Time Quality Assurance* (IEEE TSE 2013). JIT metrikleri.
+- Spadini, Aniche, Bacchelli — *PyDriller: Python Framework for Mining Software Repositories* (ESEC/FSE 2018).
+- Hoang vd. — *DeepJIT: An End-to-End Deep Learning Framework for Just-in-Time Defect Prediction* (MSR 2019).
+- Pornprasit, Tantithamthavorn — *JITLine: A Simpler, Better, Faster, Finer-grained Just-In-Time Defect Prediction* (MSR 2021).
+- Widyasari vd. — *BugsInPy: A Database of Existing Bugs in Python Programs to Enable Controlled Testing and Debugging Studies* (ESEC/FSE 2020).
+- Lewis vd. — *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks* (NeurIPS 2020).
 
 ---
 

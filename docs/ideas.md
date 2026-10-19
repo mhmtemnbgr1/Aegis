@@ -4,9 +4,14 @@
 
 | Fikir | Neden şimdi değil? | Önerildiği tarih |
 | --- | --- | --- |
-| Go, Java, Rust desteği | v1 yalnızca Python + TypeScript | 2026-10-18 |
-| VS Code eklentisi | CLI çekirdeği önce olgunlaşmalı | 2026-10-18 |
-| GitHub App / server-side hook | Farklı dağıtım modeli, ayrı proje kadar iş | 2026-10-18 |
-| Otomatik düzeltme (auto-fix) önerisi uygulama | Yanlış pozitif riskini büyütür | 2026-10-18 |
-| Depo genelinde RAG ile bağlam | Maliyet ve karmaşıklık | 2026-10-18 |
-| CLI çekirdeğini Go'ya taşıma | Başlangıç süresi sorun olursa v2'de | 2026-10-18 |
+| TypeScript/JavaScript desteği (patch + test) | v1'de yalnızca Python; test sandbox'ı dil başına ayrı iş | 2026-10-18 |
+| Go, Java, Rust desteği | Aynı gerekçe | 2026-10-18 |
+| Pre-push hook modu | PR botuna geçildi; test koşumu ve hafıza güncellemesi push anında pratik değil | 2026-10-19 |
+| VS Code eklentisi | Çekirdek önce olgunlaşmalı | 2026-10-18 |
+| GitHub App (sunucu tarafı) | Barındırma gerektirir; v1'de Action yeterli | 2026-10-18 |
+| GitLab / Bitbucket desteği | Farklı API ve suggestion biçimi | 2026-10-19 |
+| Refactoring-aware SZZ (RA-SZZ benzeri) | Mevcut uygulamalar Java odaklı; v1'de filtreli B-SZZ | 2026-10-19 |
+| Derin öğrenme tabanlı JIT modelleri (DeepJIT, CC2Vec) | Klasik modeller açıklanabilir ve yeterli; karşılaştırma olarak v2'de | 2026-10-19 |
+| Embedding / LLM fine-tuning | Maliyet ve veri gereksinimi | 2026-10-19 |
+| Geliştirici 👍/👎 geri bildirimiyle gatekeeper'ı yeniden eğitme | Veri birikmesi zaman alır | 2026-10-19 |
+| CLI çekirdeğini Go'ya taşıma | Başlangıç süresi PR botunda kritik değil | 2026-10-18 |

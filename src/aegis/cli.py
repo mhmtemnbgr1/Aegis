@@ -5,8 +5,14 @@ from rich.console import Console
 
 from aegis import __version__
 
-app = typer.Typer(help="LLM destekli pre-push kod inceleme aracı.", no_args_is_help=True)
+app = typer.Typer(
+    help="Risk odaklı, hafızalı ve çok ajanlı PR inceleme sistemi.", no_args_is_help=True
+)
 console = Console()
+
+
+def _not_implemented(phase: str) -> None:
+    console.print(f"[yellow]Henüz uygulanmadı — {phase}.[/yellow]")
 
 
 def _version_callback(value: bool) -> None:
@@ -26,12 +32,36 @@ def main(
 
 
 @app.command()
-def install() -> None:
-    """Mevcut depoya pre-push hook'unu kurar. (Faz 1)"""
-    console.print("[yellow]Henüz uygulanmadı — Faz 1.[/yellow]")
+def mine() -> None:
+    """Repo geçmişini tarar, fix commit'lerini ve SZZ eşlemelerini çıkarır. (Faz 1)"""
+    _not_implemented("Faz 1")
+
+
+@app.command()
+def train() -> None:
+    """Gatekeeper risk modelini eğitir. (Faz 2)"""
+    _not_implemented("Faz 2")
+
+
+@app.command()
+def score() -> None:
+    """Bir commit aralığı için risk skoru hesaplar. (Faz 2)"""
+    _not_implemented("Faz 2")
+
+
+@app.command()
+def index() -> None:
+    """Bug-fix hafızasını (hata kartları) oluşturur veya günceller. (Faz 3)"""
+    _not_implemented("Faz 3")
 
 
 @app.command()
 def review() -> None:
-    """Hook olmadan manuel inceleme yapar. (Faz 1)"""
-    console.print("[yellow]Henüz uygulanmadı — Faz 1.[/yellow]")
+    """Gatekeeper + hafıza + ajan hattını çalıştırır. (Faz 4–6)"""
+    _not_implemented("Faz 4")
+
+
+@app.command(name="eval")
+def eval_() -> None:
+    """Değerlendirme deneylerini koşturur. (Faz 7)"""
+    _not_implemented("Faz 7")

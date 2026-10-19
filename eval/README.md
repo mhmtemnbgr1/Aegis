@@ -1,23 +1,38 @@
-# Değerlendirme (Benchmark)
+# Değerlendirme
 
-Her örnek `dataset/<id>/` altında tutulur:
+Ayrıntılar için ana README'deki [Değerlendirme](../README.md#9-değerlendirme) bölümüne bakın.
 
 ```
-dataset/<id>/
+eval/
+├── datasets/
+│   ├── d1-jit/          # SZZ ile etiketlenmiş commit özellikleri (Parquet)
+│   ├── d2-detection/    # bug-inducing + temiz commit diff'leri ve beklenen satırlar
+│   ├── d3-repair/       # BugsInPy alt kümesi tanımları
+│   └── d4-e2e/          # demo ve dogfooding PR kayıtları
+├── experiments/         # deney.toml dosyaları (aegis eval <dosya>)
+└── reports/             # CSV + grafikler (git'e eklenmez)
+```
+
+D2 örnek formatı (`datasets/d2-detection/<id>/`):
+
+```
+<id>/
 ├── diff.patch     # incelenecek değişiklik
 └── labels.json    # beklenen bulgular
 ```
 
-`labels.json` formatı:
-
 ```json
 {
-  "source": "injected | real-fix | synthetic-secret | clean",
+  "source": "szz-inducing | clean",
+  "repo": "owner/name",
+  "commit": "9f8e7d6",
+  "commit_date": "2025-11-02T09:15:00Z",
+  "fix_commit": "a1b2c3d",
   "language": "python",
   "expected": [
-    { "file": "app/db.py", "line": 42, "category": "security", "severity": "critical" }
+    { "file": "app/db/pool.py", "lines": [42, 43], "category": "resource-leak" }
   ]
 }
 ```
 
-Sonuçlar `reports/` altına CSV ve grafik olarak yazılır (git'e eklenmez).
+`commit_date`, hafıza getirmede zamansal filtre için zorunludur. Bu tarihten sonra oluşmuş hata kartları kullanılamaz.
