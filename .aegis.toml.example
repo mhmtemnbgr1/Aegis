@@ -21,6 +21,16 @@ high_threshold = 0.70            # üstü: tam zincir (analiz + patch + test)
 # max_llm_pr_ratio = 0.4
 explain = true                   # SHAP açıklaması
 
+[gatekeeper.heuristic]
+# Skor = ağırlıklı ortalama(boyut, riskli yol, riskli API); her bileşen 0–1 arası.
+size_weight = 0.4
+path_weight = 0.3
+api_weight = 0.3
+size_saturation = 400            # bu kadar değişen satırda boyut bileşeni 1 olur
+api_saturation = 2               # bu kadar riskli API kullanımında API bileşeni 1 olur
+# risky_paths = ["auth", "db", "payment", ...]       # yol kelimeleri (varsayılan listeyi değiştirir)
+# risky_apis = ['\beval\(', '\bsubprocess\.', ...]   # eklenen satırlarda aranan regex'ler
+
 [memory]
 index_path = ".aegis/memory"
 embedding_model = "local"        # local | openai

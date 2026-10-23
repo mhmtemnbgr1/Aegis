@@ -31,7 +31,7 @@ Faz 1–4 ve Faz 6 kesilmez.
 Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → PR yorumu.
 
 - [x] Diff ayrıştırma ve ön filtre (binary, lock, üretilmiş dosyalar)
-- [ ] Sezgisel gatekeeper (değişen satır + riskli yol/API); deneylerde taban çizgisi olarak da kullanılır
+- [x] Sezgisel gatekeeper (değişen satır + riskli yol/API); deneylerde taban çizgisi olarak da kullanılır
 - [ ] `LLMProvider` protokolü ve 4 sağlayıcı adaptörü
 - [ ] Structured output, retry ve yanıt cache'i
 - [ ] Analiz ajanı prompt'ları (versiyonlu)
