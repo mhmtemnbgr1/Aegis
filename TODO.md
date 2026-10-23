@@ -35,7 +35,7 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [x] `LLMProvider` protokolü ve 4 sağlayıcı adaptörü
 - [x] Structured output, retry ve yanıt cache'i
 - [ ] Analiz ajanı prompt'ları (versiyonlu)
-- [ ] Kanıt ve satır doğrulama filtreleri
+- [x] Kanıt ve satır doğrulama filtreleri
 - [ ] Prompt injection önlemleri ve saldırı testleri
 - [ ] `aegis review --base main`
 - [ ] `action.yml` (composite action)
