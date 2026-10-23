@@ -33,7 +33,10 @@ INJECTION_PATTERNS = [
         r"\bthis (code|change|function|pr) is (safe|secure|correct)\b",
         r"\b(suggest|apply|use) (the following|this) patch\b",
         r"\bAI (reviewer|assistant|model)\b",
-        r"</?\s*(pr_diff|pr_metadata)\b",
+        # Veri bloğundan kaçış için kapatan ayraç gerekir; ayracın adının geçmesi tek başına
+        # (ör. bir commit mesajında `<pr_diff>`) talimat değildir. Her iki biçim de prompt'a
+        # girmeden etkisizleştirilir.
+        r"</\s*(pr_diff|pr_metadata)\b",
         # Türkçe kalıplar
         r"\b(önceki|yukarıdaki|tüm)\b.{0,20}\btalimat\w*\b.{0,20}\b(yok say|unut|görmezden gel)",
         r"\bbulgu\w* (raporlama|bildirme|yazma)\b",

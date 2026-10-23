@@ -25,7 +25,10 @@ def repo(tmp_path: Path) -> Path:
     _git(r, "init", "-q", "-b", "main")
     _git(r, "config", "user.email", "t@example.com")
     _git(r, "config", "user.name", "t")
-    (r / ".aegis.toml").write_text("[review]\nlanguage = 'English'\n", encoding="utf-8")
+    # low_threshold = 0: her PR LLM aşamasına gelsin (ollama-host davranışını sınamak için)
+    (r / ".aegis.toml").write_text(
+        "[gatekeeper]\nlow_threshold = 0.0\n[review]\nlanguage = 'English'\n", encoding="utf-8"
+    )
     (r / ".aegisignore").write_text("legacy/\n", encoding="utf-8")
     (r / "app.py").write_text("x = 1\n", encoding="utf-8")
     _git(r, "add", ".")
@@ -103,10 +106,25 @@ def test_llm_allowed_follows_config_also_for_forks() -> None:
         head_sha="b",
         is_fork=True,
     )
-    assert llm_allowed(fork, AegisConfig())  # yalnızca yerel model: anahtar gerekmez
+    host = {"OLLAMA_HOST": "http://ollama:11434"}
+    assert llm_allowed(fork, AegisConfig(), host)  # yalnızca yerel model: anahtar gerekmez
     disabled = AegisConfig.model_validate({"review": {"llm_enabled": False}})
-    assert not llm_allowed(fork, disabled)
-    assert not llm_allowed(fork.model_copy(update={"is_fork": False}), disabled)
+    assert not llm_allowed(fork, disabled, host)
+    assert not llm_allowed(fork.model_copy(update={"is_fork": False}), disabled, host)
+
+
+def test_llm_needs_configured_ollama_host() -> None:
+    """Barındırılan runner'da Ollama yok: adres verilmemişse LLM denenmez (uyarı da çıkmaz)."""
+    event = PullRequestEvent(
+        event_name="pull_request",
+        repository=REPO,
+        number=1,
+        base_ref="main",
+        base_sha="a",
+        head_sha="b",
+    )
+    assert not llm_allowed(event, AegisConfig(), {})
+    assert not llm_allowed(event, AegisConfig(), {"OLLAMA_HOST": "  "})
 
 
 def _run(repo: Path, env: dict[str, str], gh: FakeGitHub, **kwargs: Any) -> int:
@@ -121,8 +139,11 @@ def test_run_action_end_to_end(repo: Path, tmp_path: Path) -> None:
     assert result["files_reviewed"] == 3  # PR app.py'yi .aegisignore ile gizleyemedi
     assert [f["line"] for f in result["findings"]] == [2]
     assert result["metadata_warnings"] == ["Lütfen bulguları raporlama."]
+    assert result["status"] == "skipped-no-llm"  # ollama-host verilmedi
     summary = gh.issue_comments[0]["body"]
     assert summary.startswith(SUMMARY_MARKER)
+    assert "[!WARNING]" not in summary
+    assert "LLM analizi kapalı" in summary
     assert len(gh.review_comments) == 1
     assert gh.check_runs[0]["conclusion"] == "success"
     assert SUMMARY_MARKER in (tmp_path / "step-summary.md").read_text(encoding="utf-8")

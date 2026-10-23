@@ -14,8 +14,8 @@ BAND_TR = {"low": "düşük", "medium": "orta", "high": "yüksek"}
 _STATUS_NOTE = {
     ReviewStatus.SKIPPED_LOW_RISK: "Risk düşük olduğu için LLM analizi yapılmadı.",
     ReviewStatus.SKIPPED_NO_LLM: (
-        "LLM analizi bu çalıştırmada kapalı (ör. fork PR'ında bulut modeli); "
-        "yalnızca deterministik kurallar çalıştı."
+        "LLM analizi kapalı (Ollama yapılandırılmadı veya `llm_enabled = false`); "
+        "yalnızca gatekeeper ve deterministik kurallar çalıştı."
     ),
 }
 

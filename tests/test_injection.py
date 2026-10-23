@@ -159,6 +159,7 @@ def test_benign_code_not_flagged() -> None:
         "instructions = load_instructions(path)",
         "if user.is_safe():",
         "- prompts/v1: system prompt with categories, severity definitions,",
+        "- Neutralize forged <pr_diff>/<pr_metadata> delimiters in PR content",
         "SYSTEM_PROMPT_PATH = 'prompts/v1/system.md'",
     ]
     for line in benign:

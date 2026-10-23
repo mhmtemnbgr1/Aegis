@@ -17,7 +17,7 @@ inputs:
     description: Python sürümü.
     default: "3.12"
   ollama-host:
-    description: Ollama sunucu adresi (ör. self-hosted runner'da http://localhost:11434).
+    description: Ollama sunucu adresi (ör. self-hosted runner'da http://localhost:11434). Boşsa LLM analizi yapılmaz.
     default: ""
   upload-runs:
     description: Çalıştırma metriklerini (runs.jsonl) artifact olarak yükle.

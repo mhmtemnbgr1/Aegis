@@ -47,9 +47,14 @@ def base_ignore(event: PullRequestEvent, repo: Path) -> GitIgnoreSpec:
     return GitIgnoreSpec.from_lines(text.splitlines())
 
 
-def llm_allowed(event: PullRequestEvent, config: AegisConfig) -> bool:
-    """Analiz ajanı yalnızca yerel modeli (Ollama) kullanır; fork PR'larında da çalışabilir."""
-    return config.review.llm_enabled
+def llm_allowed(event: PullRequestEvent, config: AegisConfig, env: Mapping[str, str]) -> bool:
+    """Analiz ajanı yalnızca yerel modeli (Ollama) kullanır; fork PR'larında da çalışabilir.
+
+    GitHub'ın barındırılan runner'larında Ollama yoktur. Action'a `ollama-host` verilmemişse
+    LLM "erişilemez" (araç hatası) değil "yapılandırılmamış" sayılır ve inceleme uyarısız,
+    yalnızca kurallarla sürer.
+    """
+    return config.review.llm_enabled and bool(env.get("OLLAMA_HOST", "").strip())
 
 
 def _error_result(error: str) -> ReviewResult:
@@ -101,7 +106,7 @@ def run_action(
                 config,
                 ignore=base_ignore(event, repo),
                 metadata=f"{event.metadata}\n\n{commits}".strip(),
-                llm_enabled=llm_allowed(event, config),
+                llm_enabled=llm_allowed(event, config, env),
                 cache=ResponseCache(repo / config.review.cache_dir),
             )
         append_run(
