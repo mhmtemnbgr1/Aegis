@@ -9,6 +9,8 @@ dependencies = [
     "typer>=0.12",
     "rich>=13.7",
     "pydantic>=2.7",
+    "unidiff>=1.0.1",
+    "pathspec>=1.1.1",
 ]
 
 [project.scripts]
