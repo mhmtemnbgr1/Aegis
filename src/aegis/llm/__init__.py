@@ -1,42 +1,26 @@
-"""LLM sağlayıcıları: tek protokol, dört adaptör (FR-37)."""
+"""LLM sağlayıcıları: tek protokol; yerel Ollama adaptörü ve testler için Mock (FR-37)."""
 
 from aegis.config import AgentConfig
 from aegis.llm.base import LLMError, LLMProvider, LLMRequest, LLMResponse, Usage
 from aegis.llm.cache import ResponseCache
-from aegis.llm.providers import (
-    AnthropicProvider,
-    GeminiProvider,
-    MockProvider,
-    OllamaProvider,
-    OpenAIProvider,
-)
+from aegis.llm.providers import MockProvider, OllamaProvider
 from aegis.llm.structured import SchemaStats, StructuredLLM, StructuredResult
 
 
 def create_provider(config: AgentConfig) -> LLMProvider:
     """Ajan ayarından sağlayıcı oluşturur."""
-    timeout = config.timeout_seconds
-    match config.provider:
-        case "ollama":
-            return OllamaProvider(config.model, temperature=config.temperature, timeout=timeout)
-        case "gemini":
-            return GeminiProvider(config.model, temperature=config.temperature, timeout=timeout)
-        case "openai":
-            return OpenAIProvider(config.model, temperature=config.temperature, timeout=timeout)
-        case "anthropic":
-            return AnthropicProvider(config.model, effort=config.effort, timeout=timeout)
+    return OllamaProvider(
+        config.model, temperature=config.temperature, timeout=config.timeout_seconds
+    )
 
 
 __all__ = [
-    "AnthropicProvider",
-    "GeminiProvider",
     "LLMError",
     "LLMProvider",
     "LLMRequest",
     "LLMResponse",
     "MockProvider",
     "OllamaProvider",
-    "OpenAIProvider",
     "ResponseCache",
     "SchemaStats",
     "StructuredLLM",

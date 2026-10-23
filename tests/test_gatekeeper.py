@@ -45,7 +45,7 @@ def test_band_for(score: float, band: RiskBand) -> None:
 def test_small_harmless_change_is_low() -> None:
     score, band = _assess(_file("app/utils.py", ["x = 1"] * 5))
     assert band is RiskBand.LOW
-    assert score == pytest.approx(0.4 * 5 / 400)
+    assert score == pytest.approx(0.5 * 5 / 400, abs=1e-4)
 
 
 def test_large_change_is_medium() -> None:
@@ -53,56 +53,32 @@ def test_large_change_is_medium() -> None:
     assert band is RiskBand.MEDIUM
 
 
-def test_risky_path_and_api_is_high() -> None:
+def test_risky_path_alone_is_medium() -> None:
+    _, band = _assess(_file("app/auth/login.py", ["x = 1"]))
+    assert band is RiskBand.MEDIUM
+
+
+def test_risky_path_and_large_change_is_high() -> None:
     result = HeuristicGatekeeper().assess(
-        Diff(
-            files=[
-                _file(
-                    "app/db/queries.py",
-                    ['cur.execute("SELECT * FROM t WHERE id=" + uid)', "x = 1"] * 50,
-                )
-            ]
-        ),
-        as_of=NOW,
+        Diff(files=[_file("app/db/queries.py", ["x = 1"] * 200)]), as_of=NOW
     )
     assert result.band is RiskBand.HIGH
-    assert result.features["risky_api_calls"] == 50
     assert result.features["risky_path_files"] == 1
     assert any("riskli yol (db)" in r for r in result.reasons)
-    assert any("riskli API" in r for r in result.reasons)
+    assert set(result.features) == {
+        "changed_lines",
+        "files",
+        "risky_path_files",
+        "size_score",
+        "path_score",
+    }
 
 
-@pytest.mark.parametrize(
-    "line",
-    [
-        "eval(user_input)",
-        "subprocess.run(cmd, shell=True)",
-        "os.system(cmd)",
-        "data = pickle.loads(blob)",
-        "yaml.load(fh)",
-        "requests.get(url, verify=False)",
-        'cursor.execute(f"SELECT * FROM users WHERE name = {name}")',
-        'cursor.execute("DELETE FROM t WHERE id = %s" % uid)',
-    ],
-)
-def test_risky_api_patterns(line: str) -> None:
-    result = HeuristicGatekeeper().assess(Diff(files=[_file("app/x.py", [line])]), as_of=NOW)
-    assert result.features["risky_api_calls"] == 1
-
-
-@pytest.mark.parametrize(
-    "line",
-    [
-        'cursor.execute("SELECT * FROM t WHERE id = %s", (uid,))',
-        "evaluate(model)",
-        "except subprocess.CalledProcessError as exc:",
-        "timeout = subprocess.TIMEOUT",
-        "self.retrieval(x)",
-    ],
-)
-def test_safe_lines_not_flagged(line: str) -> None:
-    result = HeuristicGatekeeper().assess(Diff(files=[_file("app/x.py", [line])]), as_of=NOW)
-    assert result.features["risky_api_calls"] == 0
+def test_code_content_does_not_affect_score() -> None:
+    """Riskli API kuralı kaldırıldı: yalnızca boyut ve yol önemlidir."""
+    plain = _assess(_file("app/x.py", ["x = 1"]))
+    dangerous = _assess(_file("app/x.py", ["eval(user_input)"]))
+    assert plain == dangerous
 
 
 def test_path_matches_whole_words_only() -> None:
@@ -110,13 +86,6 @@ def test_path_matches_whole_words_only() -> None:
         Diff(files=[_file("app/dashboard/author.py", ["x"])]), as_of=NOW
     )
     assert result.features["risky_path_files"] == 0
-
-
-def test_test_files_ignored_for_api() -> None:
-    result = HeuristicGatekeeper().assess(
-        Diff(files=[_file("tests/test_x.py", ["eval('1')"])]), as_of=NOW
-    )
-    assert result.features["risky_api_calls"] == 0
 
 
 @pytest.mark.parametrize(
@@ -135,9 +104,7 @@ def test_is_test_file(path: str, expected: bool) -> None:
 
 
 def test_weights_from_config() -> None:
-    path_only = GatekeeperConfig(
-        heuristic=HeuristicConfig(size_weight=0, path_weight=1, api_weight=0)
-    )
+    path_only = GatekeeperConfig(heuristic=HeuristicConfig(size_weight=0, path_weight=1))
     score, band = _assess(_file("app/auth/login.py", ["x = 1"]), config=path_only)
     assert (score, band) == (1.0, RiskBand.HIGH)
 
@@ -150,7 +117,7 @@ def test_invalid_config() -> None:
     with pytest.raises(ValidationError):
         GatekeeperConfig(low_threshold=0.8, high_threshold=0.2)
     with pytest.raises(ValidationError):
-        HeuristicConfig(size_weight=0, path_weight=0, api_weight=0)
+        HeuristicConfig(size_weight=0, path_weight=0)
 
 
 def test_load_config_defaults_and_toml(tmp_path: Path) -> None:

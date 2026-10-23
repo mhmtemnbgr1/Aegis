@@ -49,8 +49,8 @@ def result(**overrides: Any) -> ReviewResult:
         "risk": risk,
         "findings": [finding()],
         "summary": "Bir kaynak sızıntısı var.",
-        "provider": "gemini",
-        "model": "gemini-flash",
+        "provider": "ollama",
+        "model": "qwen2.5-coder:7b",
         "prompt_version": "v1",
         "usage": {"input_tokens": 4000, "output_tokens": 120},
     }
@@ -68,7 +68,7 @@ def test_summary_format_matches_architecture() -> None:
     assert lines[1] == "**🛡️ Aegis — Risk: 0.82 (yüksek)**"
     assert lines[2] == "Neden: 3 alt sisteme yayılan değişiklik"
     assert "Sonuç: 1 bulgu · 4.120 token" in body
-    assert "`gemini/gemini-flash` · prompt `v1`" in body
+    assert "`ollama/qwen2.5-coder:7b` · prompt `v1`" in body
 
 
 def test_summary_low_risk_note() -> None:

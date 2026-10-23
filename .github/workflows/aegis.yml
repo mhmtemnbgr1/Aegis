@@ -24,4 +24,3 @@ jobs:
       - uses: ./
         with:
           config: .github/aegis.toml
-          gemini-api-key: ${{ secrets.GEMINI_API_KEY }}

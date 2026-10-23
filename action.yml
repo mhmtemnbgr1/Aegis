@@ -13,21 +13,9 @@ inputs:
   config:
     description: Taban commit'ten okunacak yapılandırma dosyasının yolu.
     default: .aegis.toml
-  extras:
-    description: Kurulacak LLM SDK'ları, virgülle (ollama, gemini, openai, anthropic).
-    default: ollama,gemini
   python-version:
     description: Python sürümü.
     default: "3.12"
-  gemini-api-key:
-    description: Gemini anahtarı (fork PR'larında kullanılmaz).
-    default: ""
-  openai-api-key:
-    description: OpenAI anahtarı (fork PR'larında kullanılmaz).
-    default: ""
-  anthropic-api-key:
-    description: Anthropic anahtarı (fork PR'larında kullanılmaz).
-    default: ""
   ollama-host:
     description: Ollama sunucu adresi (ör. self-hosted runner'da http://localhost:11434).
     default: ""
@@ -61,12 +49,7 @@ runs:
       shell: bash
       env:
         AEGIS_ACTION_PATH: ${{ github.action_path }}
-        AEGIS_EXTRAS: ${{ inputs.extras }}
-      run: |
-        extras="$(echo "$AEGIS_EXTRAS" | tr -d ' ')"
-        spec="$AEGIS_ACTION_PATH"
-        if [ -n "$extras" ]; then spec="$AEGIS_ACTION_PATH[$extras]"; fi
-        uv tool install --quiet "$spec"
+      run: uv tool install --quiet "$AEGIS_ACTION_PATH[ollama]"
 
     - name: Review
       id: review
@@ -75,9 +58,6 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         AEGIS_CONFIG: ${{ inputs.config }}
-        GEMINI_API_KEY: ${{ inputs.gemini-api-key }}
-        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
-        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
         OLLAMA_HOST: ${{ inputs.ollama-host }}
       run: |
         result="$RUNNER_TEMP/aegis-result.json"

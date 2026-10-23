@@ -19,15 +19,6 @@ dependencies = [
 aegis = "aegis.cli:app"
 
 [project.optional-dependencies]
-anthropic = [
-    "anthropic>=2.2.0",
-]
-openai = [
-    "openai>=3.37.0",
-]
-gemini = [
-    "google-genai>=2.33.0",
-]
 ollama = [
     "ollama>=0.6.3",
 ]

@@ -93,7 +93,7 @@ def test_config_and_ignore_read_from_base(repo: Path, tmp_path: Path) -> None:
     assert base_config(event, repo, "yok.toml") == AegisConfig()
 
 
-def test_fork_allows_only_local_model() -> None:
+def test_llm_allowed_follows_config_also_for_forks() -> None:
     fork = PullRequestEvent(
         event_name="pull_request",
         repository=REPO,
@@ -103,11 +103,9 @@ def test_fork_allows_only_local_model() -> None:
         head_sha="b",
         is_fork=True,
     )
-    cloud = AegisConfig.model_validate({"agents": {"analyst": {"provider": "gemini"}}})
-    assert not llm_allowed(fork, cloud)
-    assert llm_allowed(fork, AegisConfig())  # varsayılan: ollama
-    assert llm_allowed(fork.model_copy(update={"is_fork": False}), cloud)
+    assert llm_allowed(fork, AegisConfig())  # yalnızca yerel model: anahtar gerekmez
     disabled = AegisConfig.model_validate({"review": {"llm_enabled": False}})
+    assert not llm_allowed(fork, disabled)
     assert not llm_allowed(fork.model_copy(update={"is_fork": False}), disabled)
 
 

@@ -21,7 +21,7 @@ Faz 1–4 ve Faz 6 kesilmez.
 - [x] `aegis --version` komutu
 - [x] Hedef repoların seçimi ([docs/target-repos.md](docs/target-repos.md))
 - [x] mypy ve pre-commit
-- [ ] Geliştirme ortamı: Ollama ve Gemini API anahtarı
+- [ ] Geliştirme ortamı: Ollama
 - [ ] GitHub Projects panosu ve branch koruması
 - [ ] Görev dağılımı
 - [ ] Proje yönünün danışmana onaylatılması
@@ -31,7 +31,7 @@ Faz 1–4 ve Faz 6 kesilmez.
 Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → PR yorumu.
 
 - [x] Diff ayrıştırma ve ön filtre (binary, lock, üretilmiş dosyalar)
-- [x] Sezgisel gatekeeper (değişen satır + riskli yol/API); deneylerde taban çizgisi olarak da kullanılır
+- [x] Sezgisel gatekeeper (değişen satır + riskli yol); deneylerde taban çizgisi olarak da kullanılır
 - [x] `LLMProvider` protokolü ve 4 sağlayıcı adaptörü
 - [x] Structured output, retry ve yanıt cache'i
 - [x] Analiz ajanı prompt'ları (versiyonlu)

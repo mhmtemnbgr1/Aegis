@@ -19,13 +19,10 @@ class _Section(BaseModel):
 class HeuristicConfig(_Section):
     """Sezgisel gatekeeper ağırlıkları. Skor, bileşenlerin ağırlıklı ortalamasıdır."""
 
-    size_weight: float = Field(default=0.4, ge=0)
-    path_weight: float = Field(default=0.3, ge=0)
-    api_weight: float = Field(default=0.3, ge=0)
+    size_weight: float = Field(default=0.5, ge=0)
+    path_weight: float = Field(default=0.5, ge=0)
     size_saturation: int = Field(default=400, gt=0)
     """Bu kadar değişen satırda boyut bileşeni 1'e ulaşır."""
-    api_saturation: int = Field(default=2, gt=0)
-    """Bu kadar riskli API kullanımında API bileşeni 1'e ulaşır."""
     risky_paths: list[str] = [
         "auth",
         "login",
@@ -43,26 +40,10 @@ class HeuristicConfig(_Section):
         "payment",
         "billing",
     ]
-    risky_apis: list[str] = [
-        r"\beval\(",
-        r"\bexec\(",
-        r"\b__import__\(",
-        # Yalnızca süreç başlatan çağrılar; `except subprocess.CalledProcessError` riskli değil.
-        r"\bsubprocess\.(run|call|check_call|check_output|Popen|getoutput|getstatusoutput)\(",
-        r"\bos\.(system|popen)\(",
-        r"shell\s*=\s*True",
-        r"\bpickle\.loads?\(",
-        r"\bmarshal\.loads?\(",
-        r"\byaml\.load\(",
-        r"verify\s*=\s*False",
-        r"\btempfile\.mktemp\(",
-        # SQL string birleştirme: execute("..." + x), execute(f"..."), execute("..." % x)
-        r"\.(execute|executemany|raw)\(\s*(f[\"']|[\"'][^\"']*[\"']\s*(\+|%|\.format))",
-    ]
 
     @model_validator(mode="after")
     def _some_weight(self) -> "HeuristicConfig":
-        if self.size_weight + self.path_weight + self.api_weight <= 0:
+        if self.size_weight + self.path_weight <= 0:
             raise ValueError("en az bir ağırlık pozitif olmalı")
         return self
 
@@ -87,12 +68,9 @@ class FiltersConfig(_Section):
 class AgentConfig(_Section):
     """Bir ajanın kullanacağı sağlayıcı ve model (FR-37)."""
 
-    provider: Literal["ollama", "gemini", "openai", "anthropic"] = "ollama"
+    provider: Literal["ollama"] = "ollama"
     model: str = "qwen2.5-coder:7b"
     temperature: float | None = Field(default=0.0, ge=0, le=2)
-    """Anthropic'te yok sayılır (güncel Claude modelleri desteklemez)."""
-    effort: Literal["low", "medium", "high", "xhigh", "max"] | None = None
-    """Yalnızca Anthropic: `output_config.effort`."""
     timeout_seconds: float = Field(default=60, gt=0)
 
 

@@ -2,8 +2,9 @@
 # Action bu dosyayı PR'ın değil, taban dalın sürümünden okur.
 
 [review]
-# Gerçek LLM denemeleri proje sonunda yapılacak; o zamana kadar yalnızca gatekeeper +
-# injection dedektörü çalışır ve çalıştırma metrikleri birikir.
+# GitHub'ın barındırılan runner'larında Ollama yok; LLM'i açmak için Ollama'lı bir
+# self-hosted runner (ollama-host) gerekir. O zamana kadar yalnızca gatekeeper + injection
+# dedektörü çalışır ve çalıştırma metrikleri birikir.
 llm_enabled = false
 language = "Turkish"
 # Bu dosyalar saldırı kalıplarını bilerek tarif eder (prompt'lar ve dedektörün kendisi).
@@ -14,5 +15,5 @@ injection_exclude = [
 ]
 
 [agents.analyst]
-provider = "gemini"
-model = "gemini-flash-latest"
+provider = "ollama"
+model = "qwen2.5-coder:7b"

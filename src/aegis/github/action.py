@@ -4,7 +4,7 @@ Güvenlik kuralları (docs/architecture.md §7):
 - Yalnızca `pull_request` olayında çalışır; `pull_request_target` reddedilir.
 - Yapılandırma ve `.aegisignore` PR'ın değil taban commit'in sürümünden okunur; PR yazarı
   kendi kodunu incelemeden saklayamaz.
-- Fork PR'larında yalnızca gatekeeper ve yerel model (Ollama) çalışır.
+- Yalnızca yerel model (Ollama) kullanılır; fork PR'larında da gizli anahtar gerekmez.
 - Hiçbir hata PR'ı bloklamaz: süreç her durumda 0 ile çıkar (fail-open).
 """
 
@@ -24,7 +24,7 @@ from aegis.github.event import EventError, PullRequestEvent, load_event
 from aegis.github.publisher import publish
 from aegis.github.render import render_summary
 from aegis.llm import ResponseCache
-from aegis.review import ANALYST, ReviewResult, ReviewStatus, run_review
+from aegis.review import ReviewResult, ReviewStatus, run_review
 from aegis.telemetry.runs import append_run
 
 log = logging.getLogger(__name__)
@@ -48,10 +48,8 @@ def base_ignore(event: PullRequestEvent, repo: Path) -> GitIgnoreSpec:
 
 
 def llm_allowed(event: PullRequestEvent, config: AegisConfig) -> bool:
-    """Fork PR'larında gizli anahtar yoktur ve kod dışarı gönderilmez: yalnızca yerel model."""
-    if not config.review.llm_enabled:
-        return False
-    return not event.is_fork or config.agent(ANALYST).provider == "ollama"
+    """Analiz ajanı yalnızca yerel modeli (Ollama) kullanır; fork PR'larında da çalışabilir."""
+    return config.review.llm_enabled
 
 
 def _error_result(error: str) -> ReviewResult:

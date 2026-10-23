@@ -90,11 +90,11 @@ jobs:
           fetch-depth: 0   # base...head diff'i için tam geçmiş
       - uses: mhmtemnbgr1/Aegis@main
         with:
-          gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
+          ollama-host: ${{ vars.OLLAMA_HOST }}   # Ollama'lı self-hosted runner / sunucu
 ```
 
 - Yapılandırma (`.aegis.toml`) ve `.aegisignore` **taban dalın** sürümünden okunur; PR kendi incelemesini gevşetemez.
-- **Fork PR'larında** gizli anahtar kullanılmaz ve kod dışarı gönderilmez: yalnızca gatekeeper ve (varsa) yerel Ollama modeli çalışır.
+- Yalnızca **yerel model (Ollama)** kullanılır; bulut LLM'i ve API anahtarı yoktur. Ollama'ya erişilemezse inceleme gatekeeper ve deterministik kurallarla sürer.
 - Aegis PR'ı **asla bloklamaz**: kendi hatasında check run `neutral` olur ve özet yorumunda uyarı bırakılır.
 - Her çalıştırmanın metrikleri `aegis-runs-*` artifact'ı olarak yüklenir.
 
@@ -105,7 +105,7 @@ Tüm seçenekler: [`action.yml`](action.yml) · [`.aegis.toml.example`](.aegis.t
 | Dosya | İçerik |
 | --- | --- |
 | [docs/rad.md](docs/rad.md) | Gereksinim Analiz Dokümanı (RAD): kapsam, hedefler, FR/NFR, senaryolar, UML modelleri, arayüz taslakları |
-| [docs/setup.md](docs/setup.md) | Geliştirme ortamı: uv, Ollama, Gemini anahtarı |
+| [docs/setup.md](docs/setup.md) | Geliştirme ortamı: uv, Ollama |
 | [docs/architecture.md](docs/architecture.md) | Gereksinimler, katman ayrıntıları, şemalar, modüller, teknoloji yığını, güvenlik |
 | [docs/presentation.md](docs/presentation.md) | Sunum ve tez: katkılar, araştırma soruları, değerlendirme planı, demo, jüri soruları |
 | [docs/target-repos.md](docs/target-repos.md) | Eğitim ve değerlendirmede kullanılan repolar |
@@ -114,7 +114,7 @@ Tüm seçenekler: [`action.yml`](action.yml) · [`.aegis.toml.example`](.aegis.t
 ## Geliştirme
 
 ```bash
-uv sync --all-extras        # LLM SDK'ları dahil; tek sağlayıcı için: --extra ollama
+uv sync --all-extras        # Ollama SDK'sı dahil
 uv run pre-commit install   # commit öncesi ruff, ruff-format, mypy
 uv run ruff check .
 uv run mypy

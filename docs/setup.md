@@ -6,7 +6,7 @@ Python 3.12+ ve [uv](https://docs.astral.sh/uv/) gerekir.
 
 ```bash
 pip install --user uv          # veya: https://docs.astral.sh/uv/getting-started/installation/
-uv sync --all-extras           # proje + tüm LLM SDK'ları + geliştirme araçları
+uv sync --all-extras           # proje + Ollama SDK'sı + geliştirme araçları
 uv run pre-commit install      # commit öncesi ruff, ruff-format, mypy
 ```
 
@@ -51,30 +51,7 @@ provider = "ollama"
 model = "qwen2.5-coder:7b"
 ```
 
-## 3. Gemini API anahtarı (ücretsiz kota)
-
-1. [Google AI Studio](https://aistudio.google.com/apikey) üzerinden bir anahtar oluşturun.
-2. Anahtarı **yalnızca ortam değişkeni olarak** tanımlayın; hiçbir dosyaya yazmayın:
-
-   ```bash
-   # bash / zsh (~/.bashrc veya ~/.zshrc)
-   export GEMINI_API_KEY="..."
-   ```
-
-   ```powershell
-   # PowerShell (kalıcı, kullanıcı düzeyi)
-   [Environment]::SetEnvironmentVariable("GEMINI_API_KEY", "...", "User")
-   ```
-
-3. Gemini ile denemek için `.aegis.toml`:
-
-   ```toml
-   [agents.analyst]
-   provider = "gemini"
-   model = "gemini-flash-latest"
-   ```
-
-## 4. Gerçek modelle injection testleri (isteğe bağlı)
+## 3. Gerçek modelle injection testleri (isteğe bağlı)
 
 CI bu testleri mock LLM ile koşar. Gerçek modelle elle denemek için:
 
@@ -82,8 +59,9 @@ CI bu testleri mock LLM ile koşar. Gerçek modelle elle denemek için:
 AEGIS_LIVE_PROVIDER=ollama AEGIS_LIVE_MODEL=qwen2.5-coder:7b uv run pytest -m live
 ```
 
-## 5. GitHub Action için gizli anahtar
+## 4. GitHub Action'da LLM
 
-Repo ayarlarında **Settings → Secrets and variables → Actions → New repository secret**:
-`GEMINI_API_KEY`. Dogfooding workflow'u (`.github/workflows/aegis.yml`) bu anahtarı kullanır;
-LLM'i açmak için `.github/aegis.toml` içinde `llm_enabled = true` yapın.
+GitHub'ın barındırılan runner'larında Ollama yoktur. LLM analizini Action'da açmak için Ollama'nın
+erişilebilir olduğu bir ortam gerekir (ör. Ollama kurulu self-hosted runner). Adresi action'ın
+`ollama-host` girdisiyle verin ve `.github/aegis.toml` içinde `llm_enabled = true` yapın. Aksi
+halde Action yalnızca gatekeeper ve deterministik kurallarla çalışır.

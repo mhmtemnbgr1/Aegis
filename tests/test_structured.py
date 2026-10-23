@@ -136,7 +136,7 @@ def test_cache_key_depends_on_everything() -> None:
     base = LLMRequest(system="s", prompt="p")
     key = cache_key("ollama", "m", base)
     assert key == cache_key("ollama", "m", LLMRequest(system="s", prompt="p"))
-    assert key != cache_key("gemini", "m", base)
+    assert key != cache_key("mock", "m", base)
     assert key != cache_key("ollama", "m2", base)
     assert key != cache_key("ollama", "m", base.model_copy(update={"prompt": "q"}))
     assert key != cache_key("ollama", "m", base.model_copy(update={"max_tokens": 1}))
