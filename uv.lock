@@ -12,6 +12,7 @@ name = "aegis-review"
 version = "0.0.1"
 source = { editable = "." }
 dependencies = [
+    { name = "httpx" },
     { name = "pathspec" },
     { name = "pydantic" },
     { name = "rich" },
@@ -47,6 +48,7 @@ dev = [
 requires-dist = [
     { name = "anthropic", marker = "extra == 'anthropic'", specifier = ">=2.2.0" },
     { name = "google-genai", marker = "extra == 'gemini'", specifier = ">=2.33.0" },
+    { name = "httpx", specifier = ">=0.27" },
     { name = "ollama", marker = "extra == 'ollama'", specifier = ">=0.6.3" },
     { name = "openai", marker = "extra == 'openai'", specifier = ">=3.37.0" },
     { name = "pathspec", specifier = ">=1.1.1" },

@@ -39,9 +39,9 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [x] Prompt injection önlemleri ve saldırı testleri
 - [x] `aegis review --base main`
 - [ ] `action.yml` (composite action)
-- [ ] Özet yorumu (oluştur / güncelle)
-- [ ] Bulguların satır yorumu olarak yayınlanması
-- [ ] Fail-open ve check run sonucu
+- [x] Özet yorumu (oluştur / güncelle)
+- [x] Bulguların satır yorumu olarak yayınlanması
+- [x] Fail-open ve check run sonucu
 - [ ] Kendi repomuzda dogfooding
 
 ## Faz 2 — Repo Madenciliği
