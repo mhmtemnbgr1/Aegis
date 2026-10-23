@@ -34,7 +34,7 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [x] Sezgisel gatekeeper (değişen satır + riskli yol/API); deneylerde taban çizgisi olarak da kullanılır
 - [x] `LLMProvider` protokolü ve 4 sağlayıcı adaptörü
 - [x] Structured output, retry ve yanıt cache'i
-- [ ] Analiz ajanı prompt'ları (versiyonlu)
+- [x] Analiz ajanı prompt'ları (versiyonlu)
 - [x] Kanıt ve satır doğrulama filtreleri
 - [ ] Prompt injection önlemleri ve saldırı testleri
 - [ ] `aegis review --base main`
