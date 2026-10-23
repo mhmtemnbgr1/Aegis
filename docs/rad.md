@@ -47,17 +47,25 @@ The first version (v1) covers the following areas.
 | Output | One summary comment per PR, inline review comments, suggestion blocks, a check run result and JSONL run records. |
 | Evaluation | Datasets D1 to D4, research questions RQ1 to RQ5, a comparison with PR-Agent and a blind user study. |
 
-**Planned: graphical user interface.** A web-based graphical user interface, the Aegis Dashboard, is planned. It will run locally with the command `aegis dashboard` and will let maintainers and researchers inspect past reviews and costs, browse the bug-fix memory, tune the gatekeeper thresholds on the cost-recall curve, edit the configuration and compare experiment results. The dashboard reads the same state files and run records that the CLI produces, so it does not change the review pipeline. Its requirements are listed in group G of Section 3.2 and its screens in Section 3.4.5. It will be developed after the end-to-end pipeline and the trained gatekeeper are working (Phase 3 onward); the exact phase will be fixed in the project plan.
+**Scope revision (October 2026).** To deliver in December 2026 and to study the two main contributions in depth, the scope of v1 was narrowed:
+
+- **Deferred to future work:** patch and test generation (fixer and tester agents), the Docker sandbox and the verifier, suggestion blocks, the BugsInPy experiment (RQ3) and the Aegis Dashboard.
+- **Optional (done only if time allows):** the comparison with PR-Agent (RQ4), the blind user study (RQ5), incremental updates after each merge, the public dataset release and a conference paper.
+- **Unchanged:** repository mining, the trained gatekeeper (K1, RQ1), the bug-fix memory (K2, RQ2) and the GitHub Action. Only a local model served by Ollama is used.
+
+Deferred requirements keep their identifiers and are marked **Won't (v1)** in the priority column (MoSCoW); deferred nonfunctional requirements are marked *(deferred)*. Scenarios, use cases and mock-ups that show patches or the dashboard are kept as the design for future work.
+
+**Deferred: graphical user interface.** A web-based graphical user interface, the Aegis Dashboard, was planned. It will run locally with the command `aegis dashboard` and will let maintainers and researchers inspect past reviews and costs, browse the bug-fix memory, tune the gatekeeper thresholds on the cost-recall curve, edit the configuration and compare experiment results. The dashboard reads the same state files and run records that the CLI produces, so it does not change the review pipeline. Its requirements are listed in group G of Section 3.2 and its screens in Section 3.4.5. It is outside the scope of v1 after the October 2026 revision and is kept here as a design for future work.
 
 **Out of scope for v1.** The following items are recorded as ideas for later versions and will not be implemented in v1:
 
-- patch and test generation for languages other than Python;
+- patch and test generation, the sandbox verifier and suggestion blocks (deferred to future work);
+- the Aegis Dashboard (deferred to future work);
 - a pre-push hook, an IDE plugin, a server-hosted GitHub App, GitLab and Bitbucket support;
 - fine-tuning of LLMs or embedding models;
 - cloud LLM providers (Gemini, OpenAI, Anthropic and similar); only local models served by Ollama are used;
 - automatically committing the generated test to the PR branch;
 - automatic merging of any change;
-- a hosted, multi-user version of the dashboard.
 
 ### 1.3 Objectives and success criteria of the project
 
@@ -67,9 +75,9 @@ The first version (v1) covers the following areas.
 | --- | --- | --- |
 | O1 | Reduce the number of LLM calls and the cost of review with a trained gatekeeper while missing as few defective PRs as possible. | RQ1 |
 | O2 | Improve the accuracy of findings by giving the LLM repository-specific bug history, and show that the improvement comes from the content of the memory rather than from a longer prompt. | RQ2 |
-| O3 | Produce more correct patches with a test-verified multi-agent chain than with a single LLM call. | RQ3 |
-| O4 | Compare cost and accuracy with an existing open-source PR bot (PR-Agent) that uses the same LLM and the same data. | RQ4 |
-| O5 | Show that developers rate Aegis comments as more correct and more useful than PR-Agent comments. | RQ5 |
+| O3 | *Deferred (future work):* produce more correct patches with a test-verified multi-agent chain than with a single LLM call. | RQ3 |
+| O4 | *(Optional)* Compare cost and accuracy with an existing open-source PR bot (PR-Agent) that uses the same LLM and the same data. | RQ4 |
+| O5 | *(Optional)* Show that developers rate Aegis comments as more correct and more useful than PR-Agent comments. | RQ5 |
 | O6 | Deliver a working, installable tool that can be demonstrated live, together with a dashboard that presents its results. | None |
 
 **Success criteria**
@@ -79,15 +87,13 @@ The first version (v1) covers the following areas.
 | Gatekeeper result | The full cost-recall curve is reported with two operating points: (a) about 60% of PRs are filtered out and the recall at that point is reported; (b) at least 90% of defective PRs are caught and the filter rate at that point is reported. |
 | Gatekeeper ROC-AUC | Significantly higher than the heuristic rule and than triage by a cheap LLM. |
 | F1 improvement with memory | Statistically significant compared with the variants without memory and with placebo memory. |
-| Plausible patch rate (RQ3) | At least 25%. |
-| Unverified patches published as suggestions | None, by design. |
 | Average LLM load per PR | At the cost-focused operating point, at least 50% fewer LLM calls, tokens and LLM time than the "LLM on every PR" baseline. |
 | End-to-end time per PR (95th percentile) | At most 5 minutes. |
 | User study (RQ5) | Usefulness score significantly higher than that of PR-Agent. |
 | Test coverage of the core modules | At least 80%. |
 | Demonstration | A five-step live demonstration on a fork of `httpie/cli`, rehearsed at least twice, with a recorded backup video. |
 
-Except for the rule that no unverified patch is published as a suggestion, these targets will be reviewed once the first data from the Phase 2 pilot is available. The minimum result that the project must defend is O1 together with O2. If the schedule slips, O3 is moved to future work according to the agreed cut lines (see the Glossary).
+These targets will be reviewed once the first data from the Phase 2 pilot is available. The minimum result that the project must defend is O1 together with O2. O3 was moved to future work in the October 2026 scope revision; O4 and O5 are optional.
 
 ### 1.4 Definitions, acronyms, and abbreviations
 
@@ -278,7 +284,7 @@ Priorities follow the MoSCoW scheme (Must, Should, Could). The UC column links e
 | FR-02 | Fix commits are detected from message patterns (`fix`, `bug`, `regression`, `leak`, `crash`, `closes #N`) and from GitHub issue labels. | Must | UC-02 |
 | FR-03 | Bug-inducing commits are identified with SZZ (MA-SZZ through pyszz, with PyDriller B-SZZ as a fallback). Meta-changes are ignored, merge commits and very large commits are excluded, and only the last N years (5 by default) are processed. | Must | UC-02 |
 | FR-04 | The 14 Kamei JIT metrics are computed. | Must | UC-02 |
-| FR-05 | Mining is incremental, so only commits after the last processed commit are handled. | Must | UC-08 |
+| FR-05 | Mining is incremental, so only commits after the last processed commit are handled. | Could | UC-08 |
 | FR-07 | `aegis publish-state` packs the model, the index, the testmon data and the last processed commit into one archive and uploads it as a GitHub Release asset, which the Action then uses. | Must | UC-02 |
 
 **Group C: gatekeeper**
@@ -302,7 +308,7 @@ Priorities follow the MoSCoW scheme (Must, Should, Could). The UC column links e
 | FR-21 | Source code is split into functions using the Python `ast` module. | Must | UC-02 |
 | FR-22 | Retrieval combines structural matching, BM25 and vector search, and merges the results with RRF. | Must | UC-03 |
 | FR-23 | Only cards whose `fix_date` is earlier than the PR date are returned. | Must | UC-03 |
-| FR-24 | The memory is updated incrementally after each merge to `main`. | Should | UC-08 |
+| FR-24 | The memory is updated incrementally after each merge to `main`. | Could | UC-08 |
 | FR-25 | A low-cost model adds a short summary of the root cause and the fix pattern to each card. | Could | UC-02 |
 
 **Group E: agents and verification**
@@ -311,14 +317,14 @@ Priorities follow the MoSCoW scheme (Must, Should, Could). The UC column links e
 | --- | --- | --- | --- |
 | FR-30 | The analyst agent returns findings that conform to the output schema and lists the cards it used in the `memory_refs` field. | Must | UC-03 |
 | FR-31 | A finding is removed if its `evidence` text does not appear literally in the diff or if its line is not a changed line. | Must | UC-03 |
-| FR-32 | The fixer agent returns a minimal diff that changes only the region of the related hunk. | Must | UC-03 |
-| FR-33 | The tester agent writes a pytest test that reproduces the bug. | Must | UC-03 |
-| FR-34 | The verifier applies the patch, runs the linter, runs the existing tests and runs the generated test before and after the patch, and then assigns a status. | Must | UC-03 |
-| FR-35 | If verification fails, at most two further attempts are made, and the error is passed back to the fixer agent. | Must | UC-03 |
-| FR-36 | Tests run in a Docker sandbox without network access and with limited resources. | Must | UC-03 |
+| FR-32 | The fixer agent returns a minimal diff that changes only the region of the related hunk. | Won't (v1) | UC-03 |
+| FR-33 | The tester agent writes a pytest test that reproduces the bug. | Won't (v1) | UC-03 |
+| FR-34 | The verifier applies the patch, runs the linter, runs the existing tests and runs the generated test before and after the patch, and then assigns a status. | Won't (v1) | UC-03 |
+| FR-35 | If verification fails, at most two further attempts are made, and the error is passed back to the fixer agent. | Won't (v1) | UC-03 |
+| FR-36 | Tests run in a Docker sandbox without network access and with limited resources. | Won't (v1) | UC-03 |
 | FR-37 | The LLM can be selected separately for each agent. | Should | UC-01 |
-| FR-38 | Verification runs only the affected tests (selected with pytest-testmon, or by imports as a fallback) and runs them in parallel with pytest-xdist. | Must | UC-03 |
-| FR-39 | At most two patches are attempted per PR. If verification exceeds its time limit, the status is `unverified`. | Must | UC-03 |
+| FR-38 | Verification runs only the affected tests (selected with pytest-testmon, or by imports as a fallback) and runs them in parallel with pytest-xdist. | Won't (v1) | UC-03 |
+| FR-39 | At most two patches are attempted per PR. If verification exceeds its time limit, the status is `unverified`. | Won't (v1) | UC-03 |
 
 **Group F: GitHub integration and CLI**
 
@@ -326,12 +332,12 @@ Priorities follow the MoSCoW scheme (Must, Should, Could). The UC column links e
 | --- | --- | --- | --- |
 | FR-40 | Aegis runs as a GitHub Action on the `pull_request` event. | Must | UC-03 |
 | FR-41 | One summary comment is written per PR and is updated after each new push. | Must | UC-03, UC-04 |
-| FR-42 | `verified` patches are published as suggestion blocks. Patches that do not fit into a single hunk are shown as a collapsible diff. | Must | UC-05 |
-| FR-43 | `plausible` patches are published with a warning label, and `unverified` patches are published as a description without code. | Must | UC-04 |
-| FR-47 | The generated test is shown in a collapsible section below the inline comment, together with a suggested file path. | Must | UC-05 |
+| FR-42 | `verified` patches are published as suggestion blocks. Patches that do not fit into a single hunk are shown as a collapsible diff. | Won't (v1) | UC-05 |
+| FR-43 | `plausible` patches are published with a warning label, and `unverified` patches are published as a description without code. | Won't (v1) | UC-04 |
+| FR-47 | The generated test is shown in a collapsible section below the inline comment, together with a suggested file path. | Won't (v1) | UC-05 |
 | FR-44 | `aegis review --base main` runs the same pipeline on a local machine. | Must | UC-07 |
 | FR-45 | Run metrics (risk score, band, LLM calls, tokens, duration and patch statuses) are stored as JSONL records. | Should | UC-11, UC-12 |
-| FR-46 | Developers can rate suggestions with the GitHub thumbs-up and thumbs-down reactions. | Could | UC-10 |
+| FR-46 | Developers can rate suggestions with the GitHub thumbs-up and thumbs-down reactions. | Won't (v1) | UC-10 |
 | FR-48 | Configuration is read from `.aegis.toml`. Secrets such as `GITHUB_TOKEN` are read only from environment variables and never from the configuration file. | Must | UC-01 |
 | FR-49 | Only a local model served by Ollama is used, so PRs opened from forks are reviewed in the same way and no secret other than `GITHUB_TOKEN` is needed. | Must | UC-03 |
 | FR-50 | The summary comment shows the risk score, the band, the main reasons, the memory references, the number of findings and patches, the number of tokens and the LLM time. | Must | UC-04 |
@@ -341,13 +347,13 @@ Priorities follow the MoSCoW scheme (Must, Should, Could). The UC column links e
 
 | ID | Requirement | Priority | UC |
 | --- | --- | --- | --- |
-| FR-60 | `aegis dashboard` starts a local web application that opens in the default browser and is bound to `localhost` only. | Should | UC-12 |
-| FR-61 | The overview screen lists reviewed PRs with their risk score, band, number of findings, patch statuses, tokens and duration, and shows totals for a selected time range. | Should | UC-12 |
-| FR-62 | The PR detail screen shows the SHAP explanation, the retrieved bug cards, every finding with its evidence, and the verification log of each patch. | Should | UC-12 |
-| FR-63 | The memory screen allows the bug cards to be searched by file, function, issue number or free text, and shows the full content of a selected card. | Should | UC-13 |
-| FR-64 | The gatekeeper screen shows the cost-recall curve of the current model. When the user moves the threshold, the screen shows the expected share of PRs sent to the LLM and the expected recall, and the chosen thresholds can be saved to `.aegis.toml`. | Should | UC-14 |
-| FR-65 | The settings screen shows the contents of `.aegis.toml` as a form, validates the values against the configuration schema before saving, and never displays secrets. | Could | UC-15 |
-| FR-66 | The experiments screen lists the results in `eval/reports/` and shows selected experiment variants side by side in tables and plots. | Could | UC-16 |
+| FR-60 | `aegis dashboard` starts a local web application that opens in the default browser and is bound to `localhost` only. | Won't (v1) | UC-12 |
+| FR-61 | The overview screen lists reviewed PRs with their risk score, band, number of findings, patch statuses, tokens and duration, and shows totals for a selected time range. | Won't (v1) | UC-12 |
+| FR-62 | The PR detail screen shows the SHAP explanation, the retrieved bug cards, every finding with its evidence, and the verification log of each patch. | Won't (v1) | UC-12 |
+| FR-63 | The memory screen allows the bug cards to be searched by file, function, issue number or free text, and shows the full content of a selected card. | Won't (v1) | UC-13 |
+| FR-64 | The gatekeeper screen shows the cost-recall curve of the current model. When the user moves the threshold, the screen shows the expected share of PRs sent to the LLM and the expected recall, and the chosen thresholds can be saved to `.aegis.toml`. | Won't (v1) | UC-14 |
+| FR-65 | The settings screen shows the contents of `.aegis.toml` as a form, validates the values against the configuration schema before saving, and never displays secrets. | Won't (v1) | UC-15 |
+| FR-66 | The experiments screen lists the results in `eval/reports/` and shows selected experiment variants side by side in tables and plots. | Won't (v1) | UC-16 |
 | FR-67 | The GitHub Action uploads its run records as a workflow artifact, so that the dashboard can import reviews that were run in CI. | Should | UC-12 |
 
 ### 3.3 Nonfunctional requirements
@@ -358,12 +364,12 @@ Priorities follow the MoSCoW scheme (Must, Should, Could). The UC column links e
 | --- | --- | --- |
 | NFR-U1 | Installation requires one workflow file and one optional configuration file. | A maintainer can enable Aegis on a new repository within 15 minutes by following the README. |
 | NFR-U2 | Aegis writes a single summary comment per PR and updates it in place. | One summary comment per PR, independent of the number of pushes. |
-| NFR-U3 | A verified fix can be accepted with one click using the GitHub "Commit suggestion" button. | No manual copying is needed for `verified` patches. |
+| NFR-U3 *(deferred)* | A verified fix can be accepted with one click using the GitHub "Commit suggestion" button. | No manual copying is needed for `verified` patches. |
 | NFR-05 | Explainability: each decision is shown in the PR comment together with its reason (main SHAP features, memory references and a summary of the verification log). | Every risk band and every finding has at least one stated reason. |
-| NFR-U4 | The verification status of each patch is visible as a text label (`verified`, `plausible`, `unverified`). | Every finding that includes code carries a status label. |
+| NFR-U4 *(deferred)* | The verification status of each patch is visible as a text label (`verified`, `plausible`, `unverified`). | Every finding that includes code carries a status label. |
 | NFR-U5 | Each CLI command provides `--help`, and error messages state what the user should do next. | All commands are documented by `aegis --help`. |
-| NFR-U6 | The dashboard uses the same terms as the PR comments (risk band, bug card, verification status) and needs no training for a user who knows the PR comments. | A first-time user can find the cost of the last 30 days and open a bug card without help, as checked in the user study. |
-| NFR-U7 | The dashboard is usable on a laptop screen and its text and charts meet WCAG 2.1 AA contrast. | Layout works from a width of 1280 pixels; contrast is checked with an automated tool. |
+| NFR-U6 *(deferred)* | The dashboard uses the same terms as the PR comments (risk band, bug card, verification status) and needs no training for a user who knows the PR comments. | A first-time user can find the cost of the last 30 days and open a bug card without help, as checked in the user study. |
+| NFR-U7 *(deferred)* | The dashboard is usable on a laptop screen and its text and charts meet WCAG 2.1 AA contrast. | Layout works from a width of 1280 pixels; contrast is checked with an automated tool. |
 
 #### 3.3.2 Reliability
 
@@ -375,18 +381,18 @@ Priorities follow the MoSCoW scheme (Must, Should, Could). The UC column links e
 | NFR-R3 | If neither the state archive nor the cache is available, Aegis runs with the heuristic gatekeeper and without memory instead of failing. | Covered by an integration test. |
 | NFR-R4 | LLM outputs are validated against a JSON schema. Invalid outputs are retried or discarded and are never published. | All published findings conform to the schema. |
 | NFR-08 | Resistance to prompt injection: PR content is marked as data in the prompt, the agents have no tool permissions, and known attack examples are kept as regression tests. | All attack regression tests pass. |
-| NFR-R5 | The dashboard opens the state and run records read-only. Only the settings and gatekeeper screens write, and they write only `.aegis.toml`, after validation and with a backup of the previous file. | Covered by tests; a failed write leaves the previous file unchanged. |
+| NFR-R5 *(deferred)* | The dashboard opens the state and run records read-only. Only the settings and gatekeeper screens write, and they write only `.aegis.toml`, after validation and with a backup of the previous file. | Covered by tests; a failed write leaves the previous file unchanged. |
 
 #### 3.3.3 Performance
 
 | ID | Requirement | Measure |
 | --- | --- | --- |
-| NFR-P1 | End-to-end time per PR. | At most 5 minutes at the 95th percentile, with test selection and the limit of two patches. |
+| NFR-P1 | End-to-end time per PR. | At most 5 minutes at the 95th percentile. |
 | NFR-P2 | Low-risk PRs are answered without an LLM call. | Gatekeeper result and summary within 30 seconds after the state has been loaded. |
 | NFR-P3 | LLM load per PR. | Hard limits of 60,000 tokens and 12 LLM requests per PR; with the gatekeeper enabled, low-risk PRs make no LLM call. |
 | NFR-P4 | Mining time on large repositories. | SZZ is limited to the last 5 years so that mining takes minutes rather than hours. PR runs never scan the full history. |
 | NFR-P5 | Latency of memory retrieval. | The top three cards are returned within 2 seconds from the local LanceDB index. |
-| NFR-P6 | Responsiveness of the dashboard. | Each screen loads within 2 seconds for up to 10,000 run records; updating the threshold on the gatekeeper screen takes less than 0.5 seconds. |
+| NFR-P6 *(deferred)* | Responsiveness of the dashboard. | Each screen loads within 2 seconds for up to 10,000 run records; updating the threshold on the gatekeeper screen takes less than 0.5 seconds. |
 
 #### 3.3.4 Supportability
 
@@ -398,7 +404,7 @@ Priorities follow the MoSCoW scheme (Must, Should, Could). The UC column links e
 | NFR-S1 | Quality checks (ruff, mypy in strict mode and pre-commit) run in CI on Linux, Windows and macOS. | CI must pass before a merge. |
 | NFR-S2 | Prompts are versioned in `agents/prompts/v1/`, so that each result can be linked to a prompt version. | The prompt version is stored in every run record. |
 | NFR-S3 | The SZZ variant that was used is recorded in every data release. | The field is present in the dataset metadata. |
-| NFR-S4 | The dashboard reads data only through the same Pydantic models as the CLI, so a change of the data format is made in one place. | No separate data parsing code in the dashboard module. |
+| NFR-S4 *(deferred)* | The dashboard reads data only through the same Pydantic models as the CLI, so a change of the data format is made in one place. | No separate data parsing code in the dashboard module. |
 
 #### 3.3.5 Implementation
 
