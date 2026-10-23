@@ -81,7 +81,9 @@ GitHub Action ve yapılandırma: [`.aegis.toml.example`](.aegis.toml.example)
 
 ```bash
 uv sync
+uv run pre-commit install   # commit öncesi ruff, ruff-format, mypy
 uv run ruff check .
+uv run mypy
 uv run pytest
 ```
 

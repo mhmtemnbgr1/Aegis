@@ -20,7 +20,7 @@ Faz 1–4 ve Faz 6 kesilmez.
 - [x] GitHub Actions CI, issue/PR şablonları
 - [x] `aegis --version` komutu
 - [x] Hedef repoların seçimi ([docs/target-repos.md](docs/target-repos.md))
-- [ ] mypy ve pre-commit
+- [x] mypy ve pre-commit
 - [ ] Geliştirme ortamı: Ollama ve Gemini API anahtarı
 - [ ] GitHub Projects panosu ve branch koruması
 - [ ] Görev dağılımı
