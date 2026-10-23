@@ -80,7 +80,7 @@ GitHub Action ve yapılandırma: [`.aegis.toml.example`](.aegis.toml.example)
 ## Geliştirme
 
 ```bash
-uv sync
+uv sync --all-extras        # LLM SDK'ları dahil; tek sağlayıcı için: --extra ollama
 uv run pre-commit install   # commit öncesi ruff, ruff-format, mypy
 uv run ruff check .
 uv run mypy

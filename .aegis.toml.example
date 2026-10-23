@@ -44,8 +44,13 @@ languages = ["python"]
 [agents.analyst]
 provider = "ollama"              # ollama | gemini | openai | anthropic
 model = "qwen2.5-coder:7b"
-temperature = 0.0
+temperature = 0.0                # anthropic'te yok sayılır
 timeout_seconds = 60
+# SDK'yı kurmak için: uv sync --extra <provider>  (ollama | gemini | openai | anthropic)
+# Anahtarlar: GEMINI_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY; Ollama adresi: OLLAMA_HOST
+# Örnekler:
+#   provider = "gemini"     model = "gemini-flash-latest"
+#   provider = "anthropic"  model = "claude-opus-5-5"   effort = "medium"   # low | medium | high | xhigh | max
 
 [agents.fixer]
 provider = "ollama"

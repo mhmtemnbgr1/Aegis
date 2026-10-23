@@ -83,9 +83,26 @@ class FiltersConfig(_Section):
     max_changed_lines_per_file: int | None = Field(default=1500, gt=0)
 
 
+class AgentConfig(_Section):
+    """Bir ajanın kullanacağı sağlayıcı ve model (FR-37)."""
+
+    provider: Literal["ollama", "gemini", "openai", "anthropic"] = "ollama"
+    model: str = "qwen2.5-coder:7b"
+    temperature: float | None = Field(default=0.0, ge=0, le=2)
+    """Anthropic'te yok sayılır (güncel Claude modelleri desteklemez)."""
+    effort: Literal["low", "medium", "high", "xhigh", "max"] | None = None
+    """Yalnızca Anthropic: `output_config.effort`."""
+    timeout_seconds: float = Field(default=60, gt=0)
+
+
 class AegisConfig(_Section):
     gatekeeper: GatekeeperConfig = GatekeeperConfig()
     filters: FiltersConfig = FiltersConfig()
+    agents: dict[str, AgentConfig] = {}
+
+    def agent(self, name: str) -> AgentConfig:
+        """Ajanın ayarı; tanımlı değilse varsayılan (yerel Ollama)."""
+        return self.agents.get(name, AgentConfig())
 
 
 def load_config(repo: Path | str = ".") -> AegisConfig:

@@ -32,7 +32,7 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 
 - [x] Diff ayrıştırma ve ön filtre (binary, lock, üretilmiş dosyalar)
 - [x] Sezgisel gatekeeper (değişen satır + riskli yol/API); deneylerde taban çizgisi olarak da kullanılır
-- [ ] `LLMProvider` protokolü ve 4 sağlayıcı adaptörü
+- [x] `LLMProvider` protokolü ve 4 sağlayıcı adaptörü
 - [ ] Structured output, retry ve yanıt cache'i
 - [ ] Analiz ajanı prompt'ları (versiyonlu)
 - [ ] Kanıt ve satır doğrulama filtreleri
