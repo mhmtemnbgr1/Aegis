@@ -1,0 +1,18 @@
+# Aegis'in kendi reposunda dogfooding yapılandırması (#65).
+# Action bu dosyayı PR'ın değil, taban dalın sürümünden okur.
+
+[review]
+# Gerçek LLM denemeleri proje sonunda yapılacak; o zamana kadar yalnızca gatekeeper +
+# injection dedektörü çalışır ve çalıştırma metrikleri birikir.
+llm_enabled = false
+language = "Turkish"
+# Bu dosyalar saldırı kalıplarını bilerek tarif eder (prompt'lar ve dedektörün kendisi).
+injection_exclude = [
+    "src/aegis/agents/prompts/**",
+    "src/aegis/agents/injection.py",
+    "src/aegis/agents/analyst.py",
+]
+
+[agents.analyst]
+provider = "gemini"
+model = "gemini-flash-latest"

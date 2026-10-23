@@ -96,6 +96,8 @@ class AgentConfig(_Section):
 
 
 class ReviewConfig(_Section):
+    llm_enabled: bool = True
+    """False ise analiz ajanı hiç çağrılmaz; yalnızca gatekeeper ve deterministik kurallar."""
     language: str = "Turkish"
     """Bulgu başlığı, açıklaması ve özetin yazılacağı dil."""
     prompt_version: str = "v1"

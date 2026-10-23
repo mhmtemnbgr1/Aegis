@@ -179,7 +179,7 @@ def review(
         config,
         ignore=load_ignore_spec(repo),
         metadata=metadata,
-        llm_enabled=not no_llm,
+        llm_enabled=config.review.llm_enabled and not no_llm,
         cache=None if no_cache else ResponseCache(repo / config.review.cache_dir),
     )
     append_run(repo / config.review.runs_path, result, base=base, head=head, source="cli")

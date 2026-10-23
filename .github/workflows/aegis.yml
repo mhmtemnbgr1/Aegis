@@ -1,0 +1,27 @@
+name: Aegis
+
+# Aegis'i kendi PR'larımızda çalıştırır (dogfooding). Action bu repodan (uses: ./) kurulur.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+concurrency:
+  group: aegis-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./
+        with:
+          config: .github/aegis.toml
+          gemini-api-key: ${{ secrets.GEMINI_API_KEY }}

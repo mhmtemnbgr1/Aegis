@@ -107,6 +107,8 @@ def test_fork_allows_only_local_model() -> None:
     assert not llm_allowed(fork, cloud)
     assert llm_allowed(fork, AegisConfig())  # varsayılan: ollama
     assert llm_allowed(fork.model_copy(update={"is_fork": False}), cloud)
+    disabled = AegisConfig.model_validate({"review": {"llm_enabled": False}})
+    assert not llm_allowed(fork.model_copy(update={"is_fork": False}), disabled)
 
 
 def _run(repo: Path, env: dict[str, str], gh: FakeGitHub, **kwargs: Any) -> int:

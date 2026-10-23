@@ -49,6 +49,8 @@ def base_ignore(event: PullRequestEvent, repo: Path) -> GitIgnoreSpec:
 
 def llm_allowed(event: PullRequestEvent, config: AegisConfig) -> bool:
     """Fork PR'larında gizli anahtar yoktur ve kod dışarı gönderilmez: yalnızca yerel model."""
+    if not config.review.llm_enabled:
+        return False
     return not event.is_fork or config.agent(ANALYST).provider == "ollama"
 
 

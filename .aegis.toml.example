@@ -75,6 +75,7 @@ parallel = true                  # pytest-xdist
 max_patches_per_pr = 2
 
 [review]
+llm_enabled = true               # false: yalnızca gatekeeper + deterministik kurallar
 language = "Turkish"             # bulgu ve özet dili
 prompt_version = "v1"            # src/aegis/agents/prompts/<sürüm>
 cache_dir = ".aegis/cache/llm"   # aynı istek ikinci kez API'ye gitmez
