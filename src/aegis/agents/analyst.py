@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel
 
+from aegis.agents.injection import neutralize_delimiters
 from aegis.agents.prompts import DEFAULT_VERSION, load_prompts
 from aegis.diff.models import Diff, FileDiff, LineKind
 from aegis.gatekeeper.base import RiskAssessment
@@ -68,8 +69,15 @@ class Analyst:
         self.language = language
         self.max_diff_chars = max_diff_chars
 
-    def build_prompt(self, diff: Diff, risk: RiskAssessment) -> tuple[str, list[str]]:
+    def build_prompt(
+        self, diff: Diff, risk: RiskAssessment, metadata: str | None = None
+    ) -> tuple[str, list[str]]:
         diff_text, omitted = render_diff(diff, self.max_diff_chars)
+        metadata_block = (
+            f"<pr_metadata>\n{neutralize_delimiters(metadata.strip())}\n</pr_metadata>\n"
+            if metadata and metadata.strip()
+            else ""
+        )
         omitted_note = f"Not reviewed (size limit): {', '.join(omitted)}\n" if omitted else ""
         prompt = self.prompts.user.format(
             examples=self.prompts.examples.strip(),
@@ -77,13 +85,17 @@ class Analyst:
             risk_band=risk.band,
             risk_reasons="\n".join(f"- {r}" for r in risk.reasons) or "- (none)",
             omitted=omitted_note,
-            diff=diff_text,
+            metadata=metadata_block,
+            diff=neutralize_delimiters(diff_text),
             language=self.language,
         )
         return prompt, omitted
 
-    def analyze(self, diff: Diff, risk: RiskAssessment) -> AnalysisResult:
-        prompt, omitted = self.build_prompt(diff, risk)
+    def analyze(
+        self, diff: Diff, risk: RiskAssessment, metadata: str | None = None
+    ) -> AnalysisResult:
+        """`metadata`: PR başlığı, açıklaması ve commit mesajları (güvenilmeyen veri)."""
+        prompt, omitted = self.build_prompt(diff, risk, metadata)
         result = self.llm.generate(self.prompts.system, prompt, AnalysisOutput)
         return AnalysisResult(
             output=result.value,

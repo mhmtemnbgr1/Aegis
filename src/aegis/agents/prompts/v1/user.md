@@ -5,7 +5,7 @@
 Gatekeeper risk: {risk_score} ({risk_band})
 Risk reasons:
 {risk_reasons}
-{omitted}
+{omitted}{metadata}
 <pr_diff>
 {diff}
 </pr_diff>

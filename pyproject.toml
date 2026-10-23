@@ -62,3 +62,5 @@ files = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["live: gerçek LLM ile elle koşturulan testler (AEGIS_LIVE_PROVIDER)"]
+addopts = "-m 'not live'"
