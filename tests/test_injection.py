@@ -167,6 +167,14 @@ def test_test_files_skipped() -> None:
     assert detect_injections(diff) == []
 
 
+def test_exclude_paths() -> None:
+    from pathspec import GitIgnoreSpec
+
+    diff = _diff_with(DIFF_ATTACKS["comment-ignore"], path="prompts/v1/system.md")
+    assert detect_injections(diff, GitIgnoreSpec.from_lines(["prompts/**"])) == []
+    assert detect_injections(diff) != []
+
+
 def test_merge_does_not_duplicate() -> None:
     diff = _diff_with(DIFF_ATTACKS["comment-safe"])
     detected = detect_injections(diff)

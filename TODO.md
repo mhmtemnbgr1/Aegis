@@ -37,7 +37,7 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [x] Analiz ajanı prompt'ları (versiyonlu)
 - [x] Kanıt ve satır doğrulama filtreleri
 - [x] Prompt injection önlemleri ve saldırı testleri
-- [ ] `aegis review --base main`
+- [x] `aegis review --base main`
 - [ ] `action.yml` (composite action)
 - [ ] Özet yorumu (oluştur / güncelle)
 - [ ] Bulguların satır yorumu olarak yayınlanması

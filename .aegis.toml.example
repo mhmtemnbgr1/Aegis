@@ -74,6 +74,13 @@ test_selection = "testmon"       # testmon | imports | all
 parallel = true                  # pytest-xdist
 max_patches_per_pr = 2
 
+[review]
+language = "Turkish"             # bulgu ve özet dili
+prompt_version = "v1"            # src/aegis/agents/prompts/<sürüm>
+cache_dir = ".aegis/cache/llm"   # aynı istek ikinci kez API'ye gitmez
+runs_path = ".aegis/runs.jsonl"  # çalıştırma metrikleri (FR-45)
+# injection_exclude = ["docs/prompts/**"]  # injection dedektörünün atlayacağı yollar
+
 [state]
 release_tag = "aegis-state"      # aegis publish-state ile yüklenen arşivin release etiketi
 use_actions_cache = true

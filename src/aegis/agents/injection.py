@@ -10,6 +10,8 @@
 
 import re
 
+from pathspec import GitIgnoreSpec
+
 from aegis.diff.models import Diff
 from aegis.gatekeeper.heuristic import is_test_file
 from aegis.models import Category, Finding, Severity
@@ -55,14 +57,14 @@ def scan_text(text: str) -> list[str]:
     return [line.strip() for line in text.splitlines() if is_injection(line)]
 
 
-def detect_injections(diff: Diff) -> list[Finding]:
+def detect_injections(diff: Diff, exclude: GitIgnoreSpec | None = None) -> list[Finding]:
     """Eklenen satırlarda saldırı kalıbı arar; her eşleşme için bir güvenlik bulgusu üretir.
 
-    Test dosyaları atlanır (saldırı örnekleri testlerde meşru olarak bulunur).
+    Test dosyaları ve `exclude` ile eşleşen yollar atlanır (saldırı örnekleri orada meşrudur).
     """
     findings = []
     for f in diff.files:
-        if is_test_file(f.path):
+        if is_test_file(f.path) or (exclude is not None and exclude.match_file(f.path)):
             continue
         for h in f.hunks:
             for line in h.added_lines:

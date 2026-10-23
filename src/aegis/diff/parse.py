@@ -86,3 +86,17 @@ def git_diff(base: str, head: str = "HEAD", repo: Path | str = ".") -> str:
         check=True,
     )
     return result.stdout
+
+
+def git_commit_messages(base: str, head: str = "HEAD", repo: Path | str = ".") -> str:
+    """`base..head` aralığındaki commit mesajları (analizde güvenilmeyen metadata olarak)."""
+    result = subprocess.run(
+        ["git", "log", "--format=%B", f"{base}..{head}"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=True,
+    )
+    return result.stdout.strip()

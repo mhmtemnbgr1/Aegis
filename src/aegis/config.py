@@ -95,20 +95,38 @@ class AgentConfig(_Section):
     timeout_seconds: float = Field(default=60, gt=0)
 
 
+class ReviewConfig(_Section):
+    language: str = "Turkish"
+    """Bulgu başlığı, açıklaması ve özetin yazılacağı dil."""
+    prompt_version: str = "v1"
+    cache_dir: str = ".aegis/cache/llm"
+    runs_path: str = ".aegis/runs.jsonl"
+    """Çalıştırma metriklerinin eklendiği JSONL dosyası (FR-45)."""
+    injection_exclude: list[str] = []
+    """Injection dedektörünün atlayacağı yollar (gitignore sözdizimi), ör. prompt dosyaları.
+    LLM incelemesi bu dosyalarda yine yapılır."""
+
+
 class AegisConfig(_Section):
     gatekeeper: GatekeeperConfig = GatekeeperConfig()
     filters: FiltersConfig = FiltersConfig()
     agents: dict[str, AgentConfig] = {}
+    review: ReviewConfig = ReviewConfig()
 
     def agent(self, name: str) -> AgentConfig:
         """Ajanın ayarı; tanımlı değilse varsayılan (yerel Ollama)."""
         return self.agents.get(name, AgentConfig())
 
 
-def load_config(repo: Path | str = ".") -> AegisConfig:
-    """Repo kökündeki `.aegis.toml` dosyasını okur; yoksa varsayılanları döndürür."""
-    path = Path(repo) / CONFIG_FILE
-    if not path.is_file():
-        return AegisConfig()
+def load_config(repo: Path | str = ".", path: Path | str | None = None) -> AegisConfig:
+    """`path` verilmişse onu, yoksa repo kökündeki `.aegis.toml`'u okur; yoksa varsayılanlar."""
+    if path is not None:
+        path = Path(path)
+        if not path.is_file():
+            raise FileNotFoundError(f"yapılandırma dosyası bulunamadı: {path}")
+    else:
+        path = Path(repo) / CONFIG_FILE
+        if not path.is_file():
+            return AegisConfig()
     with path.open("rb") as fh:
         return AegisConfig.model_validate(tomllib.load(fh))
