@@ -118,6 +118,10 @@ class AegisConfig(_Section):
         return self.agents.get(name, AgentConfig())
 
 
+def parse_config(text: str) -> AegisConfig:
+    return AegisConfig.model_validate(tomllib.loads(text))
+
+
 def load_config(repo: Path | str = ".", path: Path | str | None = None) -> AegisConfig:
     """`path` verilmişse onu, yoksa repo kökündeki `.aegis.toml`'u okur; yoksa varsayılanlar."""
     if path is not None:

@@ -100,3 +100,16 @@ def git_commit_messages(base: str, head: str = "HEAD", repo: Path | str = ".") -
         check=True,
     )
     return result.stdout.strip()
+
+
+def git_show(rev: str, path: str, repo: Path | str = ".") -> str | None:
+    """`rev` commit'indeki dosya içeriği; dosya yoksa `None`."""
+    result = subprocess.run(
+        ["git", "show", f"{rev}:{path}"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    return result.stdout if result.returncode == 0 else None

@@ -55,17 +55,50 @@ PR'da çıkan sonuç şöyle görünür:
 
 Her faz bir önceki fazın çalışan sistemini derinleştirir. Ayrıntılı görevler [TODO.md](TODO.md) dosyasında ve [GitHub Issues](https://github.com/mhmtemnbgr1/Aegis/issues) altında.
 
-## Kullanım (planlanan)
+## Kullanım
+
+### Yerelde
 
 ```bash
-aegis mine   .            # repo geçmişini tara, SZZ etiketlerini çıkar
-aegis train               # risk modelini eğit
-aegis index               # bug-fix hafızasını kur
-aegis publish-state       # model + indeksi Release asset olarak yükle
-aegis review --base main  # yerelde incele
+aegis score  --base main          # yalnızca risk skoru
+aegis review --base main          # gatekeeper + analiz ajanı; sonuç terminale
+aegis review --base main --no-llm # LLM'siz, yalnızca deterministik kurallar
 ```
 
-GitHub Action ve yapılandırma: [`.aegis.toml.example`](.aegis.toml.example)
+Planlanan (Faz 2–4): `aegis mine`, `aegis train`, `aegis index`, `aegis publish-state`.
+
+### GitHub Action
+
+`.github/workflows/aegis.yml`:
+
+```yaml
+name: Aegis
+on:
+  pull_request:            # pull_request_target KULLANMAYIN
+
+permissions:
+  contents: read
+  pull-requests: write     # özet ve satır yorumları
+  checks: write            # check run
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # base...head diff'i için tam geçmiş
+      - uses: mhmtemnbgr1/Aegis@main
+        with:
+          gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
+```
+
+- Yapılandırma (`.aegis.toml`) ve `.aegisignore` **taban dalın** sürümünden okunur; PR kendi incelemesini gevşetemez.
+- **Fork PR'larında** gizli anahtar kullanılmaz ve kod dışarı gönderilmez: yalnızca gatekeeper ve (varsa) yerel Ollama modeli çalışır.
+- Aegis PR'ı **asla bloklamaz**: kendi hatasında check run `neutral` olur ve özet yorumunda uyarı bırakılır.
+- Her çalıştırmanın metrikleri `aegis-runs-*` artifact'ı olarak yüklenir.
+
+Tüm seçenekler: [`action.yml`](action.yml) · [`.aegis.toml.example`](.aegis.toml.example)
 
 ## Dokümanlar
 

@@ -2,7 +2,7 @@
 
 from aegis.diff.filters import FilterResult, SkippedFile, SkipReason, filter_diff, load_ignore_spec
 from aegis.diff.models import Diff, DiffLine, FileDiff, FileStatus, Hunk, LineKind
-from aegis.diff.parse import git_commit_messages, git_diff, parse_diff
+from aegis.diff.parse import git_commit_messages, git_diff, git_show, parse_diff
 
 __all__ = [
     "Diff",
@@ -17,6 +17,7 @@ __all__ = [
     "filter_diff",
     "git_commit_messages",
     "git_diff",
+    "git_show",
     "load_ignore_spec",
     "parse_diff",
 ]

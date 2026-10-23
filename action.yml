@@ -1,0 +1,94 @@
+name: Aegis PR Review
+description: Risk odaklı, hafızalı PR incelemesi. Düşük riskli PR'larda LLM çağırmaz; PR'ı asla bloklamaz.
+author: Aegis
+branding:
+  icon: shield
+  color: blue
+
+# Kullanım için README'deki örnek workflow'a bakın. `pull_request_target` ile kullanmayın.
+inputs:
+  github-token:
+    description: Yorum ve check run yazmak için token (pull-requests:write, checks:write).
+    default: ${{ github.token }}
+  config:
+    description: Taban commit'ten okunacak yapılandırma dosyasının yolu.
+    default: .aegis.toml
+  extras:
+    description: Kurulacak LLM SDK'ları, virgülle (ollama, gemini, openai, anthropic).
+    default: ollama,gemini
+  python-version:
+    description: Python sürümü.
+    default: "3.12"
+  gemini-api-key:
+    description: Gemini anahtarı (fork PR'larında kullanılmaz).
+    default: ""
+  openai-api-key:
+    description: OpenAI anahtarı (fork PR'larında kullanılmaz).
+    default: ""
+  anthropic-api-key:
+    description: Anthropic anahtarı (fork PR'larında kullanılmaz).
+    default: ""
+  ollama-host:
+    description: Ollama sunucu adresi (ör. self-hosted runner'da http://localhost:11434).
+    default: ""
+  upload-runs:
+    description: Çalıştırma metriklerini (runs.jsonl) artifact olarak yükle.
+    default: "true"
+
+outputs:
+  result-path:
+    description: İnceleme sonucunun JSON dosyası.
+    value: ${{ steps.review.outputs.result-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Refuse pull_request_target
+      if: github.event_name == 'pull_request_target'
+      shell: bash
+      run: |
+        echo "::error::Aegis pull_request_target ile çalıştırılamaz; 'on: pull_request' kullanın."
+        exit 0
+
+    - name: Set up uv
+      if: github.event_name == 'pull_request'
+      uses: astral-sh/setup-uv@v6
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install Aegis
+      if: github.event_name == 'pull_request'
+      shell: bash
+      env:
+        AEGIS_ACTION_PATH: ${{ github.action_path }}
+        AEGIS_EXTRAS: ${{ inputs.extras }}
+      run: |
+        extras="$(echo "$AEGIS_EXTRAS" | tr -d ' ')"
+        spec="$AEGIS_ACTION_PATH"
+        if [ -n "$extras" ]; then spec="$AEGIS_ACTION_PATH[$extras]"; fi
+        uv tool install --quiet "$spec"
+
+    - name: Review
+      id: review
+      if: github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        AEGIS_CONFIG: ${{ inputs.config }}
+        GEMINI_API_KEY: ${{ inputs.gemini-api-key }}
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        OLLAMA_HOST: ${{ inputs.ollama-host }}
+      run: |
+        result="$RUNNER_TEMP/aegis-result.json"
+        aegis github --config "$AEGIS_CONFIG" --json-out "$result" || true
+        echo "result-path=$result" >> "$GITHUB_OUTPUT"
+
+    - name: Upload run metrics
+      if: always() && github.event_name == 'pull_request' && inputs.upload-runs == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: aegis-runs-${{ github.run_id }}-${{ github.run_attempt }}
+        path: .aegis/runs.jsonl
+        if-no-files-found: ignore
+        retention-days: 90

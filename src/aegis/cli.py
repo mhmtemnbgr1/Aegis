@@ -1,6 +1,7 @@
 """Aegis komut satırı arayüzü."""
 
 import io
+import logging
 import subprocess
 import sys
 from datetime import UTC, datetime
@@ -13,6 +14,7 @@ from aegis import __version__
 from aegis.config import load_config
 from aegis.diff import filter_diff, git_commit_messages, git_diff, load_ignore_spec, parse_diff
 from aegis.gatekeeper import HeuristicGatekeeper, RiskBand
+from aegis.github.action import run_action
 from aegis.llm import ResponseCache
 from aegis.review import ReviewResult, ReviewStatus, run_review
 from aegis.telemetry.runs import append_run
@@ -184,6 +186,19 @@ def review(
     _print_review(result)
     if json_out is not None:
         json_out.write_text(result.model_dump_json(indent=2), encoding="utf-8")
+
+
+@app.command(name="github")
+def github_action(
+    repo: Path = typer.Option(Path("."), "--repo", help="Git deposunun yolu."),
+    config_path: str = typer.Option(
+        ".aegis.toml", "--config", help="Taban commit'te okunacak yapılandırma dosyası."
+    ),
+    json_out: Path | None = typer.Option(None, "--json-out", help="Sonucu JSON olarak yaz."),
+) -> None:
+    """GitHub Action içinde PR'ı inceler ve sonucu yayınlar (her zaman 0 ile çıkar)."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    raise typer.Exit(run_action(repo=repo, config_path=config_path, json_out=json_out))
 
 
 @app.command(name="eval")
