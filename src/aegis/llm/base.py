@@ -6,7 +6,14 @@ from pydantic import BaseModel, Field
 
 
 class LLMError(RuntimeError):
-    """Sağlayıcı çağrısı başarısız oldu (ağ, kota, ret, boş yanıt...)."""
+    """Sağlayıcı çağrısı başarısız oldu (ağ, kota, ret, boş yanıt...).
+
+    `retryable=False` olan hatalar (ret, eksik anahtar/SDK) tekrar denenmez.
+    """
+
+    def __init__(self, message: str, *, retryable: bool = True) -> None:
+        super().__init__(message)
+        self.retryable = retryable
 
 
 class LLMRequest(BaseModel):

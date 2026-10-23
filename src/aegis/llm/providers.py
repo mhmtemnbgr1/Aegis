@@ -23,13 +23,15 @@ def _import(module: str, extra: str) -> ModuleType:
     try:
         return importlib.import_module(module)
     except ImportError as exc:
-        raise LLMError(f"{module} kurulu değil: `uv sync --extra {extra}`") from exc
+        raise LLMError(
+            f"{module} kurulu değil: `uv sync --extra {extra}`", retryable=False
+        ) from exc
 
 
 def _require_env(var: str) -> str:
     value = os.environ.get(var)
     if not value:
-        raise LLMError(f"{var} ortam değişkeni tanımlı değil")
+        raise LLMError(f"{var} ortam değişkeni tanımlı değil", retryable=False)
     return value
 
 
@@ -233,9 +235,9 @@ class AnthropicProvider:
         except Exception as exc:
             raise LLMError(f"anthropic: {exc}") from exc
         if resp.stop_reason == "refusal":
-            raise LLMError("anthropic: model isteği reddetti")
+            raise LLMError("anthropic: model isteği reddetti", retryable=False)
         if resp.stop_reason == "max_tokens":
-            raise LLMError("anthropic: yanıt max_tokens sınırında kesildi")
+            raise LLMError("anthropic: yanıt max_tokens sınırında kesildi", retryable=False)
         text = "".join(block.text for block in resp.content if block.type == "text")
         return LLMResponse(
             text=_nonempty(text, self.name),

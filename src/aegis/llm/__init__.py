@@ -2,6 +2,7 @@
 
 from aegis.config import AgentConfig
 from aegis.llm.base import LLMError, LLMProvider, LLMRequest, LLMResponse, Usage
+from aegis.llm.cache import ResponseCache
 from aegis.llm.providers import (
     AnthropicProvider,
     GeminiProvider,
@@ -9,6 +10,7 @@ from aegis.llm.providers import (
     OllamaProvider,
     OpenAIProvider,
 )
+from aegis.llm.structured import SchemaStats, StructuredLLM, StructuredResult
 
 
 def create_provider(config: AgentConfig) -> LLMProvider:
@@ -35,6 +37,10 @@ __all__ = [
     "MockProvider",
     "OllamaProvider",
     "OpenAIProvider",
+    "ResponseCache",
+    "SchemaStats",
+    "StructuredLLM",
+    "StructuredResult",
     "Usage",
     "create_provider",
 ]
