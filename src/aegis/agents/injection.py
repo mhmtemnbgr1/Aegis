@@ -25,7 +25,8 @@ INJECTION_PATTERNS = [
         r"\b(instructions?|rules|prompts?)\b",
         r"\byou are now\b",
         r"\b(new|updated|override) (system )?instructions?\b",
-        r"\bsystem prompt\b",
+        # Çıplak "system prompt" ifadesi (ör. bir commit mesajında) talimat değildir.
+        r"\b(ignore|reveal|print|show|override|replace|new)\b.{0,20}\bsystem prompt\b",
         r"\b(do not|don't|never) (report|flag|mention)\b",
         r"\breport (no|zero) (findings|issues|bugs)\b",
         r"\b(approve|lgtm)\b.{0,20}\b(this|the) (pr|pull request|change)\b",

@@ -95,6 +95,8 @@ def test_risky_api_patterns(line: str) -> None:
     [
         'cursor.execute("SELECT * FROM t WHERE id = %s", (uid,))',
         "evaluate(model)",
+        "except subprocess.CalledProcessError as exc:",
+        "timeout = subprocess.TIMEOUT",
         "self.retrieval(x)",
     ],
 )

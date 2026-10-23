@@ -47,7 +47,8 @@ class HeuristicConfig(_Section):
         r"\beval\(",
         r"\bexec\(",
         r"\b__import__\(",
-        r"\bsubprocess\.",
+        # Yalnızca süreç başlatan çağrılar; `except subprocess.CalledProcessError` riskli değil.
+        r"\bsubprocess\.(run|call|check_call|check_output|Popen|getoutput|getstatusoutput)\(",
         r"\bos\.(system|popen)\(",
         r"shell\s*=\s*True",
         r"\bpickle\.loads?\(",
