@@ -1,7 +1,7 @@
 # Aegis yapılandırma örneği.
 # Kullanmak için: cp .aegis.toml.example .aegis.toml
-# API anahtarları buraya YAZILMAZ; ortam değişkeni kullanın:
-#   GEMINI_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY / GITHUB_TOKEN
+# Gizli değerler buraya YAZILMAZ; ortam değişkeni kullanın:
+#   GITHUB_TOKEN, OLLAMA_HOST
 
 [mining]
 fix_patterns = ["fix", "bug", "regression", "leak", "crash", "hotfix"]
@@ -21,9 +21,16 @@ high_threshold = 0.70            # üstü: tam zincir (analiz + patch + test)
 # max_llm_pr_ratio = 0.4
 explain = true                   # SHAP açıklaması
 
+[gatekeeper.heuristic]
+# Skor = ağırlıklı ortalama(boyut, riskli yol); her bileşen 0–1 arası.
+size_weight = 0.5
+path_weight = 0.5
+size_saturation = 400            # bu kadar değişen satırda boyut bileşeni 1 olur
+# risky_paths = ["auth", "db", "payment", ...]   # yol kelimeleri (varsayılan listeyi değiştirir)
+
 [memory]
 index_path = ".aegis/memory"
-embedding_model = "local"        # local | openai
+embedding_model = "local"        # yerel sentence-transformers modeli
 top_k = 3
 retrieval = "hybrid"             # hybrid | vector | structural
 
@@ -32,10 +39,11 @@ max_changed_lines_per_file = 1500
 languages = ["python"]
 
 [agents.analyst]
-provider = "ollama"              # ollama | gemini | openai | anthropic
+provider = "ollama"              # yalnızca yerel model; SDK: uv sync --extra ollama
 model = "qwen2.5-coder:7b"
 temperature = 0.0
 timeout_seconds = 60
+# Ollama adresi OLLAMA_HOST ortam değişkeninden okunur (varsayılan http://localhost:11434).
 
 [agents.fixer]
 provider = "ollama"
@@ -58,6 +66,14 @@ network = false
 test_selection = "testmon"       # testmon | imports | all
 parallel = true                  # pytest-xdist
 max_patches_per_pr = 2
+
+[review]
+llm_enabled = true               # false: yalnızca gatekeeper + deterministik kurallar
+language = "Turkish"             # bulgu ve özet dili
+prompt_version = "v1"            # src/aegis/agents/prompts/<sürüm>
+cache_dir = ".aegis/cache/llm"   # aynı istek ikinci kez API'ye gitmez
+runs_path = ".aegis/runs.jsonl"  # çalıştırma metrikleri (FR-45)
+# injection_exclude = ["docs/prompts/**"]  # injection dedektörünün atlayacağı yollar
 
 [state]
 release_tag = "aegis-state"      # aegis publish-state ile yüklenen arşivin release etiketi

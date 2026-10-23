@@ -55,23 +55,57 @@ PR'da çıkan sonuç şöyle görünür:
 
 Her faz bir önceki fazın çalışan sistemini derinleştirir. Ayrıntılı görevler [TODO.md](TODO.md) dosyasında ve [GitHub Issues](https://github.com/mhmtemnbgr1/Aegis/issues) altında.
 
-## Kullanım (planlanan)
+## Kullanım
+
+### Yerelde
 
 ```bash
-aegis mine   .            # repo geçmişini tara, SZZ etiketlerini çıkar
-aegis train               # risk modelini eğit
-aegis index               # bug-fix hafızasını kur
-aegis publish-state       # model + indeksi Release asset olarak yükle
-aegis review --base main  # yerelde incele
+aegis score  --base main          # yalnızca risk skoru
+aegis review --base main          # gatekeeper + analiz ajanı; sonuç terminale
+aegis review --base main --no-llm # LLM'siz, yalnızca deterministik kurallar
 ```
 
-GitHub Action ve yapılandırma: [`.aegis.toml.example`](.aegis.toml.example)
+Planlanan (Faz 2–4): `aegis mine`, `aegis train`, `aegis index`, `aegis publish-state`.
+
+### GitHub Action
+
+`.github/workflows/aegis.yml`:
+
+```yaml
+name: Aegis
+on:
+  pull_request:            # pull_request_target KULLANMAYIN
+
+permissions:
+  contents: read
+  pull-requests: write     # özet ve satır yorumları
+  checks: write            # check run
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # base...head diff'i için tam geçmiş
+      - uses: mhmtemnbgr1/Aegis@main
+        with:
+          ollama-host: ${{ vars.OLLAMA_HOST }}   # Ollama'lı self-hosted runner / sunucu
+```
+
+- Yapılandırma (`.aegis.toml`) ve `.aegisignore` **taban dalın** sürümünden okunur; PR kendi incelemesini gevşetemez.
+- Yalnızca **yerel model (Ollama)** kullanılır; bulut LLM'i ve API anahtarı yoktur. `ollama-host` verilmezse (GitHub'ın barındırılan runner'larında Ollama yoktur) LLM adımı uyarısız atlanır ve inceleme gatekeeper ile deterministik kurallarla sürer.
+- Aegis PR'ı **asla bloklamaz**: kendi hatasında check run `neutral` olur ve özet yorumunda uyarı bırakılır.
+- Her çalıştırmanın metrikleri `aegis-runs-*` artifact'ı olarak yüklenir.
+
+Tüm seçenekler: [`action.yml`](action.yml) · [`.aegis.toml.example`](.aegis.toml.example)
 
 ## Dokümanlar
 
 | Dosya | İçerik |
 | --- | --- |
 | [docs/rad.md](docs/rad.md) | Gereksinim Analiz Dokümanı (RAD): kapsam, hedefler, FR/NFR, senaryolar, UML modelleri, arayüz taslakları |
+| [docs/setup.md](docs/setup.md) | Geliştirme ortamı: uv, Ollama |
 | [docs/architecture.md](docs/architecture.md) | Gereksinimler, katman ayrıntıları, şemalar, modüller, teknoloji yığını, güvenlik |
 | [docs/presentation.md](docs/presentation.md) | Sunum ve tez: katkılar, araştırma soruları, değerlendirme planı, demo, jüri soruları |
 | [docs/target-repos.md](docs/target-repos.md) | Eğitim ve değerlendirmede kullanılan repolar |
@@ -80,8 +114,10 @@ GitHub Action ve yapılandırma: [`.aegis.toml.example`](.aegis.toml.example)
 ## Geliştirme
 
 ```bash
-uv sync
+uv sync --all-extras        # Ollama SDK'sı dahil
+uv run pre-commit install   # commit öncesi ruff, ruff-format, mypy
 uv run ruff check .
+uv run mypy
 uv run pytest
 ```
 

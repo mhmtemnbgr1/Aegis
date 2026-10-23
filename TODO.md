@@ -20,8 +20,8 @@ Faz 1–4 ve Faz 6 kesilmez.
 - [x] GitHub Actions CI, issue/PR şablonları
 - [x] `aegis --version` komutu
 - [x] Hedef repoların seçimi ([docs/target-repos.md](docs/target-repos.md))
-- [ ] mypy ve pre-commit
-- [ ] Geliştirme ortamı: Ollama ve Gemini API anahtarı
+- [x] mypy ve pre-commit
+- [ ] Geliştirme ortamı: Ollama
 - [ ] GitHub Projects panosu ve branch koruması
 - [ ] Görev dağılımı
 - [ ] Proje yönünün danışmana onaylatılması
@@ -30,18 +30,18 @@ Faz 1–4 ve Faz 6 kesilmez.
 
 Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → PR yorumu.
 
-- [ ] Diff ayrıştırma ve ön filtre (binary, lock, üretilmiş dosyalar)
-- [ ] Sezgisel gatekeeper (değişen satır + riskli yol/API); deneylerde taban çizgisi olarak da kullanılır
-- [ ] `LLMProvider` protokolü ve 4 sağlayıcı adaptörü
-- [ ] Structured output, retry ve yanıt cache'i
-- [ ] Analiz ajanı prompt'ları (versiyonlu)
-- [ ] Kanıt ve satır doğrulama filtreleri
-- [ ] Prompt injection önlemleri ve saldırı testleri
-- [ ] `aegis review --base main`
-- [ ] `action.yml` (composite action)
-- [ ] Özet yorumu (oluştur / güncelle)
-- [ ] Bulguların satır yorumu olarak yayınlanması
-- [ ] Fail-open ve check run sonucu
+- [x] Diff ayrıştırma ve ön filtre (binary, lock, üretilmiş dosyalar)
+- [x] Sezgisel gatekeeper (değişen satır + riskli yol); deneylerde taban çizgisi olarak da kullanılır
+- [x] `LLMProvider` protokolü ve 4 sağlayıcı adaptörü
+- [x] Structured output, retry ve yanıt cache'i
+- [x] Analiz ajanı prompt'ları (versiyonlu)
+- [x] Kanıt ve satır doğrulama filtreleri
+- [x] Prompt injection önlemleri ve saldırı testleri
+- [x] `aegis review --base main`
+- [x] `action.yml` (composite action)
+- [x] Özet yorumu (oluştur / güncelle)
+- [x] Bulguların satır yorumu olarak yayınlanması
+- [x] Fail-open ve check run sonucu
 - [ ] Kendi repomuzda dogfooding
 
 ## Faz 2 — Repo Madenciliği

@@ -73,7 +73,7 @@ flowchart LR
     IDX -.-> RET
 ```
 
-**Faz 1 iskeletinde:** Gatekeeper sezgisel bir kuraldır (değişen satır sayısı + riskli yol/API), hafıza yoktur ve analiz tek bir LLM çağrısıyla yapılır. Sonraki fazlar bu kutuları gerçek bileşenlerle değiştirir. Akışın şekli değişmez.
+**Faz 1 iskeletinde:** Gatekeeper sezgisel bir kuraldır (değişen satır sayısı + riskli yol), hafıza yoktur ve analiz tek bir LLM çağrısıyla yapılır. Sonraki fazlar bu kutuları gerçek bileşenlerle değiştirir. Akışın şekli değişmez.
 
 ---
 
@@ -86,7 +86,7 @@ flowchart LR
 | Amaç | FIX | Kamei vd. 2013 |
 | Geçmiş | NDEV, AGE, NUC | Kamei vd. 2013 |
 | Deneyim | EXP, REXP, SEXP | Kamei vd. 2013 |
-| **Aegis'e özgü** | Dokunulan fonksiyonların geçmiş hata kartı sayısı, riskli yol (`auth`, `db`, `payment`…), riskli API (`eval`, `subprocess`, SQL string birleştirme…), test değişim oranı | — |
+| **Aegis'e özgü** | Dokunulan fonksiyonların geçmiş hata kartı sayısı, riskli yol (`auth`, `db`, `payment`…), test değişim oranı | — |
 
 - **SZZ varyantı:** MA-SZZ (meta-change aware), [pyszz](https://github.com/grosa1/pyszz) ile çalıştırılır. Bu varyant boşluk/yorum değişikliklerini, merge'leri ve meta değişiklikleri (dosya taşıma, satır sonu, biçimlendirme) yok sayar. pyszz kurulamazsa PyDriller'ın B-SZZ uygulamasına (`get_commits_last_modified_lines`) geri dönülür. Hangi varyantın kullanıldığı her veri sürümüne yazılır.
 - **Geçmiş sınırı:** SZZ yalnızca son N yıla uygulanır (varsayılan 5). Böylece büyük repolarda madencilik saatler değil dakikalar sürer.
@@ -254,7 +254,7 @@ async def test_release_on_timeout(pool):
 | ID | Gereksinim | Öncelik |
 | --- | --- | --- |
 | FR-06 | PR veya commit aralığının diff'i dosya/hunk/satır modeline çevrilir. Binary, lock, minified ve üretilmiş dosyalar elenir. | Must |
-| FR-17 | Eğitilmiş model yokken **sezgisel gatekeeper** kullanılır: değişen satır sayısı, riskli yol ve riskli API. Bu kural deneylerde taban çizgisi olarak da kullanılır. | Must |
+| FR-17 | Eğitilmiş model yokken **sezgisel gatekeeper** kullanılır: değişen satır sayısı ve riskli yol. Bu kural deneylerde taban çizgisi olarak da kullanılır. | Must |
 
 **Repo madenciliği**
 
@@ -273,7 +273,7 @@ async def test_release_on_timeout(pool):
 | --- | --- | --- |
 | FR-10 | `aegis train` zaman sıralı doğrulamayla model eğitir. | Must |
 | FR-11 | PR düzeyinde 0–1 arası risk skoru üretilir. PR etiketi: içindeki commit'lerden en az biri bug-inducing ise hatalı. Yalnızca PR açılış/güncelleme anında bilinen bilgiler kullanılır. | Must |
-| FR-12 | Ek özellikler: hafızadan gelen hata yoğunluğu, riskli yol/API, test değişim oranı, commit ve yazar sayısı. | Should |
+| FR-12 | Ek özellikler: hafızadan gelen hata yoğunluğu, riskli yol, test değişim oranı, commit ve yazar sayısı. | Should |
 | FR-18 | Tüm özellikler zorunlu `as_of` parametresiyle, yalnızca o tarihte bilinen veriyle hesaplanır. | Must |
 | FR-13 | Üç risk bandı vardır. Eşikler config'den veya bütçeden belirlenir. | Must |
 | FR-14 | SHAP ile en etkili 3 özellik açıklanır. | Should |
@@ -360,7 +360,7 @@ src/aegis/
 ├── features/    kamei.py  extra.py
 ├── gatekeeper/  heuristic.py  train.py  score.py  explain.py
 ├── memory/      cards.py  chunker.py  embed.py  retrieve.py
-├── llm/         base.py  ollama.py  gemini.py  openai.py  anthropic.py  cache.py
+├── llm/         base.py  providers.py  structured.py  cache.py
 ├── agents/      analyst.py  fixer.py  tester.py  orchestrator.py  prompts/v1/
 ├── verify/      sandbox.py  verifier.py
 ├── github/      event.py  publisher.py
@@ -381,10 +381,10 @@ src/aegis/
 | ML | scikit-learn, LightGBM, imbalanced-learn, SHAP |
 | Kod ayrıştırma | `ast` (ileride tree-sitter), unidiff |
 | Embedding ve vektör DB | sentence-transformers, LanceDB |
-| LLM | `openai`, `anthropic`, `google-genai`, `ollama`; httpx, tenacity |
+| LLM | `ollama` (yalnızca yerel model); httpx, tenacity |
 | GitHub | PyGithub veya httpx ile REST |
 | Doğrulama | pytest-testmon (test seçimi), pytest-xdist (paralellik), Docker |
 | Test ve kalite | pytest, pytest-cov, pytest-mock, syrupy, ruff, mypy (strict), pre-commit |
 | Deneyler | matplotlib, scipy |
 
-LLM modelleri `.aegis.toml` içinde parametredir. Geliştirmede Ollama ile çalışan güncel bir açık kod modeli (ör. `qwen2.5-coder:7b` veya Ollama'daki daha yeni bir Qwen Coder sürümü) ve Gemini Flash ücretsiz kotası kullanılır; deneylerde küçük bulut modelleri eklenir. Tüm sağlayıcılar JSON Schema ile yapılandırılmış çıktı destekler (Ollama'da `format` parametresi).
+LLM modelleri `.aegis.toml` içinde parametredir. Yalnızca Ollama ile çalışan yerel açık kod modelleri kullanılır (ör. `qwen2.5-coder:7b` veya daha yeni bir Qwen Coder sürümü); bulut sağlayıcısı yoktur. Yapılandırılmış çıktı Ollama'nın `format` parametresiyle JSON Schema olarak alınır.
