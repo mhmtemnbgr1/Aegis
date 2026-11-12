@@ -3,11 +3,12 @@
 Henüz uygulanmamış bölümler (ör. `[agents]`) okunur ama yok sayılır; ilgili fazda modele eklenir.
 """
 
+import re
 import tomllib
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 CONFIG_FILE = ".aegis.toml"
 
@@ -88,11 +89,84 @@ class ReviewConfig(_Section):
     LLM incelemesi bu dosyalarda yine yapılır."""
 
 
+class MiningConfig(_Section):
+    """Repo madenciliği ve fix-commit tespiti (FR-01, FR-02)."""
+
+    data_dir: str = ".aegis/data"
+    """Madencilik çıktılarının (Parquet) yazıldığı kök dizin; her repo bir alt dizin."""
+    clone_dir: str = ".aegis/repos"
+    """URL verildiğinde repoların klonlandığı kök dizin."""
+    fix_patterns: list[str] = [
+        r"\bfix(e[sd]|ing)?\b",
+        r"\bbug(s|fix|fixes)?\b",
+        r"\bhotfix\b",
+        r"\bregressions?\b",
+        r"\bleak(s|ing)?\b",
+        r"\bcrash(es|ed|ing)?\b",
+        r"\bdefects?\b",
+    ]
+    """Commit mesajında (büyük/küçük harf duyarsız) aranan fix kalıpları (regex)."""
+    fix_exclude_patterns: list[str] = [
+        r"^revert\b",
+        r"\btypos?\b",
+        r"\bspelling\b",
+        r"\bdocs?\b",
+        r"\bdocumentation\b",
+        r"\breadme\b",
+        r"\bchangelog\b",
+        r"\blint(ing)?\b",
+        r"\bflake8\b",
+        r"\bmypy\b",
+        r"\bpep ?8\b",
+        r"\bformatting\b",
+        r"\bwhitespace\b",
+        r"\bci\b",
+    ]
+    """Commit'in ilk satırında eşleşirse kalıp eşleşmesi fix sayılmaz; hata etiketi yine sayılır."""
+    bug_labels: list[str] = [
+        "bug",
+        "type: bug",
+        "type:bug",
+        "kind/bug",
+        "kind: bug",
+        "bugfix",
+        "regression",
+    ]
+    """Bağlı issue'da bu etiketlerden biri varsa commit fix sayılır (büyük/küçük harf duyarsız)."""
+
+    szz_variant: Literal["ma", "b"] = "ma"
+    """`ma`: boşluk/yorum değişikliklerini ve meta commit'leri yok sayar; `b`: düz blame (FR-03)."""
+    history_years: int = Field(default=5, gt=0)
+    """SZZ yalnızca son N yıldaki fix'leri işler (repodaki en yeni commit'e göre)."""
+    max_files_per_commit: int = Field(default=50, gt=0)
+    """Daha fazla dosya değiştiren fix'ler atlanır; `ma` bu commit'leri blame'de de yok sayar."""
+    source_extensions: list[str] = [".py"]
+    """SZZ'nin blame ettiği kaynak dosya uzantıları."""
+    test_path_patterns: list[str] = [
+        r"(^|/)tests?/",
+        r"(^|/)test_[^/]*\.py$",
+        r"_tests?\.py$",
+        r"(^|/)conftest\.py$",
+    ]
+    """Eşleşen yollar SZZ'de kaynak sayılmaz; yalnız testlere dokunan fix'ler elenir."""
+
+    @field_validator("fix_patterns", "fix_exclude_patterns", "test_path_patterns")
+    @classmethod
+    def _valid_regex(cls, patterns: list[str]) -> list[str]:
+        for pattern in patterns:
+            try:
+                re.compile(pattern)
+            except re.error as exc:
+                raise ValueError(f"geçersiz regex {pattern!r}: {exc}") from exc
+        return patterns
+
+
 class AegisConfig(_Section):
     gatekeeper: GatekeeperConfig = GatekeeperConfig()
     filters: FiltersConfig = FiltersConfig()
     agents: dict[str, AgentConfig] = {}
     review: ReviewConfig = ReviewConfig()
+    mining: MiningConfig = MiningConfig()
 
     def agent(self, name: str) -> AgentConfig:
         """Ajanın ayarı; tanımlı değilse varsayılan (yerel Ollama)."""

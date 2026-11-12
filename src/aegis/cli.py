@@ -2,20 +2,37 @@
 
 import io
 import logging
+import os
 import subprocess
 import sys
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
+import polars as pl
 import typer
 from rich.console import Console
+from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, TimeElapsedColumn
 
 from aegis import __version__
 from aegis.config import load_config
 from aegis.diff import filter_diff, git_commit_messages, git_diff, load_ignore_spec, parse_diff
+from aegis.features import compute_kamei
 from aegis.gatekeeper import HeuristicGatekeeper, RiskBand
 from aegis.github.action import run_action
+from aegis.github.client import GitHubClient
 from aegis.llm import ResponseCache
+from aegis.mining import (
+    ensure_clone,
+    github_repository,
+    is_remote,
+    mine_repository,
+    repo_slug,
+    slug_from_url,
+)
+from aegis.mining.labels import github_label_source
+from aegis.mining.miner import count_commits, remote_url
+from aegis.mining.szz import run_szz
 from aegis.review import ReviewResult, ReviewStatus, run_review
 from aegis.telemetry.runs import append_run
 
@@ -54,9 +71,140 @@ def main(
 
 
 @app.command()
-def mine() -> None:
-    """Repo geçmişini tarar, fix commit'lerini ve SZZ eşlemelerini çıkarır. (Faz 1)"""
-    _not_implemented("Faz 1")
+def mine(
+    repo: str = typer.Argument(..., help="Yerel git deposunun yolu veya klonlanacak URL."),
+    out: Path | None = typer.Option(
+        None, "--out", help="Çıktı kök dizini (varsayılan: [mining].data_dir)."
+    ),
+    config_path: Path | None = typer.Option(
+        None, "--config", help="Yapılandırma dosyası (varsayılan: ./.aegis.toml)."
+    ),
+    since: datetime | None = typer.Option(
+        None, "--since", help="Yalnızca bu tarihten sonraki commit'ler (YYYY-MM-DD)."
+    ),
+    no_functions: bool = typer.Option(
+        False, "--no-functions", help="Fonksiyon düzeyindeki değişiklikleri çıkarma (daha hızlı)."
+    ),
+    issue_labels: bool = typer.Option(
+        False,
+        "--issue-labels",
+        help="Bağlı issue etiketlerini GitHub'dan oku (GITHUB_TOKEN gerekir).",
+    ),
+    no_szz: bool = typer.Option(False, "--no-szz", help="SZZ eşlemesini çalıştırma."),
+    szz_only: bool = typer.Option(
+        False, "--szz-only", help="Taramayı atla; mevcut çıktı üzerinde yalnızca SZZ çalıştır."
+    ),
+    szz_variant: str | None = typer.Option(
+        None, "--szz-variant", help="SZZ varyantı: ma veya b (varsayılan: [mining].szz_variant)."
+    ),
+) -> None:
+    """Commit geçmişini tarar, fix commit'lerini bulur ve SZZ ile hatayı getiren commit'leri
+    eşler. Çıktılar Parquet'e yazılır (docs/mining-schema.md)."""
+    config = load_config(Path("."), config_path).mining
+    if szz_variant is not None:
+        if szz_variant not in ("ma", "b"):
+            console.print("[red]--szz-variant ma veya b olmalı.[/red]")
+            raise typer.Exit(2)
+        config = config.model_copy(update={"szz_variant": szz_variant})
+    if since is not None and since.tzinfo is None:
+        since = since.replace(tzinfo=UTC)
+    try:
+        if is_remote(repo):
+            console.print(f"Klonlanıyor: {repo}")
+            path = ensure_clone(repo, Path(config.clone_dir))
+            slug = slug_from_url(repo)
+        else:
+            path = Path(repo)
+            slug = repo_slug(path)
+        total = count_commits(path, since)
+    except subprocess.CalledProcessError as exc:
+        console.print(f"[red]git başarısız:[/red] {(exc.stderr or '').strip()}")
+        raise typer.Exit(2) from exc
+
+    out_dir = (out or Path(config.data_dir)) / slug
+    label_source = None
+    if issue_labels:
+        url = remote_url(path)
+        gh_repo = github_repository(url) if url else None
+        token = os.environ.get("GITHUB_TOKEN")
+        if gh_repo is None or not token:
+            console.print("[red]--issue-labels için GitHub reposu ve GITHUB_TOKEN gerekir.[/red]")
+            raise typer.Exit(2)
+        label_source = github_label_source(
+            GitHubClient(token, gh_repo), out_dir / "issue_labels.json"
+        )
+
+    def progress_bar() -> Progress:
+        return Progress(
+            TextColumn("{task.description}"),
+            BarColumn(),
+            MofNCompleteColumn(),
+            TimeElapsedColumn(),
+            console=console,
+        )
+
+    if szz_only:
+        if not (out_dir / "commits.parquet").is_file():
+            console.print(f"[red]{out_dir} altında tarama çıktısı yok; önce aegis mine.[/red]")
+            raise typer.Exit(2)
+    else:
+        with progress_bar() as progress:
+            task = progress.add_task(f"{slug} taranıyor", total=total)
+            result = mine_repository(
+                path,
+                out_dir,
+                config,
+                slug=slug,
+                since=since,
+                functions=not no_functions,
+                label_source=label_source,
+                on_commit=lambda: progress.advance(task),
+            )
+        console.print(
+            f"[bold]{result.commits}[/bold] commit ({result.merges} merge, "
+            f"[bold]{result.fixes}[/bold] fix) · {result.files} dosya değişikliği · "
+            f"{result.functions} fonksiyon değişikliği · {result.duration_seconds:.1f} sn"
+        )
+        if result.function_errors:
+            console.print(
+                f"[yellow]{result.function_errors} dosyada fonksiyonlar çıkarılamadı.[/yellow]"
+            )
+        started = time.perf_counter()
+        features = compute_kamei(
+            pl.read_parquet(out_dir / "commits.parquet"), pl.read_parquet(out_dir / "files.parquet")
+        )
+        features.write_parquet(out_dir / "kamei.parquet")
+        console.print(
+            f"Kamei metrikleri: {features.height} commit · {time.perf_counter() - started:.1f} sn"
+        )
+
+    if not no_szz:
+        with progress_bar() as progress:
+            szz_task = progress.add_task(f"SZZ ({config.szz_variant})", total=None)
+            try:
+                szz = run_szz(
+                    path,
+                    out_dir,
+                    config,
+                    on_start=lambda n: progress.update(szz_task, total=n),
+                    on_fix=lambda: progress.advance(szz_task),
+                )
+            except subprocess.CalledProcessError as exc:
+                console.print(
+                    f"[red]SZZ sırasında git başarısız:[/red] {(exc.stderr or '').strip()}"
+                )
+                raise typer.Exit(2) from exc
+        console.print(
+            f"SZZ ({szz.variant}, {config.history_years} yıl): {szz.fixes_in_window} fix → "
+            f"[bold]{szz.fixes_with_inducing}[/bold] eşlendi · "
+            f"[bold]{szz.inducing_commits}[/bold] bug-inducing commit · {szz.pairs} çift · "
+            f"{szz.duration_seconds:.1f} sn"
+        )
+        console.print(
+            f"[dim]Atlanan fix: {szz.fixes_skipped_large} çok büyük, "
+            f"{szz.fixes_without_source} kaynak dosyasız (yalnız test/doküman vb.)[/dim]"
+        )
+    console.print(f"[dim]Çıktı: {out_dir}[/dim]")
 
 
 @app.command()

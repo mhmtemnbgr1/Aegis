@@ -70,12 +70,12 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 
 ## Faz 2 — Repo Madenciliği · 8 Kas
 
-- [ ] Miner: PyDriller ile commit, dosya ve fonksiyon değişiklikleri
-- [ ] Fix-commit tespiti
+- [x] Miner: PyDriller ile commit, dosya ve fonksiyon değişiklikleri ([şema](docs/mining-schema.md))
+- [x] Fix-commit tespiti
 - [ ] Fix-commit tespiti için 200 örneklik doğrulama seti
-- [ ] SZZ (pyszz ile MA-SZZ; yedek PyDriller B-SZZ; son 5 yıl)
-- [ ] Kamei JIT metrikleri
-- [ ] Zaman kuralı: `as_of` ile sızıntısız özellik hesabı
+- [ ] SZZ (git blame tabanlı MA ve B varyantları; son 5 yıl) — kod hazır, 50 eşlemenin elle kontrolü bekliyor
+- [x] Kamei JIT metrikleri
+- [x] Zaman kuralı: `as_of` ile sızıntısız özellik hesabı
 - [ ] Sentetik git deposu testleri
 - [ ] D1 veri setinin çıkarılması (6 repo, önce tqdm pilotu)
 - [ ] *(opsiyonel)* Artımlı madencilik

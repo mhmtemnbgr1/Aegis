@@ -91,6 +91,17 @@ class GitHubClient:
     def update_review_comment(self, comment_id: int, body: str) -> None:
         self._request("PATCH", f"/pulls/comments/{comment_id}", json={"body": body})
 
+    # Issue etiketleri (fix-commit tespiti)
+    def get_issue_labels(self, number: int) -> list[str] | None:
+        """Issue veya PR'ın etiket adları; bulunamazsa (404/410) None."""
+        try:
+            issue = self._request("GET", f"/issues/{number}")
+        except GitHubError as exc:
+            if exc.status_code in (404, 410):
+                return None
+            raise
+        return [str(label["name"]) for label in issue.get("labels", [])]
+
     # Check run
     def create_check_run(
         self, head_sha: str, *, name: str, conclusion: str, title: str, summary: str

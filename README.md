@@ -63,7 +63,7 @@ aegis review --base main          # gatekeeper + analiz ajanı; sonuç terminale
 aegis review --base main --no-llm # LLM'siz, yalnızca deterministik kurallar
 ```
 
-Planlanan (Faz 2–4): `aegis mine`, `aegis train`, `aegis index`, `aegis publish-state`.
+Planlanan (Faz 2–4): `aegis train`, `aegis index`, `aegis publish-state`.
 
 ### GitHub Action
 
