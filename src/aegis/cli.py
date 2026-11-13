@@ -460,6 +460,9 @@ def index(
     data_root: Path | None = typer.Option(
         None, "--data", help="Madencilik çıktılarının kökü (varsayılan: [mining].data_dir)."
     ),
+    index_root: Path | None = typer.Option(
+        None, "--index", help="Vektör indeksinin kökü (varsayılan: [memory].index_path)."
+    ),
     rebuild: bool = typer.Option(False, "--rebuild", help="Kartları sıfırdan üret."),
     issue_titles: bool = typer.Option(
         False, "--issue-titles", help="Issue başlıklarını GitHub'dan oku (GITHUB_TOKEN gerekir)."
@@ -514,6 +517,18 @@ def index(
     console.print(
         f"{slug}: {added} yeni kart · toplam {len(existing) + added} · "
         f"{time.perf_counter() - started:.1f} sn → {path}"
+    )
+    # Vektör indeksi her seferinde tüm kartlardan kurulur (LSA kartlar üzerinde eğitilir;
+    # birkaç bin kart için saniyeler sürer).
+    from aegis.memory.index import build_index, digest
+
+    started = time.perf_counter()
+    target = (index_root or Path(config.memory.index_path)) / slug
+    index = build_index(read_cards(path), config.memory.embedding_model)
+    index.save(target, digest(path))
+    console.print(
+        f"İndeks: {len(index.ids)} kart · {index.embedder.name} · "
+        f"{time.perf_counter() - started:.1f} sn → {target}"
     )
 
 

@@ -89,14 +89,17 @@ def test_cli_index_is_incremental(tmp_path: Path) -> None:
     root.mkdir()
     (data).rename(root / "p")  # slug = repo dizin adı (remote yok)
     runner = CliRunner()
-    first = runner.invoke(app, ["index", str(git.path), "--data", str(root)])
+    idx = ["--index", str(tmp_path / "idx")]
+    first = runner.invoke(app, ["index", str(git.path), "--data", str(root), *idx])
     assert first.exit_code == 0, first.output
     assert "1 yeni kart" in first.output
-    second = runner.invoke(app, ["index", str(git.path), "--data", str(root)])
+    second = runner.invoke(app, ["index", str(git.path), "--data", str(root), *idx])
     assert "0 yeni kart · toplam 1" in second.output
-    rebuilt = runner.invoke(app, ["index", str(git.path), "--data", str(root), "--rebuild"])
+    rebuilt = runner.invoke(app, ["index", str(git.path), "--data", str(root), "--rebuild", *idx])
     assert "1 yeni kart · toplam 1" in rebuilt.output
     assert len(read_cards(root / "p" / "cards.jsonl")) == 1
+    assert (tmp_path / "idx" / "p" / "index.json").is_file()
+    assert "İndeks: 1 kart · lsa" in rebuilt.output
     missing = runner.invoke(app, ["index", str(git.path), "--data", str(tmp_path / "yok")])
     assert missing.exit_code == 2
 
