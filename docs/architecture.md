@@ -99,7 +99,7 @@ flowchart LR
 - **Sınıf dengesizliği (#16):** Sınıf ağırlıkları, alt örnekleme ve SMOTE karşılaştırıldı (6 repo × 3 model, tek tohum). Hiçbiri yöntemsiz eğitimden tutarlı biçimde iyi değil. Repolar üzerinden ortalama test PR-AUC'si LR'de yöntemsiz 0,273, ağırlıklı 0,259, alt örneklemeli 0,266, SMOTE'lu 0,256. MCC'de de en iyisi yöntemsiz. Doğrulamada alt örnekleme önde görünse de bu avantaj test kümesine taşınmıyor. Yeniden örnekleme ayrıca olasılıkları bozar; kalibrasyon (#18) ve bütçe eşiği bu olasılıklara dayandığı için varsayılan **yöntemsiz** eğitimdir. Yöntemler `aegis train --imbalance` ile denenebilir; tablo `eval/compare_imbalance.py` ile üretilir.
 - **Karar:** Skor üç banda ayrılır: düşük, orta, yüksek. Eşik ya doğrudan verilir ya da "PR'ların en fazla %X'i LLM'e gitsin" bütçesinden hesaplanır.
 - **Açıklama:** SHAP ile en etkili 3 özellik çıkarılır ve PR yorumunda gösterilir.
-- **Soğuk başlangıç:** Geçmişi az olan repolarda diğer repolarda eğitilmiş genel model kullanılır.
+- **Soğuk başlangıç (#17):** Geçmişi az olan repolarda diğer repolarda eğitilmiş genel model kullanılır (`aegis train --repo all`, `.aegis/models/all/`). Leave-one-project-out değerlendirmede hedef reponun test kümesi repo içi senaryodakiyle aynıdır. Genel model, diğer 5 reponun yalnızca o test döneminden önceki commit'leriyle eğitilir. LR'de repolar üzerinden ortalama test PR-AUC'si repo içinde 0,273, repolar arasında 0,247; ROC-AUC 0,785 ve 0,766. Yani genel model yaklaşık %10 kayıpla çalışıyor. Geçmişi kısa repolarda (tqdm, black, httpie) genel model repo içi modele denk ya da ondan iyi. Tablo `eval/compare_scenarios.py` ile üretilir.
 
 ---
 

@@ -21,6 +21,8 @@ def load(reports: Path) -> dict[tuple[str, str, str], dict[str, dict[str, float]
     out: dict[tuple[str, str, str], dict[str, dict[str, float]]] = {}
     for path in sorted(reports.glob("train-*.json")):
         data = json.loads(path.read_text("utf-8"))
+        if data.get("scenario", "within") != "within" or data["repo"] == "all":
+            continue
         for model, result in data["models"].items():
             key = (data["repo"], model, data["imbalance"])
             out[key] = {"valid": result["valid"], "test": result["test"]}

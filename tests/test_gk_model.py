@@ -99,6 +99,35 @@ def test_cli_train(tmp_path: Path) -> None:
     assert data["models"]["lightgbm"]["test"]["roc_auc"] > 0.5
 
 
+def test_cli_train_cross_and_general(tmp_path: Path) -> None:
+    pl.concat([_d1(seed=1), _d1(seed=2).with_columns(pl.lit("o").alias("repo"))]).write_parquet(
+        tmp_path / "d1.parquet"
+    )
+    cfg = tmp_path / "aegis.toml"
+    cfg.write_text("[training]\nlabel_delay_days = 14\n", encoding="utf-8")
+    common = ["--model", "lr", "--data", str(tmp_path), "--models-dir", str(tmp_path / "m")]
+    common += ["--config", str(cfg)]
+    report = tmp_path / "cross.json"
+    cross = CliRunner().invoke(
+        app, ["train", "--repo", "r", "--scenario", "cross", "--report", str(report), *common]
+    )
+    assert cross.exit_code == 0, cross.output
+    data = json.loads(report.read_text("utf-8"))
+    assert data["scenario"] == "cross"
+    assert data["models"]["lr"]["train_repos"] == ["o"]
+    assert (tmp_path / "m" / "r" / "lr-none-cross.pkl").is_file()
+    general = CliRunner().invoke(
+        app, ["train", "--repo", "all", "--report", str(tmp_path / "all.json"), *common]
+    )
+    assert general.exit_code == 0, general.output
+    assert TrainedModel.load(tmp_path / "m" / "all" / "lr-none.pkl").meta["train_repos"] == [
+        "o",
+        "r",
+    ]
+    bad = CliRunner().invoke(app, ["train", "--repo", "all", "--scenario", "cross", *common])
+    assert bad.exit_code == 2
+
+
 def test_cli_train_errors(tmp_path: Path) -> None:
     runner = CliRunner()
     assert runner.invoke(app, ["train", "--repo", "r", "--data", str(tmp_path)]).exit_code == 2

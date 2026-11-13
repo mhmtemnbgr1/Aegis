@@ -66,3 +66,37 @@ def time_split(d1: pl.DataFrame, config: TrainingConfig | None = None) -> Split:
         valid_start=valid_start,
         test_start=test_start,
     )
+
+
+def cross_split(d1: pl.DataFrame, target: str, config: TrainingConfig | None = None) -> Split:
+    """Repolar arası (leave-one-project-out) bölme (FR-15, #17).
+
+    Test kümesi, hedef reponun kendi `time_split` test kümesiyle aynıdır; böylece repo içi ve
+    repolar arası sonuçlar aynı commit'ler üzerinde karşılaştırılır. Model yalnızca *diğer*
+    repoların, hedefin test döneminden (tampon dahil) önceki commit'leriyle eğitilir: hedef
+    reponun hiç geçmişi yokmuş gibi (soğuk başlangıç), ama gelecekten bilgi sızmadan. Bu havuz
+    zaman sırasıyla eğitim ve doğrulama olarak ikiye ayrılır; eşik doğrulamada seçilir.
+    """
+    config = config or TrainingConfig()
+    own = time_split(d1.filter(pl.col("repo") == target), config)
+    delay = timedelta(days=config.label_delay_days)
+    pool = d1.filter((pl.col("repo") != target) & (pl.col("as_of") < own.test_start - delay)).sort(
+        "as_of", maintain_order=True
+    )
+    if pool.height < 2:
+        raise ValueError(f"{target} dışında, test döneminden önce yeterli commit yok")
+    # Repo içi bölmedeki eğitim:doğrulama oranı korunur.
+    share = config.valid_fraction / (1 - config.test_fraction)
+    valid_at = pool.height - max(1, round(pool.height * share))
+    valid_start: datetime = pool["as_of"][valid_at]
+    train = pool.filter(pl.col("as_of") < valid_start - delay)
+    valid = pool.filter(pl.col("as_of") >= valid_start)
+    if train.height == 0:
+        raise ValueError("tampon, repolar arası eğitim kümesini boşaltıyor")
+    return Split(
+        train=labels_as_of(train, valid_start),
+        valid=labels_as_of(valid, own.test_start),
+        test=own.test,
+        valid_start=valid_start,
+        test_start=own.test_start,
+    )

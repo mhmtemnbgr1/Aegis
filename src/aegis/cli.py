@@ -220,7 +220,16 @@ def _fmt(value: float) -> str:
 
 @app.command()
 def train(
-    repo: str = typer.Option(..., "--repo", help="D1'deki repo, ör. scrapy__scrapy."),
+    repo: str = typer.Option(
+        ...,
+        "--repo",
+        help="D1'deki repo (ör. scrapy__scrapy) ya da all: tüm repolarla genel model.",
+    ),
+    scenario: str = typer.Option(
+        "within",
+        "--scenario",
+        help="within: repo kendi geçmişiyle; cross: diğer repolarla eğitilmiş genel model.",
+    ),
     model: str = typer.Option("all", "--model", help="lr, rf, lightgbm veya all."),
     imbalance: str = typer.Option(
         "none", "--imbalance", help="Sınıf dengesizliği: none, weights, undersample veya smote."
@@ -237,33 +246,49 @@ def train(
     seed: int = typer.Option(0, "--seed", help="Rastgelelik tohumu."),
     config_path: Path | None = typer.Option(None, "--config", help="Yapılandırma dosyası."),
 ) -> None:
-    """D1'deki bir repo için risk modellerini zaman sıralı bölmeyle eğitir ve değerlendirir."""
+    """D1'deki bir repo için risk modellerini zaman sıralı bölmeyle eğitir ve değerlendirir.
+
+    `--scenario cross` hedef reponun test kümesini, yalnızca diğer repolarla eğitilmiş bir modelle
+    değerlendirir (soğuk başlangıç, #17). `--repo all` tüm repoların birleşik geçmişiyle bir genel
+    model eğitir; D1'de olmayan yeni repolar bu modeli kullanır.
+    """
     # scikit-learn yalnızca eğitimde gerekir; diğer komutlar (ör. review) onu yüklemez.
     from aegis.gatekeeper.model import IMBALANCE, MODELS, train_model
-    from aegis.gatekeeper.split import time_split
+    from aegis.gatekeeper.split import cross_split, time_split
 
     config = load_config(Path("."), config_path)
     names = list(MODELS) if model == "all" else [model]
-    if any(n not in MODELS for n in names) or imbalance not in IMBALANCE:
+    if (
+        any(n not in MODELS for n in names)
+        or imbalance not in IMBALANCE
+        or scenario not in ("within", "cross")
+        or (scenario == "cross" and repo == "all")
+    ):
         console.print(
-            "[red]--model lr|rf|lightgbm|all, --imbalance none|weights|undersample|smote[/red]"
+            "[red]--model lr|rf|lightgbm|all, --imbalance none|weights|undersample|smote, "
+            "--scenario within|cross (cross ile --repo all kullanılamaz)[/red]"
         )
         raise typer.Exit(2)
     d1_path = (data_root or Path(config.mining.data_dir)) / "d1.parquet"
     if not d1_path.is_file():
         console.print(f"[red]{d1_path} yok; önce aegis dataset.[/red]")
         raise typer.Exit(2)
-    rows = pl.read_parquet(d1_path).filter(pl.col("repo") == repo)
+    d1 = pl.read_parquet(d1_path)
+    rows = d1 if repo == "all" else d1.filter(pl.col("repo") == repo)
     if rows.height == 0:
         console.print(f"[red]D1'de {repo} için satır yok.[/red]")
         raise typer.Exit(2)
     try:
-        split = time_split(rows, config.training)
+        if scenario == "cross":
+            split = cross_split(d1, repo, config.training)
+        else:
+            split = time_split(rows, config.training)
     except ValueError as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(2) from exc
     console.print(
-        f"{repo}: eğitim {split.train.height} ({int(split.train['buggy'].sum())} hatalı) · "
+        f"{repo} ({scenario}): eğitim {split.train.height} "
+        f"({int(split.train['buggy'].sum())} hatalı) · "
         f"doğrulama {split.valid.height} · test {split.test.height} "
         f"({int(split.test['buggy'].sum())} hatalı) · tampon {config.training.label_delay_days} gün"
     )
@@ -271,7 +296,8 @@ def train(
     results: dict[str, Any] = {}
     for name in names:
         trained = train_model(split, name, imbalance=imbalance, seed=seed)  # type: ignore[arg-type]
-        trained.save(models_dir / repo / f"{name}-{imbalance}.pkl")
+        suffix = "-cross" if scenario == "cross" else ""
+        trained.save(models_dir / repo / f"{name}-{imbalance}{suffix}.pkl")
         m = trained.test
         table.add_row(
             name, _fmt(m["roc_auc"]), _fmt(m["pr_auc"]), _fmt(m["f1"]), _fmt(m["mcc"]),
@@ -279,12 +305,11 @@ def train(
         )  # fmt: skip
         results[name] = {"test": trained.test, "valid": trained.valid, **trained.meta}
     console.print(table)
-    target = report or Path("eval/reports") / f"train-{repo}-{imbalance}.json"
+    suffix = "-cross" if scenario == "cross" else ""
+    target = report or Path("eval/reports") / f"train-{repo}-{imbalance}{suffix}.json"
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(
-        json.dumps({"repo": repo, "imbalance": imbalance, "models": results}, indent=2),
-        "utf-8",
-    )
+    payload = {"repo": repo, "scenario": scenario, "imbalance": imbalance, "models": results}
+    target.write_text(json.dumps(payload, indent=2), "utf-8")
     console.print(
         f"[dim]Test kümesi metrikleri · modeller: {models_dir / repo} · rapor: {target}[/dim]"
     )

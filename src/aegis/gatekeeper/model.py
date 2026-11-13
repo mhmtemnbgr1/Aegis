@@ -174,6 +174,7 @@ def train_model(
         "features": list(FEATURES),
         "train_rows": len(y_train),
         "train_positives": int(y_train.sum()),
+        "train_repos": sorted(set(train["repo"])) if "repo" in train.columns else [],
         "valid_start": split.valid_start.isoformat(),
         "test_start": split.test_start.isoformat(),
         "seed": seed,

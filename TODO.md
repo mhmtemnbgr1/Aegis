@@ -85,7 +85,7 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [x] Zaman sıralı bölme ve etiket gecikmesi tamponu
 - [x] LR, Random Forest ve LightGBM (`aegis train`)
 - [x] Sınıf dengesizliği yöntemleri
-- [ ] Repo içi ve repolar arası değerlendirme
+- [x] Repo içi ve repolar arası değerlendirme
 - [ ] PR düzeyinde etiket ve özellikler
 - [ ] Kalibrasyon, bütçe tabanlı eşik, risk bantları
 - [ ] SHAP açıklamaları

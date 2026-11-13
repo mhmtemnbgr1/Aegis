@@ -6,7 +6,7 @@ import polars as pl
 import pytest
 
 from aegis.config import TrainingConfig, parse_config
-from aegis.gatekeeper.split import labels_as_of, time_split
+from aegis.gatekeeper.split import cross_split, labels_as_of, time_split
 
 START = datetime(2024, 1, 1, tzinfo=UTC)
 
@@ -77,3 +77,28 @@ def test_config_from_toml_and_validation() -> None:
         time_split(_d1(2))
     with pytest.raises(ValueError, match="tampon"):
         time_split(_d1(), TrainingConfig(label_delay_days=30))  # doğrulama 15 gün
+
+
+def test_cross_split_uses_other_repos_before_target_test() -> None:
+    cfg = TrainingConfig(label_delay_days=5)
+    target = _d1(100).with_columns(pl.lit("t").alias("repo"))
+    # Diğer repo hedeften 50 gün önce başlıyor ve test döneminden sonra da sürüyor.
+    other = (
+        _d1(200, fixes={10: 3, 120: 3})
+        .with_columns(pl.lit("o").alias("repo"), pl.col("as_of") - timedelta(days=50))
+        .with_columns(pl.col("fixed_at") - timedelta(days=50))
+    )
+    d1 = pl.concat([target, other])
+    own = time_split(target, cfg)
+    cross = cross_split(d1, "t", cfg)
+    assert cross.test.equals(own.test)
+    assert set(cross.train["repo"]) | set(cross.valid["repo"]) == {"o"}
+    assert cross.valid["as_of"].max() < own.test_start - timedelta(days=5)
+    assert cross.train["as_of"].max() < cross.valid_start - timedelta(days=5)
+    assert cross.train["buggy"].sum() == 1  # commit 10 eğitimde biliniyor
+
+
+def test_cross_split_needs_other_repos() -> None:
+    target = _d1(100).with_columns(pl.lit("t").alias("repo"))
+    with pytest.raises(ValueError, match="yeterli commit"):
+        cross_split(target, "t", TrainingConfig(label_delay_days=5))
