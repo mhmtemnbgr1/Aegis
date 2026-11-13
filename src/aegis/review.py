@@ -7,7 +7,7 @@
 import logging
 import time
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from enum import StrEnum
 
@@ -22,6 +22,7 @@ from aegis.config import AegisConfig
 from aegis.diff import FilterResult, filter_diff, parse_diff
 from aegis.gatekeeper import Gatekeeper, HeuristicGatekeeper, RiskAssessment, RiskBand
 from aegis.llm import LLMProvider, ResponseCache, StructuredLLM, Usage, create_provider
+from aegis.memory.cards import BugCard
 from aegis.models import Finding
 
 log = logging.getLogger(__name__)
@@ -58,6 +59,10 @@ class ReviewResult(BaseModel):
     dropped: list[DroppedFinding] = Field(default_factory=list)
     metadata_warnings: list[str] = Field(default_factory=list)
     """PR başlığı/açıklaması/commit mesajlarında görülen injection kalıpları."""
+    memory_cards: list[str] = Field(default_factory=list)
+    """Analiz prompt'una giren hata kartlarının kimlikleri (#33)."""
+    memory_error: str | None = None
+    """Hafıza getirilemediyse nedeni; inceleme kartsız sürer (fail-open)."""
     provider: str | None = None
     model: str | None = None
     prompt_version: str | None = None
@@ -72,6 +77,8 @@ class ReviewResult(BaseModel):
 
 
 ProviderFactory = Callable[[AegisConfig], LLMProvider]
+MemorySource = Callable[[], Sequence[BugCard]]
+"""Bu PR için hafızadan hata kartı getirir (bkz. `gatekeeper.factory.make_memory`)."""
 
 
 def _default_provider(config: AegisConfig) -> LLMProvider:
@@ -89,6 +96,7 @@ def run_review(
     provider_factory: ProviderFactory = _default_provider,
     cache: ResponseCache | None = None,
     gatekeeper: Gatekeeper | None = None,
+    memory: MemorySource | None = None,
 ) -> ReviewResult:
     """`gatekeeper` verilmezse sezgisel kural kullanılır (bkz. `gatekeeper.factory`)."""
     result = ReviewResult()
@@ -105,6 +113,7 @@ def run_review(
             provider_factory=provider_factory,
             cache=cache,
             gatekeeper=gatekeeper or HeuristicGatekeeper(config.gatekeeper),
+            memory=memory,
         )
     except Exception as exc:  # fail-open: hiçbir hata PR'ı bloklamaz
         log.exception("inceleme başarısız")
@@ -126,6 +135,7 @@ def _run(
     provider_factory: ProviderFactory,
     cache: ResponseCache | None,
     gatekeeper: Gatekeeper,
+    memory: MemorySource | None = None,
 ) -> None:
     filtered: FilterResult = filter_diff(
         parse_diff(diff_text),
@@ -153,8 +163,17 @@ def _run(
             StructuredLLM(provider, cache=cache),
             prompt_version=config.review.prompt_version,
             language=config.review.language,
+            max_memory_chars=config.memory.max_prompt_chars,
         )
-        analysis = analyst.analyze(diff, risk, metadata)
+        cards: Sequence[BugCard] = ()
+        if memory is not None:
+            try:
+                cards = memory()
+            except Exception as exc:  # fail-open: hafıza olmadan incelemeye devam
+                log.warning("hafıza getirilemedi: %s", exc)
+                result.memory_error = f"{type(exc).__name__}: {exc}"
+        analysis = analyst.analyze(diff, risk, metadata, cards)
+        result.memory_cards = analysis.memory_cards
         result.prompt_version = analysis.prompt_version
         result.omitted_files = analysis.omitted_files
         result.llm_calls, result.cached, result.usage = (

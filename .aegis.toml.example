@@ -80,7 +80,7 @@ max_patches_per_pr = 2
 [review]
 llm_enabled = true               # false: yalnızca gatekeeper + deterministik kurallar
 language = "Turkish"             # bulgu ve özet dili
-prompt_version = "v1"            # src/aegis/agents/prompts/<sürüm>
+prompt_version = "v2"            # src/aegis/agents/prompts/<sürüm>; v2 hafıza kartlarını içerir
 cache_dir = ".aegis/cache/llm"   # aynı istek ikinci kez API'ye gitmez
 runs_path = ".aegis/runs.jsonl"  # çalıştırma metrikleri (FR-45)
 # injection_exclude = ["docs/prompts/**"]  # injection dedektörünün atlayacağı yollar

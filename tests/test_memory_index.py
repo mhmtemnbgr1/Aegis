@@ -105,3 +105,17 @@ def test_ollama_embedder_with_fake_client() -> None:
 def test_card_text_includes_code_and_functions() -> None:
     text = card_text(CARDS[0].model_copy(update={"functions": ["app.x.release"]}))
     assert "app.x.release" in text and "pool.put(conn)" in text
+
+
+def test_index_manifest_records_version(tmp_path: Path) -> None:
+    import json
+
+    from aegis import __version__
+    from aegis.memory.index import SCHEMA_VERSION
+
+    build_index(CARDS, "lsa").save(tmp_path / "idx", "digest")
+    manifest = json.loads((tmp_path / "idx" / "index.json").read_text("utf-8"))
+    assert manifest["schema_version"] == SCHEMA_VERSION
+    assert manifest["aegis_version"] == __version__
+    assert manifest["embedder"] == "lsa" and manifest["cards"] == len(CARDS)
+    assert manifest["cards_sha256"] == "digest" and manifest["built_at"]

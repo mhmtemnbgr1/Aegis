@@ -610,11 +610,14 @@ def review(
     except subprocess.CalledProcessError as exc:
         console.print(f"[red]git başarısız:[/red] {exc.stderr.strip()}")
         raise typer.Exit(2) from exc
-    from aegis.gatekeeper.factory import make_gatekeeper
+    from aegis.gatekeeper.factory import make_gatekeeper, make_memory
 
     gatekeeper, warning = make_gatekeeper(config, repo, base, head)
     if warning:
         console.print(f"[yellow]{warning}[/yellow]")
+    memory, memory_warning = make_memory(config, repo, base, head)
+    if memory_warning:
+        console.print(f"[dim]{memory_warning}[/dim]")
     result = run_review(
         text,
         config,
@@ -623,6 +626,7 @@ def review(
         llm_enabled=config.review.llm_enabled and not no_llm,
         cache=None if no_cache else ResponseCache(repo / config.review.cache_dir),
         gatekeeper=gatekeeper,
+        memory=memory,
     )
     append_run(repo / config.review.runs_path, result, base=base, head=head, source="cli")
     _print_review(result)

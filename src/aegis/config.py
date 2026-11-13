@@ -89,6 +89,8 @@ class MemoryConfig(_Section):
     """Kartta fonksiyon başına en çok satır; uzun fonksiyonlar kırpılır."""
     max_diff_lines: int = Field(default=120, gt=0)
     """Karttaki fix diff'inin en çok satırı."""
+    max_prompt_chars: int = Field(default=12_000, gt=0)
+    """Analiz prompt'una giren kartların karakter bütçesi (~3k token); aşan kartlar kırpılır."""
 
 
 class FiltersConfig(_Section):
@@ -109,7 +111,7 @@ class ReviewConfig(_Section):
     """False ise analiz ajanı hiç çağrılmaz; yalnızca gatekeeper ve deterministik kurallar."""
     language: str = "Turkish"
     """Bulgu başlığı, açıklaması ve özetin yazılacağı dil."""
-    prompt_version: str = "v1"
+    prompt_version: str = "v2"
     cache_dir: str = ".aegis/cache/llm"
     runs_path: str = ".aegis/runs.jsonl"
     """Çalıştırma metriklerinin eklendiği JSONL dosyası (FR-45)."""

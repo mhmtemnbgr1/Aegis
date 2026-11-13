@@ -13,11 +13,16 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from aegis.config import AegisConfig
 from aegis.diff.models import Diff
 from aegis.gatekeeper.base import Gatekeeper, RiskAssessment
 from aegis.gatekeeper.heuristic import HeuristicGatekeeper
+from aegis.memory.cards import BugCard
+
+if TYPE_CHECKING:
+    from aegis.review import MemorySource
 
 log = logging.getLogger(__name__)
 
@@ -134,3 +139,39 @@ def _resolve(repo: Path, path: str) -> Path:
     if p.is_absolute() or p.exists():
         return p
     return repo / p
+
+
+def make_memory(
+    config: AegisConfig,
+    repo: Path,
+    base: str,
+    head: str,
+    *,
+    data_root: Path | None = None,
+    index_root: Path | None = None,
+) -> tuple["MemorySource | None", str | None]:
+    """(hafıza kaynağı, uyarı). Kartlar ya da indeks yoksa hafıza kapalıdır (uyarıyla).
+
+    Kaynak tembeldir: sorgu ve arama yalnızca analiz ajanı çalışacaksa yapılır. Yalnızca `head`
+    commit'inin tarihinden önce düzeltilmiş kartlar döner (eski bir commit incelenirken gelecekteki
+    fix'ler sızmaz).
+    """
+    from aegis.mining import repo_slug
+
+    slug = repo_slug(repo)
+    cards_path = (data_root or _resolve(repo, config.mining.data_dir)) / slug / "cards.jsonl"
+    index_dir = (index_root or _resolve(repo, config.memory.index_path)) / slug
+    if not cards_path.is_file():
+        return None, "Hafıza kartı yok (aegis index); inceleme hafızasız yapılacak."
+
+    def source() -> list[BugCard]:
+        from aegis.memory.retrieve import Retriever, query_from_range
+        from aegis.mining.gitfiles import git
+
+        retriever = Retriever.load(cards_path, index_dir)
+        when = datetime.fromisoformat(git(repo, "log", "-1", "--format=%cI", head).strip())
+        query = query_from_range(repo, base, head, config, before=when)
+        hits = retriever.search(query, k=config.memory.top_k, mode=config.memory.retrieval)
+        return [retriever.card(h.card_id) for h in hits]
+
+    return source, None

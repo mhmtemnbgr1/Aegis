@@ -16,7 +16,7 @@ from aegis.diff.models import Diff
 from aegis.gatekeeper.heuristic import is_test_file
 from aegis.models import Category, Finding, Severity
 
-_DELIMITER = re.compile(r"<(/?)\s*(pr_diff|pr_metadata)\b", re.IGNORECASE)
+_DELIMITER = re.compile(r"<(/?)\s*(pr_diff|pr_metadata|bug_memory)\b", re.IGNORECASE)
 
 INJECTION_PATTERNS = [
     re.compile(p, re.IGNORECASE)
