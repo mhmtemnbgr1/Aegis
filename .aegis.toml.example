@@ -10,15 +10,22 @@ ignore_merge_commits = true
 max_files_per_commit = 50        # daha büyük commit'ler SZZ'den elenir
 label_delay_days = 180           # son N günün commit'leri eğitime alınmaz
 szz_variant = "ma"               # ma (pyszz MA-SZZ) | b (PyDriller B-SZZ)
-history_years = 5                # SZZ yalnızca son N yıla uygulanır
+# history_years = 10             # SZZ'yi son N yılla sınırla (varsayılan: tüm geçmiş)
+
+[training]
+# calibration = "sigmoid"        # none | sigmoid (Platt) | isotonic
 
 [gatekeeper]
-mode = "heuristic"               # heuristic | model (model yoksa heuristic kullanılır)
-model_path = ".aegis/model.lgbm"
+mode = "heuristic"               # heuristic | model (model ya da madencilik geçmişi yoksa heuristic)
+# models_dir = ".aegis/models"   # <dizin>/<repo>/lr-none.pkl, yoksa <dizin>/all/ (genel model)
+# model_name = "lr"              # lr | rf | lightgbm
 low_threshold = 0.30             # altı: LLM çağrılmaz
 high_threshold = 0.70            # üstü: tam zincir (analiz + patch + test)
-# Eşikler yerine bütçe verilebilir:
-# max_llm_pr_ratio = 0.4
+# Eşikler yerine bütçe verilebilir (yalnızca model modunda; doğrulama skorlarından hesaplanır):
+# max_llm_pr_ratio = 0.4         # PR'ların en fazla %40'ı orta/yüksek banda düşer
+# high_share = 0.5               # LLM'e gidenlerin en riskli yarısı yüksek bant
+# budget_window = 50             # eşik, model modunda puanlanmış son 50 PR'ın skorundan hesaplanır
+# budget_min_runs = 20           # bu kadar kayıt yoksa modelin doğrulama skorları kullanılır
 explain = true                   # SHAP açıklaması
 
 [gatekeeper.heuristic]

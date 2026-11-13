@@ -390,7 +390,7 @@ Priorities follow the MoSCoW scheme (Must, Should, Could). The UC column links e
 | NFR-P1 | End-to-end time per PR. | At most 5 minutes at the 95th percentile. |
 | NFR-P2 | Low-risk PRs are answered without an LLM call. | Gatekeeper result and summary within 30 seconds after the state has been loaded. |
 | NFR-P3 | LLM load per PR. | Hard limits of 60,000 tokens and 12 LLM requests per PR; with the gatekeeper enabled, low-risk PRs make no LLM call. |
-| NFR-P4 | Mining time on large repositories. | SZZ is limited to the last 5 years so that mining takes minutes rather than hours. PR runs never scan the full history. |
+| NFR-P4 | Mining time on large repositories. | Mining and SZZ run once locally over the full history; SZZ takes under 4 minutes on the largest target repository (scrapy). PR runs never scan the full history. |
 | NFR-P5 | Latency of memory retrieval. | The top three cards are returned within 2 seconds from the local LanceDB index. |
 | NFR-P6 *(deferred)* | Responsiveness of the dashboard. | Each screen loads within 2 seconds for up to 10,000 run records; updating the threshold on the gatekeeper screen takes less than 0.5 seconds. |
 
@@ -458,7 +458,7 @@ The scenarios below use concrete actors and events, following Bruegge and Dutoit
 
 Participating actors: deniz (Maintainer), github (GitHub).
 
-1. Deniz maintains a fork of `httpie/cli` and wants to use Aegis on it. Deniz clones the repository and runs `aegis mine .`. Aegis scans the history of the last five years, finds 412 fix commits and maps them to bug-inducing commits with SZZ.
+1. Deniz maintains a fork of `httpie/cli` and wants to use Aegis on it. Deniz clones the repository and runs `aegis mine .`. Aegis scans the full history, finds 412 fix commits and maps them to bug-inducing commits with SZZ.
 2. Deniz runs `aegis train`. Aegis trains logistic regression, Random Forest and LightGBM models with time-ordered validation and keeps the best calibrated model.
 3. Deniz runs `aegis index`. Aegis creates the bug cards and builds the LanceDB index.
 4. Deniz runs `aegis publish-state`, and Aegis uploads the archive as the `aegis-state` Release asset.
@@ -971,7 +971,7 @@ sequenceDiagram
     participant GH as GitHub Releases
 
     M->>CLI: aegis mine .
-    CLI->>MIN: scan history of the last 5 years
+    CLI->>MIN: scan the full history
     MIN-->>CLI: commits, fix commits, inducing commits (Parquet)
     M->>CLI: aegis train
     CLI->>TR: time-ordered training

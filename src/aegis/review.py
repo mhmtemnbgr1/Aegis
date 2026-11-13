@@ -20,7 +20,7 @@ from aegis.agents.injection import detect_injections, merge_findings, scan_text
 from aegis.agents.validate import DroppedFinding, validate_findings
 from aegis.config import AegisConfig
 from aegis.diff import FilterResult, filter_diff, parse_diff
-from aegis.gatekeeper import HeuristicGatekeeper, RiskAssessment, RiskBand
+from aegis.gatekeeper import Gatekeeper, HeuristicGatekeeper, RiskAssessment, RiskBand
 from aegis.llm import LLMProvider, ResponseCache, StructuredLLM, Usage, create_provider
 from aegis.models import Finding
 
@@ -88,7 +88,9 @@ def run_review(
     llm_enabled: bool = True,
     provider_factory: ProviderFactory = _default_provider,
     cache: ResponseCache | None = None,
+    gatekeeper: Gatekeeper | None = None,
 ) -> ReviewResult:
+    """`gatekeeper` verilmezse sezgisel kural kullanılır (bkz. `gatekeeper.factory`)."""
     result = ReviewResult()
     start = time.perf_counter()
     try:
@@ -102,6 +104,7 @@ def run_review(
             llm_enabled=llm_enabled,
             provider_factory=provider_factory,
             cache=cache,
+            gatekeeper=gatekeeper or HeuristicGatekeeper(config.gatekeeper),
         )
     except Exception as exc:  # fail-open: hiçbir hata PR'ı bloklamaz
         log.exception("inceleme başarısız")
@@ -122,6 +125,7 @@ def _run(
     llm_enabled: bool,
     provider_factory: ProviderFactory,
     cache: ResponseCache | None,
+    gatekeeper: Gatekeeper,
 ) -> None:
     filtered: FilterResult = filter_diff(
         parse_diff(diff_text),
@@ -133,7 +137,7 @@ def _run(
     result.skipped_files = [f"{s.path} ({s.reason})" for s in filtered.skipped]
     result.metadata_warnings = scan_text(metadata or "")
 
-    risk = HeuristicGatekeeper(config.gatekeeper).assess(diff, as_of=as_of)
+    risk = gatekeeper.assess(diff, as_of=as_of)
     result.risk = risk
     detected = detect_injections(diff, GitIgnoreSpec.from_lines(config.review.injection_exclude))
     model_findings: list[Finding] = []

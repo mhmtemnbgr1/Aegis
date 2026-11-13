@@ -22,6 +22,7 @@ def run_record(result: ReviewResult, **extra: Any) -> dict[str, Any]:
         "error": result.error,
         "risk_score": risk.score if risk else None,
         "risk_band": risk.band.value if risk else None,
+        "gatekeeper": risk.source if risk else None,
         "changed_lines": risk.features.get("changed_lines") if risk else None,
         "files_reviewed": result.files_reviewed,
         "files_skipped": len(result.skipped_files),
