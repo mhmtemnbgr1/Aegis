@@ -53,6 +53,10 @@ src = ["src"]
 select = ["E", "F", "I", "B", "UP", "SIM"]
 ignore = ["B008"]  # typer.Option() varsayılan argümanlarda kullanılır
 
+[tool.ruff.lint.per-file-ignores]
+# Sonuç belgesinin uzun Türkçe metinleri ve tablo satırları (docs/results.md üretir).
+"eval/results.py" = ["E501"]
+
 [tool.mypy]
 strict = true
 files = ["src"]
