@@ -20,6 +20,7 @@ from aegis.config import AegisConfig
 from aegis.features.history import ChangeHistory, FileChange, developer_id
 from aegis.features.kamei import kamei_metrics
 from aegis.gatekeeper.base import RiskBand, band_for
+from aegis.gatekeeper.calibration import budget_thresholds
 from aegis.gatekeeper.explain import Explanation
 from aegis.gatekeeper.model import TrainedModel
 from aegis.mining.fixes import FixClassifier
@@ -47,6 +48,8 @@ class ModelScore:
     commits: list[tuple[str, str, float]] = field(default_factory=list)
     """(sha, başlık, olasılık), commit sırasıyla."""
     explanations: list[Explanation] = field(default_factory=list)
+    threshold_source: str = "config"
+    """Bant eşiklerinin kaynağı: `config`, `doğrulama` ya da `son N PR`."""
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -153,18 +156,40 @@ def find_model(models_dir: Path, slug: str, name: str = "lr") -> Path | None:
     return None
 
 
+def budget_bands(
+    model: TrainedModel, config: AegisConfig, recent_scores: list[float] | None = None
+) -> tuple[float, float, str]:
+    """(düşük, yüksek, kaynak) bant eşikleri.
+
+    Bütçe verilmişse ve son puanlanan PR'lardan yeterince skor varsa eşik onlardan hesaplanır.
+    Doğrulamada seçilen eşik daha yeni commit'lerde bütçeyi aşıyor (#18); son skorlar hem bu kaymayı
+    izler hem de commit değil PR düzeyindedir. Yeterli kayıt yoksa doğrulama skorları kullanılır.
+    """
+    gk = config.gatekeeper
+    if gk.max_llm_pr_ratio is None:
+        return gk.low_threshold, gk.high_threshold, "config"
+    recent = (recent_scores or [])[-gk.budget_window :]
+    if len(recent) >= gk.budget_min_runs:
+        low, high = budget_thresholds(recent, gk.max_llm_pr_ratio, gk.high_share)
+        return low, high, f"son {len(recent)} PR"
+    if model.valid_scores:
+        low, high = model.thresholds(gk.max_llm_pr_ratio, gk.high_share)
+        return low, high, "doğrulama"
+    return gk.low_threshold, gk.high_threshold, "config"
+
+
 def score_range(
-    model_path: Path, commits: list[RangeCommit], history: ChangeHistory, config: AegisConfig
+    model_path: Path,
+    commits: list[RangeCommit],
+    history: ChangeHistory,
+    config: AegisConfig,
+    recent_scores: list[float] | None = None,
 ) -> ModelScore:
     model = TrainedModel.load(model_path)
     features = range_features(commits, history)
     probs = [float(p) for p in model.predict_proba(features)] if features.height else []
     score = model.score_pr(features) if features.height else 0.0
-    gk = config.gatekeeper
-    if gk.max_llm_pr_ratio is not None and model.valid_scores:
-        low, high = model.thresholds(gk.max_llm_pr_ratio, gk.high_share)
-    else:
-        low, high = gk.low_threshold, gk.high_threshold
+    low, high, threshold_source = budget_bands(model, config, recent_scores)
     return ModelScore(
         score=score,
         band=band_for(score, low, high),
@@ -173,4 +198,5 @@ def score_range(
         model_path=model_path,
         commits=[(c.sha, c.subject, p) for c, p in zip(commits, probs, strict=True)],
         explanations=model.explain_pr(features) if features.height else [],
+        threshold_source=threshold_source,
     )

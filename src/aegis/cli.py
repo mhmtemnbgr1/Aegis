@@ -19,7 +19,7 @@ from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, T
 from rich.table import Table
 
 from aegis import __version__
-from aegis.config import AegisConfig, load_config
+from aegis.config import load_config
 from aegis.diff import filter_diff, git_commit_messages, git_diff, load_ignore_spec, parse_diff
 from aegis.features import compute_kamei
 from aegis.gatekeeper import HeuristicGatekeeper, RiskBand
@@ -48,6 +48,9 @@ app = typer.Typer(
 for _stream in (sys.stdout, sys.stderr):
     if isinstance(_stream, io.TextIOWrapper):
         _stream.reconfigure(errors="replace")
+if TYPE_CHECKING:
+    from aegis.gatekeeper.factory import ModelGatekeeper
+
 console = Console()
 
 
@@ -370,7 +373,7 @@ def score(
     `<models-dir>/<repo>/lr-none.pkl`, yoksa genel model `<models-dir>/all/lr-none.pkl`.
     Model ya da reponun madencilik geçmişi yoksa sezgisel kurala dönülür.
     """
-    from aegis.mining import repo_slug
+    from aegis.gatekeeper.factory import ModelGatekeeper, make_gatekeeper
 
     if range_ is not None:
         if ".." not in range_ or "..." in range_:
@@ -384,20 +387,14 @@ def score(
         console.print(f"[red]git diff başarısız:[/red] {exc.stderr.strip()}")
         raise typer.Exit(2) from exc
 
-    if model_path is not None or config.gatekeeper.mode == "model":
-        slug = repo_slug(repo)
-        data_dir = (data_root or Path(config.mining.data_dir)) / slug
-        path = model_path or _find_model(models_dir, slug)
-        if path is None or not path.is_file():
-            console.print("[yellow]Model bulunamadı; sezgisel kural kullanılıyor.[/yellow]")
-        elif not (data_dir / "commits.parquet").is_file():
-            console.print(
-                f"[yellow]{data_dir} altında madencilik geçmişi yok (önce aegis mine); "
-                "sezgisel kural kullanılıyor.[/yellow]"
-            )
-        else:
-            _score_with_model(path, repo, base, head, data_dir, config)
-            return
+    gatekeeper, warning = make_gatekeeper(
+        config, repo, base, head, model_path=model_path, data_root=data_root, models_dir=models_dir
+    )
+    if warning:
+        console.print(f"[yellow]{warning}[/yellow]")
+    if isinstance(gatekeeper, ModelGatekeeper):
+        _score_with_model(gatekeeper)
+        return
 
     filtered = filter_diff(
         parse_diff(text),
@@ -415,25 +412,19 @@ def score(
         console.print(f"[dim]Elenen dosyalar: {skipped}[/dim]")
 
 
-def _find_model(models_dir: Path, slug: str) -> Path | None:
-    from aegis.gatekeeper.score import find_model
-
-    return find_model(models_dir, slug)
-
-
-def _score_with_model(
-    path: Path, repo: Path, base: str, head: str, data_dir: Path, config: AegisConfig
-) -> None:
+def _score_with_model(gk: "ModelGatekeeper") -> None:
     # scikit-learn yalnızca model kullanılırken yüklenir.
     from aegis.gatekeeper.score import load_history, range_commits, score_range
 
-    commits = range_commits(repo, base, head, config)
-    result = score_range(path, commits, load_history(data_dir), config)
+    commits = range_commits(gk.repo, gk.base, gk.head, gk.config)
+    result = score_range(gk.model_path, commits, load_history(gk.data_dir), gk.config, gk.recent)
+    path = gk.model_path
     style = _BAND_STYLE[result.band]
     console.print(f"Risk: [bold {style}]{result.score:.2f} ({result.band})[/bold {style}]")
     console.print(
         f"[dim]Model: {path} · bantlar: düşük < {result.low_threshold:.2f} ≤ orta < "
-        f"{result.high_threshold:.2f} ≤ yüksek · {len(commits)} commit[/dim]"
+        f"{result.high_threshold:.2f} ≤ yüksek ({result.threshold_source}) · "
+        f"{len(commits)} commit[/dim]"
     )
     for explanation in result.explanations:
         console.print(f"  • {explanation.text}")
@@ -518,6 +509,11 @@ def review(
     except subprocess.CalledProcessError as exc:
         console.print(f"[red]git başarısız:[/red] {exc.stderr.strip()}")
         raise typer.Exit(2) from exc
+    from aegis.gatekeeper.factory import make_gatekeeper
+
+    gatekeeper, warning = make_gatekeeper(config, repo, base, head)
+    if warning:
+        console.print(f"[yellow]{warning}[/yellow]")
     result = run_review(
         text,
         config,
@@ -525,6 +521,7 @@ def review(
         metadata=metadata,
         llm_enabled=config.review.llm_enabled and not no_llm,
         cache=None if no_cache else ResponseCache(repo / config.review.cache_dir),
+        gatekeeper=gatekeeper,
     )
     append_run(repo / config.review.runs_path, result, base=base, head=head, source="cli")
     _print_review(result)

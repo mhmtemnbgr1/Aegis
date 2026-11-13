@@ -58,6 +58,13 @@ class GatekeeperConfig(_Section):
     payı orta/yüksek banda düşer ve LLM'e gider (FR-13)."""
     high_share: float = Field(default=0.5, gt=0, le=1)
     """Bütçe modunda LLM'e gidenlerin en riskli bu kadarı yüksek banttır."""
+    models_dir: str = ".aegis/models"
+    """`model` modunda modellerin arandığı dizin: `<dizin>/<repo>/`, yoksa `<dizin>/all/`."""
+    model_name: Literal["lr", "rf", "lightgbm"] = "lr"
+    budget_window: int = Field(default=50, gt=0)
+    """Bütçe eşiği, model modunda puanlanmış son bu kadar PR'ın skorundan yeniden hesaplanır."""
+    budget_min_runs: int = Field(default=20, gt=0)
+    """Bu kadar kayıt yoksa eşik modelin doğrulama skorlarından hesaplanır."""
     heuristic: HeuristicConfig = HeuristicConfig()
 
     @model_validator(mode="after")

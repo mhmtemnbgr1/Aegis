@@ -31,6 +31,8 @@ class RiskAssessment(BaseModel):
     """PR yorumunda gösterilecek, insan okunur gerekçeler."""
     features: dict[str, float] = Field(default_factory=dict)
     """Skoru oluşturan ham değerler (deneyler ve açıklama için)."""
+    source: str = "heuristic"
+    """Skoru üreten gatekeeper: `heuristic` ya da `model` (telemetri ve deneyler için)."""
 
 
 class Gatekeeper(Protocol):

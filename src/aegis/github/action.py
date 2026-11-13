@@ -19,6 +19,7 @@ from pydantic import ValidationError
 from aegis.config import CONFIG_FILE, AegisConfig, parse_config
 from aegis.diff import git_commit_messages, git_diff, git_show
 from aegis.diff.filters import AEGISIGNORE
+from aegis.gatekeeper.factory import make_gatekeeper
 from aegis.github.client import API_URL, GitHubClient
 from aegis.github.event import EventError, PullRequestEvent, load_event
 from aegis.github.publisher import publish
@@ -101,6 +102,10 @@ def run_action(
         except Exception as exc:  # ör. checkout'ta fetch-depth: 0 eksik
             result = _error_result(f"git diff alınamadı: {exc}")
         else:
+            # Model ve madencilik geçmişi runner'da yoksa (durum arşivi, #45) sezgisel kural.
+            gatekeeper, warning = make_gatekeeper(config, repo, event.base_sha, event.head_sha)
+            if warning:
+                log.warning(warning)
             result = run_review(
                 diff_text,
                 config,
@@ -108,6 +113,7 @@ def run_action(
                 metadata=f"{event.metadata}\n\n{commits}".strip(),
                 llm_enabled=llm_allowed(event, config, env),
                 cache=ResponseCache(repo / config.review.cache_dir),
+                gatekeeper=gatekeeper,
             )
         append_run(
             repo / config.review.runs_path,

@@ -90,7 +90,7 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [x] Kalibrasyon, bütçe tabanlı eşik, risk bantları
 - [x] SHAP açıklamaları
 - [x] `aegis train` ve `aegis score`
-- [ ] Sezgisel gatekeeper'ın eğitilmiş modelle değiştirilmesi
+- [x] Sezgisel gatekeeper'ın eğitilmiş modelle değiştirilmesi
 - [ ] Maliyet–recall eğrisi ve iki işletme noktası (ilk sonuçlar)
 
 ## Faz 4 — Bug-Fix Hafızası · 22 Kas
