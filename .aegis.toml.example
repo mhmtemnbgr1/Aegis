@@ -37,7 +37,7 @@ size_saturation = 400            # bu kadar değişen satırda boyut bileşeni 1
 
 [memory]
 index_path = ".aegis/memory"
-embedding_model = "local"        # yerel sentence-transformers modeli
+embedding_model = "lsa"          # lsa (TF-IDF + SVD) | lsa:<boyut> | ollama:<model>
 top_k = 3
 retrieval = "hybrid"             # hybrid | vector | structural
 max_functions_per_card = 3       # kartta en çok fonksiyon

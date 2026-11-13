@@ -77,7 +77,7 @@ aegis score main..HEAD --model .aegis/models/<slug>/lr-none.pkl   # skor, bant, 
 Bug-fix hafızası (Faz 4):
 
 ```bash
-aegis index .                     # fix commit'lerinden hata kartları (artımlı)
+aegis index .                     # hata kartları (artımlı) ve vektör indeksi
 ```
 
 Planlanan (Faz 4): embedding ve hibrit arama, `aegis publish-state`.

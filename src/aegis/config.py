@@ -78,7 +78,8 @@ class MemoryConfig(_Section):
     """Bug-fix hafızası (Katman 2, FR-20…FR-24)."""
 
     index_path: str = ".aegis/memory"
-    embedding_model: str = "local"
+    embedding_model: str = "lsa"
+    """`lsa` (varsayılan, ek bağımlılık yok), `lsa:<boyut>` ya da `ollama:<model>` (#24)."""
     top_k: int = Field(default=3, gt=0)
     retrieval: Literal["hybrid", "vector", "structural"] = "hybrid"
     max_functions_per_card: int = Field(default=3, gt=0)

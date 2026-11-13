@@ -50,7 +50,7 @@ flowchart LR
         SZZ --> FE
         FE --> TR[Model eğitimi]
         SZZ --> BC[Hata kartları]
-        BC --> IDX[(Bug-Fix Hafızası<br/>LanceDB)]
+        BC --> IDX[(Bug-Fix Hafızası<br/>numpy vektör indeksi)]
         TR --> MOD[(Risk modeli)]
     end
 
@@ -133,9 +133,9 @@ flowchart LR
 
 - **Sorgu:** PR'da değişen fonksiyonların kodu, nitelikli adı ve diff'i.
 - **Getirme:** (1) Aynı dosya/fonksiyon için yapısal eşleşme, (2) BM25, (3) vektör benzerliği. Sonuçlar RRF ile birleştirilir; en iyi *k* kart (varsayılan 3) seçilir.
-- **Zamansal filtre:** Yalnızca `fix_date < PR tarihi` olan kartlar getirilir.
-- **Embedding:** Yerel bir kod embedding modeli (sentence-transformers) kullanılır.
-- **Saklama:** LanceDB (gömülü, dosya tabanlı).
+- **Zamansal filtre (#26):** Yalnızca `fix_date < PR tarihi` olan kartlar getirilir; kural arama fonksiyonunun içindedir, değerlendirmede de aynı şekilde uygulanır.
+- **Embedding (#24):** `[memory].embedding_model` ile seçilir. Varsayılan `lsa`: TF-IDF + kesik SVD (scikit-learn), kod duyarlı belirteçleme (`snake_case`/`camelCase` parçalanır). Kartlar üzerinde eğitilir; model indirmesi ve internet gerektirmez. `ollama:<model>` (ör. `nomic-embed-text`) yerel Ollama embedding modelini kullanır; gerçek model koşuları proje sonunda yapılacağı için yalnızca sahte istemciyle test edildi. Planlanan sentence-transformers, bu ortamda torch kurulamadığı için kullanılmadı.
+- **Saklama (#24):** Repo başına `<index_path>/<repo>/`: `vectors.npy` (L2 normalize), `embedder.pkl`, `index.json` (şema ve Aegis sürümü, embedding modeli, kart sayısı, kartların SHA-256 özeti, kimlikler ve fix tarihleri). Arama tam taramadır (kosinüs). 6 hedef repoda 120–832 kart var; indeks kurulumu repo başına 3–4 saniye, arama milisaniyeler sürüyor. Planlanan LanceDB pyarrow gerektiriyor (bu makinede Smart App Control engelliyor) ve bu ölçekte gereksiz.
 - **Kart üretimi (#22, #23):** `aegis index <repo>` madencilik çıktısındaki her fix commit'inden (merge değil, en az bir kaynak dosyaya dokunan) bir kart üretir ve `<data>/<repo>/cards.jsonl` dosyasına yazar. Varsayılan olarak artımlıdır: yalnızca kartı olmayan fix'ler eklenir (`--rebuild` sıfırdan kurar). Fonksiyonlar `ast` ile bulunur; nitelikli ad modül yolunu, iç içe sınıfları ve iç fonksiyonları içerir (`tqdm._tqdm.tqdm`, `app.db.pool.ConnectionPool.release`). Diff'te değişen satırlar en içteki fonksiyona eşlenir; sözdizimi hatalı dosyalar atlanır. `before`/`after` alanları fonksiyonun tamamını taşır; uzun fonksiyonlarda imza satırı ve değişen satırların çevresi tutulur (`[memory].max_code_lines`, `max_functions_per_card`, `max_diff_lines`). Issue başlığı yalnızca `--issue-titles` ile GitHub'dan okunur (GITHUB_TOKEN; diskte cache'lenir). `summary` şimdilik commit başlığıdır; LLM özeti gerçek model koşularıyla gelecek.
 
 ### Dağıtım ve kalıcılık
@@ -389,7 +389,7 @@ src/aegis/
 | Veri | pandas / polars, pyarrow (Parquet) |
 | ML | scikit-learn, LightGBM (SMOTE ve açıklamalar ek bağımlılık olmadan yerel olarak uygulanır) |
 | Kod ayrıştırma | `ast` (ileride tree-sitter), unidiff |
-| Embedding ve vektör DB | sentence-transformers, LanceDB |
+| Embedding ve vektör indeksi | scikit-learn (TF-IDF + SVD), numpy; isteğe bağlı Ollama embedding |
 | LLM | `ollama` (yalnızca yerel model); httpx, tenacity |
 | GitHub | PyGithub veya httpx ile REST |
 | Doğrulama | pytest-testmon (test seçimi), pytest-xdist (paralellik), Docker |
