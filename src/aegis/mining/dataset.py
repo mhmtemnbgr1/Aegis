@@ -2,8 +2,8 @@
 
 Her repo için madencilik çıktıları birleştirilir:
 
-- satırlar: SZZ penceresindeki (son `history_years` yıl), merge olmayan ve en az bir dosya
-  değiştiren commit'ler,
+- satırlar: SZZ penceresindeki (`history_years`; varsayılan tüm geçmiş), merge olmayan ve en az
+  bir dosya değiştiren commit'ler,
 - özellikler: `kamei.parquet` (14 metrik, `as_of` = commit zamanı),
 - etiket: `buggy` = commit, SZZ'nin bulduğu bir bug-inducing commit mi; `fixed_at` bu hatanın
   ilk düzeltildiği an (etiketin bilindiği zaman, temiz commit'lerde boş).

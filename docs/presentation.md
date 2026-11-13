@@ -92,7 +92,7 @@ Böylece model ne kadar iyi çıkarsa çıksın sonuç savunulabilir olur; ekip 
 
 | ID | Veri seti | Kaynak | Hedef boyut | RQ |
 | --- | --- | --- | --- | --- |
-| D1 | SZZ ile etiketlenmiş commit ve PR'lar | 6 hedef repo ([target-repos.md](target-repos.md)), son 5 yıl | Tüm commit'ler (repo başına ≥ 200 pozitif) | RQ1 |
+| D1 | SZZ ile etiketlenmiş commit ve PR'lar | 6 hedef repo ([target-repos.md](target-repos.md)), tüm geçmiş | Tüm commit'ler (repo başına ≥ 200 pozitif) | RQ1 |
 | D2 | Bug-inducing commit'ler (sonradan düzeltilen satırlar = beklenen bulgu) ve temiz commit'ler | D1'den tabakalı örnekleme | ~300 hatalı + ~300 temiz; ~100'ü elle etiketli | RQ2, RQ4, RQ5 |
 | D4 | Demo ve dogfooding PR'ları | Ekip | ≥ 30 PR | Maliyet, süre |
 
@@ -199,7 +199,7 @@ PR içeriği prompt'ta veri olarak işaretleniyor ve ajanın hiçbir araç yetki
 Aegis PR kodunu çalıştırmıyor, yalnızca diff'i okuyor. `pull_request_target` kullanmıyoruz ve yapılandırma taban daldan okunuyor; bir PR kendi incelemesini gevşetemiyor.
 
 ### "İlk kurulum ne kadar sürüyor? Her PR'da tüm geçmiş mi taranıyor?"
-Hayır. İlk madencilik ve indeksleme yerelde bir kez yapılıyor ve GitHub Release asset'i olarak yükleniyor. Action bu arşivi indiriyor; her PR'da geçmiş yeniden taranmıyor. SZZ son 5 yılla sınırlı.
+Hayır. İlk madencilik ve indeksleme yerelde bir kez yapılıyor ve GitHub Release asset'i olarak yükleniyor. Action bu arşivi indiriyor; her PR'da geçmiş yeniden taranmıyor. Tüm geçmiş üzerinde SZZ, en büyük hedef repoda (scrapy) 4 dakikadan kısa sürüyor.
 
 ### "Neden otomatik düzeltme (patch) üretmiyorsunuz?"
 Bilinçli bir kapsam kararı. Testle doğrulanmış patch üretimi ayrı bir araştırma problemi (APR) ve güvenilir yapılması için sandbox ile büyük bir benchmark gerekiyor. v1'de katkıyı ölçülebilir iki parçaya (K1, K2) yoğunlaştırdık; patch hattı gelecek çalışma. Mimari buna hazır: bulgular zaten satır ve kanıtla doğrulanmış biçimde üretiliyor.

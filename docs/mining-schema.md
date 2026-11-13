@@ -96,7 +96,7 @@ Fix × bug-inducing commit × dosya. SZZ, pyszz PyPI'da bulunmadığı için `gi
 
 Bir fix şu koşullarda işlenir:
 - `is_fix` doğru olmalı ve merge commit'i olmamalı.
-- Repodaki en yeni commit'ten geriye son `history_years` (varsayılan 5) yıl içinde olmalı.
+- `history_years` verilmişse repodaki en yeni commit'ten geriye son N yıl içinde olmalı. Varsayılan sınır yoktur; geçmişin tamamı işlenir (#13).
 - En fazla `max_files_per_commit` (varsayılan 50) dosya değiştirmiş olmalı.
 
 Blame yalnızca **kaynak dosyalarda** yapılır. Kaynak dosya, uzantısı `source_extensions` listesinde olan ve `test_path_patterns` ile eşleşmeyen dosyadır. Bu sayede yalnızca testlere, CI'a ya da dokümana dokunan "fix"ler eşleme üretmez. Sınıflandırıcının bu tür gürültüsünün büyük kısmı burada elenir. Aday commit'lerden şunlar elenir:
@@ -166,6 +166,21 @@ Testler (`tests/test_features.py`): 14 metriğin her biri elle hesaplanmış bir
 
 `fixed_at`, eğitimde etiketin "o an bilinen" haline indirgenmesi için gerekir. Zaman sıralı bölme ve etiket gecikmesi tamponu (`[training]`, #14) `aegis.gatekeeper.split` modülünde. `d1.json` repo başına commit, fix ve bug-inducing sayılarını, oranı ve 200 sınırının geçilip geçilmediğini kaydeder (#13).
 
+### SZZ penceresi ve D1 sayıları (13 Kasım 2026)
+
+İlk denemede SZZ son 5 yılla sınırlıydı. Bu pencerede 6 repodan yalnızca scrapy 200 bug-inducing sınırını geçti (tqdm 24, fastapi 68). Pencere tüm geçmişe çıkarıldı (#13). Eski commit'lerdeki SZZ gürültüsü ve dağılım kayması değerlendirmeyi bozmaz, çünkü zaman sıralı bölmede test kümesi her zaman en yeni commit'lerden oluşur.
+
+| Repo | Commit | Fix | Bug-inducing | Oran | SZZ süresi |
+| --- | --- | --- | --- | --- | --- |
+| scrapy | 9.625 | 1.321 | 1.275 | %13,2 | 210 sn |
+| tornado | 4.138 | 730 | 623 | %15,1 | 122 sn |
+| tqdm | 1.821 | 482 | 438 | %24,1 | 60 sn |
+| black | 2.502 | 638 | 414 | %16,6 | 103 sn |
+| fastapi | 8.037 | 332 | 195 | %2,4 | 48 sn |
+| httpie | 1.690 | 235 | 191 | %11,3 | 25 sn |
+
+Toplam 27.813 satır. fastapi ve httpie 200 sınırının biraz altında kalıyor; ikisi de D1'de tutuluyor ve sonuçlarda bu not ediliyor. fastapi'nin pozitif oranı (%2,4) diğerlerinden çok düşük; çok sayıda dokümantasyon ve çeviri commit'i içeriyor. Sınıf dengesizliği yöntemleri (#16) bu repoda ayrıca raporlanmalı.
+
 ## `meta.json`
 
 Veri sürümü kaydı (NFR-04): şema ve Aegis sürümü, `mined_at`, `remote_url`, taranan `head_sha`, `since`, kullanılan `mining_config`, satır sayıları ve süre. Aynı `head_sha` ve `mining_config` ile yapılan tarama aynı veriyi üretir.
@@ -195,7 +210,7 @@ SZZ (son 5 yıl, kesim 2021-09-11):
 | Fix–inducing çifti | 86 | 150 |
 | Süre | 7 sn | 5 sn |
 
-Docstring filtresi eklenmeden önce `ma` 125 inducing commit üretiyordu. Farkın büyük kısmı, 4 issue'yu kapatan ve çoğunlukla docstring değiştiren tek bir özellik commit'inden geliyordu. tqdm'in son 5 yılda ürettiği 72 inducing commit, D1'deki 200 sınırının altında kalıyor (#13). tqdm pilot olarak kalıyor; D1 için yedek repo ya da daha uzun bir pencere gerekiyor.
+Docstring filtresi eklenmeden önce `ma` 125 inducing commit üretiyordu. Farkın büyük kısmı, 4 issue'yu kapatan ve çoğunlukla docstring değiştiren tek bir özellik commit'inden geliyordu. tqdm'in son 5 yılda ürettiği 72 inducing commit, D1'deki 200 sınırının altında kalıyordu. Pencere tüm geçmişe çıkarıldıktan sonra 438'e yükseldi (bkz. D1 sayıları).
 
 ### scrapy (en büyük hedef repo, #9 süre ölçümü)
 

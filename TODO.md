@@ -73,7 +73,7 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [x] Miner: PyDriller ile commit, dosya ve fonksiyon değişiklikleri ([şema](docs/mining-schema.md))
 - [x] Fix-commit tespiti
 - [ ] Fix-commit tespiti için 200 örneklik doğrulama seti
-- [ ] SZZ (git blame tabanlı MA ve B varyantları; son 5 yıl) — kod hazır, 50 eşlemenin elle kontrolü bekliyor
+- [ ] SZZ (git blame tabanlı MA ve B varyantları; tüm geçmiş) — kod hazır, 50 eşlemenin elle kontrolü bekliyor
 - [x] Kamei JIT metrikleri
 - [x] Zaman kuralı: `as_of` ile sızıntısız özellik hesabı
 - [x] Sentetik git deposu testleri

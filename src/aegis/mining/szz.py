@@ -2,7 +2,8 @@
 
 pyszz PyPI'da olmadığından SZZ doğrudan `git diff` ve `git blame` üzerine kuruludur:
 
-1. Son `history_years` yıldaki, merge olmayan ve `max_files_per_commit`'ten küçük fix'ler alınır.
+1. Son `history_years` yıldaki (varsayılan: tüm geçmiş), merge olmayan ve
+   `max_files_per_commit`'ten küçük fix'ler alınır.
 2. Her fix'te değişen kaynak dosyalarının (test dosyaları hariç) silinen ya da değiştirilen
    satırları `git diff -U0 <ebeveyn> <fix>` ile bulunur.
 3. Bu satırlar ebeveyn commit'te `git blame` ile son değiştiren commit'e izlenir.
@@ -186,7 +187,11 @@ def run_szz(
     slug = commits["repo"][0] if commits.height else data_dir.name
 
     latest: datetime = commits["author_date"].max() if commits.height else datetime.now(UTC)  # type: ignore[assignment]
-    cutoff = latest - timedelta(days=round(365.25 * config.history_years))
+    if config.history_years is None:
+        earliest: datetime = commits["author_date"].min() if commits.height else latest  # type: ignore[assignment]
+        cutoff = earliest
+    else:
+        cutoff = latest - timedelta(days=round(365.25 * config.history_years))
     in_window = commits.filter(
         pl.col("is_fix") & ~pl.col("is_merge") & (pl.col("author_date") >= cutoff)
     )

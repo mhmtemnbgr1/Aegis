@@ -199,8 +199,10 @@ def mine(
                     f"[red]SZZ sırasında git başarısız:[/red] {(exc.stderr or '').strip()}"
                 )
                 raise typer.Exit(2) from exc
+        years = config.history_years
+        window = "tüm geçmiş" if years is None else f"{years} yıl"
         console.print(
-            f"SZZ ({szz.variant}, {config.history_years} yıl): {szz.fixes_in_window} fix → "
+            f"SZZ ({szz.variant}, {window}):{szz.fixes_in_window} fix → "
             f"[bold]{szz.fixes_with_inducing}[/bold] eşlendi · "
             f"[bold]{szz.inducing_commits}[/bold] bug-inducing commit · {szz.pairs} çift · "
             f"{szz.duration_seconds:.1f} sn"

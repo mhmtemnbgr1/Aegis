@@ -136,8 +136,8 @@ class MiningConfig(_Section):
 
     szz_variant: Literal["ma", "b"] = "ma"
     """`ma`: boşluk/yorum değişikliklerini ve meta commit'leri yok sayar; `b`: düz blame (FR-03)."""
-    history_years: int = Field(default=5, gt=0)
-    """SZZ yalnızca son N yıldaki fix'leri işler (repodaki en yeni commit'e göre)."""
+    history_years: int | None = Field(default=None, gt=0)
+    """SZZ yalnızca son N yıldaki fix'leri işler (en yeni commit'e göre); `None`: tüm geçmiş."""
     max_files_per_commit: int = Field(default=50, gt=0)
     """Daha fazla dosya değiştiren fix'ler atlanır; `ma` bu commit'leri blame'de de yok sayar."""
     source_extensions: list[str] = [".py"]

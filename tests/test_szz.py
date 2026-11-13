@@ -169,3 +169,17 @@ def test_ma_ignores_docstring_changes(tmp_path: Path) -> None:
     assert ma.select("fix_sha", "inducing_sha").rows() == [(fix, bug)]
     b = _szz(git, tmp_path / "b", szz_variant="b")
     assert set(b["inducing_sha"]) == {bug, docs}
+
+
+def test_full_history_is_default(tmp_path: Path) -> None:
+    (tmp_path / "p").mkdir()
+    git = GitRepo(tmp_path / "p")
+    git.commit("Add module", {"m.py": "v = 1\n"}, date="2010-01-01T00:00:00+00:00")
+    git.commit("Fix value", {"m.py": "v = 2\n"}, date="2011-01-01T00:00:00+00:00")
+    git.commit("Update readme", {"README.md": "x\n"}, date="2026-01-01T00:00:00+00:00")
+    cfg = MiningConfig()
+    mine_repository(git.path, tmp_path / "o", cfg, functions=False)
+    result = run_szz(git.path, tmp_path / "o", cfg)
+    assert (result.fixes_in_window, result.inducing_commits) == (1, 1)
+    windowed = MiningConfig(history_years=5)
+    assert run_szz(git.path, tmp_path / "o", windowed).fixes_in_window == 0

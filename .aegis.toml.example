@@ -10,7 +10,7 @@ ignore_merge_commits = true
 max_files_per_commit = 50        # daha büyük commit'ler SZZ'den elenir
 label_delay_days = 180           # son N günün commit'leri eğitime alınmaz
 szz_variant = "ma"               # ma (pyszz MA-SZZ) | b (PyDriller B-SZZ)
-history_years = 5                # SZZ yalnızca son N yıla uygulanır
+# history_years = 10             # SZZ'yi son N yılla sınırla (varsayılan: tüm geçmiş)
 
 [gatekeeper]
 mode = "heuristic"               # heuristic | model (model yoksa heuristic kullanılır)
