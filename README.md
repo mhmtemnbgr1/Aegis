@@ -81,7 +81,14 @@ aegis index .                     # hata kartları (artımlı) ve vektör indeks
 aegis dataset                     # D1'i hafıza sinyaliyle yeniden üret (index'ten sonra)
 ```
 
-Planlanan (Faz 4): embedding ve hibrit arama, `aegis publish-state`.
+Durum arşivi (GitHub Action için):
+
+```bash
+aegis publish-state .             # veri, model ve kartları Release asset'i olarak yükle (GITHUB_TOKEN)
+aegis publish-state . --out s.tar.gz   # yalnızca yerel arşiv
+```
+
+Action, arşivi önce `actions/cache`'ten, yoksa Release'ten alır (`aegis fetch-state`). Arşiv yoksa sezgisel kuralla ve hafızasız çalışır.
 
 ### GitHub Action
 

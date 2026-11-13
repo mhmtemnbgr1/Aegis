@@ -106,6 +106,15 @@ class AgentConfig(_Section):
     timeout_seconds: float = Field(default=60, gt=0)
 
 
+class StateConfig(_Section):
+    """Durum arşivi (FR-07, #45)."""
+
+    release_tag: str = "aegis-state"
+    """`aegis publish-state` ile yüklenen arşivin Release etiketi."""
+    use_actions_cache: bool = True
+    """Action arşivi önce `actions/cache`'te arar (bilgi amaçlı; davranış action.yml'de)."""
+
+
 class ReviewConfig(_Section):
     llm_enabled: bool = True
     """False ise analiz ajanı hiç çağrılmaz; yalnızca gatekeeper ve deterministik kurallar."""
@@ -237,6 +246,7 @@ class AegisConfig(_Section):
     memory: MemoryConfig = MemoryConfig()
     agents: dict[str, AgentConfig] = {}
     review: ReviewConfig = ReviewConfig()
+    state: StateConfig = StateConfig()
     mining: MiningConfig = MiningConfig()
     training: TrainingConfig = TrainingConfig()
 

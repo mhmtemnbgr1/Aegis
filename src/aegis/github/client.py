@@ -113,6 +113,59 @@ class GitHubClient:
         title = issue.get("title")
         return str(title) if title else None
 
+    # Release asset'leri (durum arşivi, #45)
+    def get_release_by_tag(self, tag: str) -> dict[str, Any] | None:
+        try:
+            release: dict[str, Any] = self._request("GET", f"/releases/tags/{tag}")
+        except GitHubError as exc:
+            if exc.status_code == 404:
+                return None
+            raise
+        return release
+
+    def create_release(self, tag: str, *, name: str, body: str) -> dict[str, Any]:
+        release: dict[str, Any] = self._request(
+            "POST", "/releases", json={"tag_name": tag, "name": name, "body": body}
+        )
+        return release
+
+    def delete_release_asset(self, asset_id: int) -> None:
+        self._request("DELETE", f"/releases/assets/{asset_id}")
+
+    def upload_release_asset(
+        self, release: dict[str, Any], name: str, data: bytes
+    ) -> dict[str, Any]:
+        # Yükleme ayrı bir sunucuya gider: release'in `upload_url` şablonu ({?name,label}).
+        url = str(release["upload_url"]).split("{", 1)[0]
+        try:
+            resp = self._http.post(
+                url,
+                params={"name": name},
+                content=data,
+                headers={**self._headers, "Content-Type": "application/gzip"},
+            )
+        except httpx.HTTPError as exc:
+            raise GitHubError(f"POST {url}: {exc}") from exc
+        if resp.status_code >= 400:
+            raise GitHubError(
+                f"POST {url}: HTTP {resp.status_code} {resp.text[:300]}", resp.status_code
+            )
+        result: dict[str, Any] = resp.json()
+        return result
+
+    def download_release_asset(self, asset_id: int) -> bytes:
+        try:
+            resp = self._http.get(
+                f"{self._base}/releases/assets/{asset_id}",
+                headers={**self._headers, "Accept": "application/octet-stream"},
+                follow_redirects=True,
+            )
+        except httpx.HTTPError as exc:
+            raise GitHubError(f"GET asset {asset_id}: {exc}") from exc
+        if resp.status_code >= 400:
+            raise GitHubError(f"GET asset {asset_id}: HTTP {resp.status_code}", resp.status_code)
+        return resp.content
+
     # Check run
     def create_check_run(
         self, head_sha: str, *, name: str, conclusion: str, title: str, summary: str

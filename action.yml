@@ -51,6 +51,42 @@ runs:
         AEGIS_ACTION_PATH: ${{ github.action_path }}
       run: uv tool install --quiet "$AEGIS_ACTION_PATH[ollama]"
 
+    # Durum arşivi (#45): madencilik verisi, model ve hafıza. Önce cache, yoksa Release asset'i
+    # (aegis publish-state ile yüklenir). İkisi de yoksa inceleme sezgisel kuralla, hafızasız sürer.
+    - name: Restore Aegis state (cache)
+      id: state-cache
+      if: github.event_name == 'pull_request'
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          .aegis/data
+          .aegis/models
+          .aegis/memory
+        key: aegis-state-v1-${{ github.repository }}-${{ github.event.pull_request.base.sha }}
+        restore-keys: |
+          aegis-state-v1-${{ github.repository }}-
+
+    - name: Fetch Aegis state (Release)
+      if: github.event_name == 'pull_request' && steps.state-cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        AEGIS_CONFIG: ${{ inputs.config }}
+      run: aegis fetch-state --if-missing --config "$AEGIS_CONFIG" || true
+
+    - name: Save Aegis state (cache)
+      if: >-
+        github.event_name == 'pull_request' && steps.state-cache.outputs.cache-hit != 'true'
+        && hashFiles('.aegis/data/**') != ''
+      continue-on-error: true
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          .aegis/data
+          .aegis/models
+          .aegis/memory
+        key: aegis-state-v1-${{ github.repository }}-${{ github.event.pull_request.base.sha }}
+
     - name: Review
       id: review
       if: github.event_name == 'pull_request'

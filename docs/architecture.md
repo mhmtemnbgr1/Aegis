@@ -155,8 +155,8 @@ flowchart LR
 
 Tüm geçmişi CI'da taramak büyük repolarda çok uzun sürer. Bu yüzden:
 
-1. **İlk kurulum yerelde yapılır:** `aegis mine` + `aegis train` + `aegis index`. Ortaya çıkan model, indeks ve son işlenen SHA tek bir arşivde toplanır ve repo'nun bir **GitHub Release asset**'i olarak yüklenir (`aegis publish-state`).
-2. **Her PR'da** Action, `actions/cache`'te durum varsa onu kullanır; yoksa Release asset'ini indirir. Hiçbir durumda tüm geçmişi yeniden taramaz.
+1. **İlk kurulum yerelde yapılır:** `aegis mine` + `aegis index` + `aegis dataset` + `aegis train`. Madencilik verisi (kartlar dahil), çalışma anı modeli (repo modeli ve genel model) ve son işlenen SHA tek bir `tar.gz` arşivinde toplanır ve repo'nun `[state].release_tag` etiketli **GitHub Release**'ine `aegis-state-<repo>.tar.gz` asset'i olarak yüklenir (`aegis publish-state`; `--out` ile yalnızca yerel dosya). Deney model varyantları arşive girmez; LSA indeksi de girmez, çünkü kartlardan birkaç saniyede yeniden kurulur. scrapy için arşiv 3,7 MB (11 dosya). Açma anında, indeksin yeniden kurulması 4,4 saniye sürüyor. Arşiv yalnızca bilinen bölümlere düz dosya yazar; `..`, mutlak yol ve bağlantı içeren girdiler reddedilir (#45).
+2. **Her PR'da** Action, `actions/cache`'te durum varsa onu kullanır; yoksa Release asset'ini indirir (`aegis fetch-state`) ve cache'e kaydeder. Hiçbir durumda tüm geçmişi yeniden taramaz.
 3. **`main`'e her merge'de** yalnızca son SHA'dan sonraki commit'ler işlenir. Güncellenen durum cache'e yazılır.
 4. **Modelin yeniden eğitimi** haftalık zamanlanmış bir workflow'da yapılır ve Release asset'i güncellenir.
 5. Asset de cache de yoksa Action sezgisel gatekeeper ile, hafızasız çalışır (fail-open).
