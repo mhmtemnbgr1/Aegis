@@ -100,7 +100,7 @@ flowchart LR
 - **Kalibrasyon (#18):** Ham skorlar doğrulama kümesinde Platt (sigmoid) yöntemiyle olasılığa çevrilir (`[training].calibration`). 6 repo ortalamasında sigmoid, RF'de test ECE'sini 0,067'den 0,037'ye, LightGBM'de 0,083'ten 0,043'e indiriyor. LR zaten iyi kalibre (0,039 → 0,040). Sıralama korunduğu için ROC-AUC ve PR-AUC değişmiyor. Isotonic doğrulamada kusursuz görünüyor (ECE 0) ama aşırı uyuyor: testte sigmoidden kötü ve PR-AUC'yi düşürüyor. Eğriler `eval/plot_calibration.py` ile SVG olarak çizilir.
 - **PR skoru (FR-11):** PR etiketi "en az bir commit hatalı" olduğundan, kalibre commit olasılıkları bağımsız sayılarak `1 − Π(1 − pᵢ)` ile birleştirilir (`TrainedModel.score_pr`). PR düzeyindeki özellikler #73'te gelir.
 - **Karar:** Skor üç banda ayrılır: düşük, orta, yüksek. Eşik ya doğrudan verilir ya da "PR'ların en fazla %X'i LLM'e gitsin" bütçesinden hesaplanır (`max_llm_pr_ratio`). Bütçe eşiği, doğrulama skorlarında `skor ≥ eşik` payı X'i aşmayacak en küçük değerdir; yüksek bant bunun en riskli `high_share` kadarıdır. **Bulgu:** Doğrulamada seçilen eşik test döneminde bütçeyi aşıyor. %20 bütçede LLM'e giden pay ortalama %26 (LR) ile %34 (RF) arasında, recall 0,62–0,67. Neden: daha yeni commit'lerin skorları yukarı kayıyor. Çalışma anında eşik, son puanlanan PR'ların skorlarından periyodik olarak yeniden hesaplanmalı (#66).
-- **Açıklama:** SHAP ile en etkili 3 özellik çıkarılır ve PR yorumunda gösterilir.
+- **Açıklama (#19):** En etkili 3 özellik çıkarılır ve Türkçe cümle olarak PR yorumunda gösterilir (`aegis.gatekeeper.explain`). `shap` paketi yerine her modelin kesin ya da yerleşik yöntemi kullanılır: LR'de doğrusal SHAP, LightGBM'de yerleşik TreeSHAP, RF'de Saabas katkıları (SHAP'a yakın; tutarlılık garantisi yok). Her yöntemde katkılar ile taban değerin toplamı modelin çıktısına eşittir ve bu birim testle doğrulanır. PR yorumunda en riskli commit'te riski **artıran** ilk 3 özellik gösterilir. Bunun nedeni, ilişkili özelliklerin (NF, ND, LA) doğrusal modelde ters işaretli katkı alıp "5 dosya değişti (riski azaltıyor)" gibi yanıltıcı cümleler üretebilmesi. 6 repo × 3 modelde en önemli özellik LA (ortalama sıra 2,3; 18 durumun 15'inde ilk 3'te), ardından LD, LT, NDEV ve deneyim metrikleri (EXP, SEXP) geliyor. FIX hiçbir durumda ilk 3'e girmiyor. Tablo `eval/explain_importance.py` ile üretilir.
 - **Soğuk başlangıç (#17):** Geçmişi az olan repolarda diğer repolarda eğitilmiş genel model kullanılır (`aegis train --repo all`, `.aegis/models/all/`). Leave-one-project-out değerlendirmede hedef reponun test kümesi repo içi senaryodakiyle aynıdır. Genel model, diğer 5 reponun yalnızca o test döneminden önceki commit'leriyle eğitilir. LR'de repolar üzerinden ortalama test PR-AUC'si repo içinde 0,273, repolar arasında 0,247; ROC-AUC 0,785 ve 0,766. Yani genel model yaklaşık %10 kayıpla çalışıyor. Geçmişi kısa repolarda (tqdm, black, httpie) genel model repo içi modele denk ya da ondan iyi. Tablo `eval/compare_scenarios.py` ile üretilir.
 
 ---
@@ -361,7 +361,7 @@ src/aegis/
 ├── diff/        parse.py  filters.py
 ├── mining/      miner.py  fixes.py  szz.py
 ├── features/    kamei.py  extra.py
-├── gatekeeper/  heuristic.py  train.py  score.py  explain.py
+├── gatekeeper/  heuristic.py  model.py  split.py  calibration.py  explain.py
 ├── memory/      cards.py  chunker.py  embed.py  retrieve.py
 ├── llm/         base.py  providers.py  structured.py  cache.py
 ├── agents/      analyst.py  fixer.py  tester.py  orchestrator.py  prompts/v1/
@@ -381,7 +381,7 @@ src/aegis/
 | Modeller ve config | Pydantic v2, tomllib |
 | Repo madenciliği | PyDriller, pyszz (MA-SZZ) |
 | Veri | pandas / polars, pyarrow (Parquet) |
-| ML | scikit-learn, LightGBM, SHAP (SMOTE scikit-learn ile yerel olarak uygulanır) |
+| ML | scikit-learn, LightGBM (SMOTE ve açıklamalar ek bağımlılık olmadan yerel olarak uygulanır) |
 | Kod ayrıştırma | `ast` (ileride tree-sitter), unidiff |
 | Embedding ve vektör DB | sentence-transformers, LanceDB |
 | LLM | `ollama` (yalnızca yerel model); httpx, tenacity |

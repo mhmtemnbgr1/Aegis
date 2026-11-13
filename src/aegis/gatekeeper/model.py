@@ -38,6 +38,7 @@ from aegis.gatekeeper.calibration import (
     pr_score,
     reliability,
 )
+from aegis.gatekeeper.explain import Explanation, explain_pr
 from aegis.gatekeeper.metrics import best_f1_threshold, evaluate
 from aegis.gatekeeper.split import Split
 
@@ -152,6 +153,10 @@ class TrainedModel:
     def score_pr(self, commits: pl.DataFrame) -> float:
         """Bir PR'ın commit'lerinden en az birinin hatalı olma olasılığı (FR-11)."""
         return pr_score(self.predict_proba(commits))
+
+    def explain_pr(self, commits: pl.DataFrame, k: int = 3) -> list[Explanation]:
+        """Skoru en çok etkileyen `k` özellik ve Türkçe metinleri (FR-14)."""
+        return explain_pr(self, commits, k)
 
     def thresholds(self, max_llm_ratio: float, high_share: float = 0.5) -> tuple[float, float]:
         """Bütçeye göre (düşük, yüksek) bant eşikleri (FR-13)."""
