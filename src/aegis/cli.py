@@ -455,9 +455,66 @@ def _score_with_model(gk: "ModelGatekeeper") -> None:
 
 
 @app.command()
-def index() -> None:
-    """Bug-fix hafızasını (hata kartları) oluşturur veya günceller. (Faz 3)"""
-    _not_implemented("Faz 3")
+def index(
+    repo: Path = typer.Argument(Path("."), help="Madenciliği yapılmış yerel git deposu."),
+    data_root: Path | None = typer.Option(
+        None, "--data", help="Madencilik çıktılarının kökü (varsayılan: [mining].data_dir)."
+    ),
+    rebuild: bool = typer.Option(False, "--rebuild", help="Kartları sıfırdan üret."),
+    issue_titles: bool = typer.Option(
+        False, "--issue-titles", help="Issue başlıklarını GitHub'dan oku (GITHUB_TOKEN gerekir)."
+    ),
+    config_path: Path | None = typer.Option(None, "--config", help="Yapılandırma dosyası."),
+) -> None:
+    """Bug-fix hafızasının hata kartlarını üretir; varsayılan olarak yalnızca yeni fix'leri ekler.
+
+    Kartlar `<data>/<repo>/cards.jsonl` dosyasına yazılır (#22, #28). Embedding ve arama
+    indeksi sonraki adımda (#24) bu kartlardan kurulur.
+    """
+    from aegis.memory.cards import build_cards, read_cards, write_cards
+    from aegis.mining import repo_slug
+
+    config = load_config(Path("."), config_path)
+    slug = repo_slug(repo)
+    data_dir = (data_root or Path(config.mining.data_dir)) / slug
+    if not (data_dir / "commits.parquet").is_file():
+        console.print(f"[red]{data_dir} altında madencilik çıktısı yok; önce aegis mine.[/red]")
+        raise typer.Exit(2)
+    titles = None
+    if issue_titles:
+        from aegis.mining.labels import github_issue_titles
+
+        url = remote_url(repo)
+        gh_repo = github_repository(url) if url else None
+        token = os.environ.get("GITHUB_TOKEN")
+        if gh_repo is None or not token:
+            console.print("[red]--issue-titles için GitHub reposu ve GITHUB_TOKEN gerekir.[/red]")
+            raise typer.Exit(2)
+        titles = github_issue_titles(GitHubClient(token, gh_repo), data_dir / "issue_titles.json")
+    path = data_dir / "cards.jsonl"
+    existing = [] if rebuild else read_cards(path)
+    skip = {c.fix_sha for c in existing}
+    started = time.perf_counter()
+    with Progress(
+        TextColumn("{task.description}"), MofNCompleteColumn(), TimeElapsedColumn(), console=console
+    ) as progress:
+        task = progress.add_task(f"{slug} kartları", total=None)
+        added = write_cards(
+            path,
+            build_cards(
+                repo,
+                data_dir,
+                config,
+                issue_titles=titles,
+                skip=skip,
+                on_card=lambda: progress.advance(task),
+            ),
+            append=not rebuild,
+        )
+    console.print(
+        f"{slug}: {added} yeni kart · toplam {len(existing) + added} · "
+        f"{time.perf_counter() - started:.1f} sn → {path}"
+    )
 
 
 _SEVERITY_STYLE = {"critical": "bold red", "high": "red", "medium": "yellow", "low": "dim"}

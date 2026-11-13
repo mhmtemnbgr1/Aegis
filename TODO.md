@@ -95,8 +95,8 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 
 ## Faz 4 — Bug-Fix Hafızası · 22 Kas
 
-- [ ] Hata kartı modeli ve oluşturucu
-- [ ] Fonksiyon düzeyinde parçalama
+- [x] Hata kartı modeli ve oluşturucu
+- [x] Fonksiyon düzeyinde parçalama
 - [ ] Embedding ve LanceDB indeksi
 - [ ] Hibrit arama (yapısal + BM25 + vektör, RRF)
 - [ ] Zamansal filtre

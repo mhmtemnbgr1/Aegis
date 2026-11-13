@@ -38,3 +38,23 @@ def github_label_source(
         return {n: cache.get(str(n), []) for n in numbers}
 
     return source
+
+
+def github_issue_titles(
+    client: GitHubClient, cache_path: Path
+) -> Callable[[Collection[int]], Mapping[int, str | None]]:
+    """Issue başlıkları (#22); `github_label_source` gibi diskte cache'lenir."""
+
+    def source(numbers: Collection[int]) -> Mapping[int, str | None]:
+        cache: dict[str, str | None] = {}
+        if cache_path.is_file():
+            cache = json.loads(cache_path.read_text("utf-8"))
+        try:
+            for number in (n for n in numbers if str(n) not in cache):
+                cache[str(number)] = client.get_issue_title(number)
+        finally:
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            cache_path.write_text(json.dumps(cache, indent=0, sort_keys=True), "utf-8")
+        return {n: cache.get(str(n)) for n in numbers}
+
+    return source

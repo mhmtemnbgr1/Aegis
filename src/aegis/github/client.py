@@ -102,6 +102,17 @@ class GitHubClient:
             raise
         return [str(label["name"]) for label in issue.get("labels", [])]
 
+    def get_issue_title(self, number: int) -> str | None:
+        """Issue veya PR'ın başlığı; bulunamazsa (404/410) None (hata kartları, #22)."""
+        try:
+            issue = self._request("GET", f"/issues/{number}")
+        except GitHubError as exc:
+            if exc.status_code in (404, 410):
+                return None
+            raise
+        title = issue.get("title")
+        return str(title) if title else None
+
     # Check run
     def create_check_run(
         self, head_sha: str, *, name: str, conclusion: str, title: str, summary: str

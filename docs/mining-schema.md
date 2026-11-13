@@ -213,6 +213,10 @@ Her maddeyi önce Claude Opus 5.5 ve Claude Sonnet 5.5 birbirinden bağımsız o
 | fastapi | 332 → 204 | 138 | %1,7 |
 | httpie | 235 → 183 | 168 | %9,9 |
 
+## `cards.jsonl` (`aegis index`)
+
+Bug-fix hafızasının hata kartları; satır başına bir JSON nesnesi, şema `docs/architecture.md` §4 ile aynı (`BugCard`). Kart kimliği `BC-<fix_sha'nın ilk 10 karakteri>`. Fix seçimi D1 ile aynı kurallara uyar (`is_fix`, merge değil, `max_files_per_commit`), ama SZZ penceresi uygulanmaz ve inducing commit'i bulunamayan fix'ler de kart olur (`inducing_shas` boş). Test dosyaları kartın dosya ve fonksiyon listesine girmez.
+
 ## `meta.json`
 
 Veri sürümü kaydı (NFR-04): şema ve Aegis sürümü, `mined_at`, `remote_url`, taranan `head_sha`, `since`, kullanılan `mining_config`, satır sayıları ve süre. Aynı `head_sha` ve `mining_config` ile yapılan tarama aynı veriyi üretir.

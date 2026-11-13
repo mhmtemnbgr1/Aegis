@@ -40,6 +40,9 @@ index_path = ".aegis/memory"
 embedding_model = "local"        # yerel sentence-transformers modeli
 top_k = 3
 retrieval = "hybrid"             # hybrid | vector | structural
+max_functions_per_card = 3       # kartta en çok fonksiyon
+max_code_lines = 60              # fonksiyon başına en çok satır (değişen satırların çevresi)
+max_diff_lines = 120             # karttaki diff'in en çok satırı
 
 [filters]
 max_changed_lines_per_file = 1500

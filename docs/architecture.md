@@ -136,6 +136,7 @@ flowchart LR
 - **Zamansal filtre:** Yalnızca `fix_date < PR tarihi` olan kartlar getirilir.
 - **Embedding:** Yerel bir kod embedding modeli (sentence-transformers) kullanılır.
 - **Saklama:** LanceDB (gömülü, dosya tabanlı).
+- **Kart üretimi (#22, #23):** `aegis index <repo>` madencilik çıktısındaki her fix commit'inden (merge değil, en az bir kaynak dosyaya dokunan) bir kart üretir ve `<data>/<repo>/cards.jsonl` dosyasına yazar. Varsayılan olarak artımlıdır: yalnızca kartı olmayan fix'ler eklenir (`--rebuild` sıfırdan kurar). Fonksiyonlar `ast` ile bulunur; nitelikli ad modül yolunu, iç içe sınıfları ve iç fonksiyonları içerir (`tqdm._tqdm.tqdm`, `app.db.pool.ConnectionPool.release`). Diff'te değişen satırlar en içteki fonksiyona eşlenir; sözdizimi hatalı dosyalar atlanır. `before`/`after` alanları fonksiyonun tamamını taşır; uzun fonksiyonlarda imza satırı ve değişen satırların çevresi tutulur (`[memory].max_code_lines`, `max_functions_per_card`, `max_diff_lines`). Issue başlığı yalnızca `--issue-titles` ile GitHub'dan okunur (GITHUB_TOKEN; diskte cache'lenir). `summary` şimdilik commit başlığıdır; LLM özeti gerçek model koşularıyla gelecek.
 
 ### Dağıtım ve kalıcılık
 
