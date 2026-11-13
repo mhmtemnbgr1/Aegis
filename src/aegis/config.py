@@ -53,6 +53,11 @@ class GatekeeperConfig(_Section):
     mode: Literal["heuristic", "model"] = "heuristic"
     low_threshold: float = Field(default=0.30, ge=0, le=1)
     high_threshold: float = Field(default=0.70, ge=0, le=1)
+    max_llm_pr_ratio: float | None = Field(default=None, gt=0, le=1)
+    """Verilirse (yalnızca `model` modunda) eşikler bütçeden hesaplanır: PR'ların en fazla bu
+    payı orta/yüksek banda düşer ve LLM'e gider (FR-13)."""
+    high_share: float = Field(default=0.5, gt=0, le=1)
+    """Bütçe modunda LLM'e gidenlerin en riskli bu kadarı yüksek banttır."""
     heuristic: HeuristicConfig = HeuristicConfig()
 
     @model_validator(mode="after")
@@ -171,6 +176,8 @@ class TrainingConfig(_Section):
     label_delay_days: int = Field(default=90, ge=0)
     """Her kümenin bitişinden önceki bu kadar günün commit'leri bir önceki kümeye alınmaz:
     hataları henüz bulunmamış olabilir (etiket gecikmesi)."""
+    calibration: Literal["none", "sigmoid", "isotonic"] = "sigmoid"
+    """Skorların doğrulama kümesinde olasılığa çevrilme yöntemi (#18)."""
 
     @model_validator(mode="after")
     def _room_for_train(self) -> "TrainingConfig":

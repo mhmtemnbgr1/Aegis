@@ -10,7 +10,7 @@ import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 import polars as pl
 import typer
@@ -243,6 +243,11 @@ def train(
     report: Path | None = typer.Option(
         None, "--report", help="Metrikleri JSON olarak yaz (varsayılan: eval/reports/)."
     ),
+    calibration: str | None = typer.Option(
+        None,
+        "--calibration",
+        help="none, sigmoid veya isotonic (varsayılan: [training].calibration).",
+    ),
     seed: int = typer.Option(0, "--seed", help="Rastgelelik tohumu."),
     config_path: Path | None = typer.Option(None, "--config", help="Yapılandırma dosyası."),
 ) -> None:
@@ -254,19 +259,26 @@ def train(
     """
     # scikit-learn yalnızca eğitimde gerekir; diğer komutlar (ör. review) onu yüklemez.
     from aegis.gatekeeper.model import IMBALANCE, MODELS, train_model
+
+    if TYPE_CHECKING:
+        from aegis.gatekeeper.calibration import Method
+        from aegis.gatekeeper.model import ModelName
     from aegis.gatekeeper.split import cross_split, time_split
 
     config = load_config(Path("."), config_path)
     names = list(MODELS) if model == "all" else [model]
+    method = calibration or config.training.calibration
     if (
-        any(n not in MODELS for n in names)
+        method not in ("none", "sigmoid", "isotonic")
+        or any(n not in MODELS for n in names)
         or imbalance not in IMBALANCE
         or scenario not in ("within", "cross")
         or (scenario == "cross" and repo == "all")
     ):
         console.print(
             "[red]--model lr|rf|lightgbm|all, --imbalance none|weights|undersample|smote, "
-            "--scenario within|cross (cross ile --repo all kullanılamaz)[/red]"
+            "--scenario within|cross (cross ile --repo all kullanılamaz), "
+            "--calibration none|sigmoid|isotonic[/red]"
         )
         raise typer.Exit(2)
     d1_path = (data_root or Path(config.mining.data_dir)) / "d1.parquet"
@@ -292,18 +304,32 @@ def train(
         f"doğrulama {split.valid.height} · test {split.test.height} "
         f"({int(split.test['buggy'].sum())} hatalı) · tampon {config.training.label_delay_days} gün"
     )
-    table = Table("Model", "ROC-AUC", "PR-AUC", "F1", "MCC", "Recall@%20 efor", "Popt", "Eşik")
+    # F1, eşik ve diğer bütçeler rapordadır; tablo dar terminale sığsın.
+    table = Table("Model", "ROC", "PR", "MCC", "R@20e", "Popt", "Brier", "ECE", "LLM≤%20 R")
     results: dict[str, Any] = {}
     for name in names:
-        trained = train_model(split, name, imbalance=imbalance, seed=seed)  # type: ignore[arg-type]
+        trained = train_model(
+            split,
+            cast("ModelName", name),
+            imbalance=imbalance,
+            calibration=cast("Method", method),
+            seed=seed,
+        )
         suffix = "-cross" if scenario == "cross" else ""
         trained.save(models_dir / repo / f"{name}-{imbalance}{suffix}.pkl")
         m = trained.test
         table.add_row(
-            name, _fmt(m["roc_auc"]), _fmt(m["pr_auc"]), _fmt(m["f1"]), _fmt(m["mcc"]),
-            _fmt(m["recall_at_20_effort"]), _fmt(m["popt"]), f"{trained.threshold:.3f}",
+            name, _fmt(m["roc_auc"]), _fmt(m["pr_auc"]), _fmt(m["mcc"]),
+            _fmt(m["recall_at_20_effort"]), _fmt(m["popt"]), _fmt(m["brier"]), _fmt(m["ece"]),
+            _fmt(trained.budget["0.2"]["recall"]),
         )  # fmt: skip
-        results[name] = {"test": trained.test, "valid": trained.valid, **trained.meta}
+        results[name] = {
+            "test": trained.test,
+            "valid": trained.valid,
+            "budget": trained.budget,
+            "reliability": trained.reliability,
+            **trained.meta,
+        }
     console.print(table)
     suffix = "-cross" if scenario == "cross" else ""
     target = report or Path("eval/reports") / f"train-{repo}-{imbalance}{suffix}.json"

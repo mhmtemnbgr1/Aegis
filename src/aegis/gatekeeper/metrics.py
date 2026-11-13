@@ -2,6 +2,8 @@
 
 Sınıflandırma: ROC-AUC, PR-AUC (ortalama kesinlik), F1, MCC.
 
+Kalibrasyon (#18): Brier skoru ve beklenen kalibrasyon hatası (ECE, 10 kutu).
+
 Efora duyarlı metrikler (Kamei vd. 2013; JITLine 2021): efor = değişen satır sayısı (LA + LD).
 Commit'ler tahmin edilen risk yoğunluğuna (olasılık / efor) göre azalan sırada incelenir.
 
@@ -17,10 +19,13 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from sklearn.metrics import (
     average_precision_score,
+    brier_score_loss,
     f1_score,
     matthews_corrcoef,
     roc_auc_score,
 )
+
+from aegis.gatekeeper.calibration import ece
 
 EFFORT_BUDGET = 0.2
 
@@ -80,6 +85,8 @@ def evaluate(
         "mcc": float(matthews_corrcoef(y, pred)) if both else math.nan,
         "recall_at_20_effort": recall_at_effort(y, p, effort),
         "popt": popt(y, p, effort),
+        "brier": float(brier_score_loss(y, p)) if len(y) else math.nan,
+        "ece": ece(y, p),
         "positives": float(y.sum()),
         "n": float(len(y)),
     }

@@ -87,7 +87,7 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [x] Sınıf dengesizliği yöntemleri
 - [x] Repo içi ve repolar arası değerlendirme
 - [ ] PR düzeyinde etiket ve özellikler
-- [ ] Kalibrasyon, bütçe tabanlı eşik, risk bantları
+- [x] Kalibrasyon, bütçe tabanlı eşik, risk bantları
 - [ ] SHAP açıklamaları
 - [ ] `aegis train` ve `aegis score`
 - [ ] Sezgisel gatekeeper'ın eğitilmiş modelle değiştirilmesi

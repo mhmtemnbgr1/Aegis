@@ -1,8 +1,9 @@
 """Risk modelleri: LR, Random Forest, LightGBM (#15).
 
 Üç model de aynı 14 Kamei özelliğiyle, zaman sıralı bölmenin (#14) eğitim kümesinde eğitilir.
-Karar eşiği doğrulama kümesinde F1'i en yükseğe çıkaracak şekilde seçilir; test kümesi yalnızca
-raporlama içindir. Bütçeye dayalı eşik ve kalibrasyon #18'de gelir.
+Ham skorlar doğrulama kümesinde kalibre edilir (#18, `calibration`). Karar eşiği doğrulama
+kümesinde F1'i en yükseğe çıkaracak şekilde seçilir; bütçeye dayalı bant eşikleri doğrulama
+skorlarının dağılımından hesaplanır. Test kümesi yalnızca raporlama içindir.
 
 - `lr`: log(1+x) dönüşümü + standartlaştırma + lojistik regresyon (Kamei'deki gibi çarpık
   dağılımlar için log dönüşümü),
@@ -29,6 +30,14 @@ from sklearn.preprocessing import FunctionTransformer, StandardScaler
 
 from aegis import __version__
 from aegis.features.kamei import KAMEI
+from aegis.gatekeeper.calibration import (
+    Calibrator,
+    Method,
+    budget_thresholds,
+    fit_calibrator,
+    pr_score,
+    reliability,
+)
 from aegis.gatekeeper.metrics import best_f1_threshold, evaluate
 from aegis.gatekeeper.split import Split
 
@@ -125,9 +134,28 @@ class TrainedModel:
     valid: dict[str, float]
     test: dict[str, float]
     meta: dict[str, Any] = field(default_factory=dict)
+    calibrator: Calibrator = field(default_factory=lambda: Calibrator("none"))
+    valid_scores: list[float] = field(default_factory=list)
+    """Doğrulama kümesinin kalibre skorları; bütçe eşikleri bunlardan hesaplanır."""
+    budget: dict[str, dict[str, float]] = field(default_factory=dict)
+    """Test kümesinde, doğrulamadan seçilen bütçe eşiğiyle LLM'e giden pay ve yakalanan hatalar."""
+    reliability: list[list[float]] = field(default_factory=list)
+    """Test kümesi kalibrasyon eğrisi: [ortalama tahmin, gerçek hatalı payı, örnek sayısı]."""
+
+    def raw_proba(self, frame: pl.DataFrame) -> np.ndarray[Any, np.dtype[np.float64]]:
+        return np.asarray(self.estimator.predict_proba(matrix(frame))[:, 1], dtype=np.float64)
 
     def predict_proba(self, frame: pl.DataFrame) -> np.ndarray[Any, np.dtype[np.float64]]:
-        return np.asarray(self.estimator.predict_proba(matrix(frame))[:, 1], dtype=np.float64)
+        """Kalibre edilmiş hata olasılıkları (commit başına)."""
+        return self.calibrator.apply(self.raw_proba(frame))
+
+    def score_pr(self, commits: pl.DataFrame) -> float:
+        """Bir PR'ın commit'lerinden en az birinin hatalı olma olasılığı (FR-11)."""
+        return pr_score(self.predict_proba(commits))
+
+    def thresholds(self, max_llm_ratio: float, high_share: float = 0.5) -> tuple[float, float]:
+        """Bütçeye göre (düşük, yüksek) bant eşikleri (FR-13)."""
+        return budget_thresholds(self.valid_scores, max_llm_ratio, high_share)
 
     def save(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -143,8 +171,16 @@ class TrainedModel:
         return model
 
 
+BUDGETS = (0.1, 0.2, 0.3, 0.5)
+
+
 def train_model(
-    split: Split, name: ModelName, *, imbalance: Imbalance = "none", seed: int = 0
+    split: Split,
+    name: ModelName,
+    *,
+    imbalance: Imbalance = "none",
+    calibration: Method = "sigmoid",
+    seed: int = 0,
 ) -> TrainedModel:
     train = _undersample(split.train, seed) if imbalance == "undersample" else split.train
     y_train = train["buggy"].to_numpy()
@@ -157,17 +193,24 @@ def train_model(
     estimator.fit(x_train, y_train)
     model = TrainedModel(name, imbalance, estimator, 0.5, {}, {})
 
+    y_valid = split.valid["buggy"].to_numpy()
+    model.calibrator = fit_calibrator(calibration, model.raw_proba(split.valid), y_valid)
     valid_prob = model.predict_proba(split.valid)
-    model.threshold = best_f1_threshold(split.valid["buggy"].to_numpy(), valid_prob)
-    model.valid = evaluate(
-        split.valid["buggy"].to_numpy(), valid_prob, effort(split.valid), model.threshold
-    )
-    model.test = evaluate(
-        split.test["buggy"].to_numpy(),
-        model.predict_proba(split.test),
-        effort(split.test),
-        model.threshold,
-    )
+    model.valid_scores = [float(v) for v in valid_prob]
+    model.threshold = best_f1_threshold(y_valid, valid_prob)
+    model.valid = evaluate(y_valid, valid_prob, effort(split.valid), model.threshold)
+    y_test = split.test["buggy"].to_numpy()
+    test_prob = model.predict_proba(split.test)
+    model.test = evaluate(y_test, test_prob, effort(split.test), model.threshold)
+    model.reliability = reliability(y_test, test_prob)
+    for ratio in BUDGETS:
+        low, _ = model.thresholds(ratio)
+        sent = test_prob >= low
+        model.budget[f"{ratio:g}"] = {
+            "threshold": low,
+            "llm_share": float(sent.mean()),
+            "recall": float(sent[y_test.astype(bool)].mean()) if y_test.any() else float("nan"),
+        }
     model.meta = {
         "aegis_version": __version__,
         "trained_at": datetime.now(UTC).isoformat(),
@@ -178,5 +221,6 @@ def train_model(
         "valid_start": split.valid_start.isoformat(),
         "test_start": split.test_start.isoformat(),
         "seed": seed,
+        "calibration": model.calibrator.method,
     }
     return model
