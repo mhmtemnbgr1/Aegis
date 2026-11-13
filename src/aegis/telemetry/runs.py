@@ -29,6 +29,8 @@ def run_record(result: ReviewResult, **extra: Any) -> dict[str, Any]:
         "files_omitted": len(result.omitted_files),
         "findings": len(result.findings),
         "findings_dropped": len(result.dropped),
+        "memory_cards": len(result.memory_cards),
+        "memory_refs": sum(len(f.memory_refs) for f in result.findings),
         "metadata_warnings": len(result.metadata_warnings),
         "provider": result.provider,
         "model": result.model,

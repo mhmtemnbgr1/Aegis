@@ -6,7 +6,8 @@ from importlib import resources
 
 from pydantic import BaseModel
 
-DEFAULT_VERSION = "v1"
+DEFAULT_VERSION = "v2"
+"""v2: v1 + bug-fix hafızası kartları (`<bug_memory>`, `memory_refs`; #33)."""
 
 
 class PromptSet(BaseModel):

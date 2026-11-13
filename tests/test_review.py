@@ -71,7 +71,7 @@ def test_risky_change_is_analyzed_and_filtered() -> None:
     assert result.status is ReviewStatus.OK
     assert result.risk is not None and result.risk.band != "low"
     assert result.summary == "SQL injection var."
-    assert result.prompt_version == "v1"
+    assert result.prompt_version == "v2"
     assert (result.provider, result.model) == ("mock", "mock")
     assert {f.line for f in result.findings} == {2, 3}  # model bulgusu + injection dedektörü
     assert [d.finding.title for d in result.dropped] == ["uydurma"]
@@ -122,7 +122,7 @@ def test_append_run_jsonl(tmp_path: Path) -> None:
     append_run(path, result, source="test")
     records = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
     assert len(records) == 2
-    assert records[0]["prompt_version"] == "v1"
+    assert records[0]["prompt_version"] == "v2"
     assert records[0]["status"] == "ok"
     assert records[0]["findings"] == 2
     assert records[0]["source"] == "test"

@@ -19,7 +19,7 @@ from pydantic import ValidationError
 from aegis.config import CONFIG_FILE, AegisConfig, parse_config
 from aegis.diff import git_commit_messages, git_diff, git_show
 from aegis.diff.filters import AEGISIGNORE
-from aegis.gatekeeper.factory import make_gatekeeper
+from aegis.gatekeeper.factory import make_gatekeeper, make_memory
 from aegis.github.client import API_URL, GitHubClient
 from aegis.github.event import EventError, PullRequestEvent, load_event
 from aegis.github.publisher import publish
@@ -106,6 +106,9 @@ def run_action(
             gatekeeper, warning = make_gatekeeper(config, repo, event.base_sha, event.head_sha)
             if warning:
                 log.warning(warning)
+            memory, memory_warning = make_memory(config, repo, event.base_sha, event.head_sha)
+            if memory_warning:
+                log.info(memory_warning)
             result = run_review(
                 diff_text,
                 config,
@@ -114,6 +117,7 @@ def run_action(
                 llm_enabled=llm_allowed(event, config, env),
                 cache=ResponseCache(repo / config.review.cache_dir),
                 gatekeeper=gatekeeper,
+                memory=memory,
             )
         append_run(
             repo / config.review.runs_path,

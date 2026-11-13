@@ -85,7 +85,7 @@ def test_analyze_with_mock() -> None:
     result = analyst.analyze(DIFF, RISK)
     assert result.output is not None
     assert result.output.findings[0].line == 41
-    assert result.prompt_version == "v1"
+    assert result.prompt_version == "v2"
     request = provider.requests[0]
     assert request.system == load_prompts().system
     assert "<pr_diff>\n### app/db/pool.py" in request.prompt
