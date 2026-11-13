@@ -21,7 +21,6 @@ from typing import Any, Literal
 
 import numpy as np
 import polars as pl
-from lightgbm import LGBMClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
@@ -55,6 +54,9 @@ def make_model(name: ModelName, *, balanced: bool = False, seed: int = 0) -> Any
             random_state=seed,
         )
     if name == "lightgbm":
+        # Geç içe aktarma: macOS'ta libomp gerektirir; yalnızca bu model istendiğinde yüklenir.
+        from lightgbm import LGBMClassifier
+
         return LGBMClassifier(
             n_estimators=300,
             learning_rate=0.05,

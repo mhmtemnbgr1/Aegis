@@ -23,8 +23,6 @@ from aegis.config import load_config
 from aegis.diff import filter_diff, git_commit_messages, git_diff, load_ignore_spec, parse_diff
 from aegis.features import compute_kamei
 from aegis.gatekeeper import HeuristicGatekeeper, RiskBand
-from aegis.gatekeeper.model import MODELS, train_model
-from aegis.gatekeeper.split import time_split
 from aegis.github.action import run_action
 from aegis.github.client import GitHubClient
 from aegis.llm import ResponseCache
@@ -238,6 +236,10 @@ def train(
     config_path: Path | None = typer.Option(None, "--config", help="Yapılandırma dosyası."),
 ) -> None:
     """D1'deki bir repo için risk modellerini zaman sıralı bölmeyle eğitir ve değerlendirir."""
+    # scikit-learn yalnızca eğitimde gerekir; diğer komutlar (ör. review) onu yüklemez.
+    from aegis.gatekeeper.model import MODELS, train_model
+    from aegis.gatekeeper.split import time_split
+
     config = load_config(Path("."), config_path)
     names = list(MODELS) if model == "all" else [model]
     if any(n not in MODELS for n in names) or imbalance not in ("none", "weights", "undersample"):
