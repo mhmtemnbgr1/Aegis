@@ -76,14 +76,14 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [ ] SZZ (git blame tabanlı MA ve B varyantları; son 5 yıl) — kod hazır, 50 eşlemenin elle kontrolü bekliyor
 - [x] Kamei JIT metrikleri
 - [x] Zaman kuralı: `as_of` ile sızıntısız özellik hesabı
-- [ ] Sentetik git deposu testleri
+- [x] Sentetik git deposu testleri
 - [ ] D1 veri setinin çıkarılması (6 repo, önce tqdm pilotu)
 - [ ] *(opsiyonel)* Artımlı madencilik
 
 ## Faz 3 — ML Gatekeeper · 15 Kas
 
-- [ ] Zaman sıralı bölme ve etiket gecikmesi tamponu
-- [ ] LR, Random Forest ve LightGBM
+- [x] Zaman sıralı bölme ve etiket gecikmesi tamponu
+- [x] LR, Random Forest ve LightGBM (`aegis train`)
 - [ ] Sınıf dengesizliği yöntemleri
 - [ ] Repo içi ve repolar arası değerlendirme
 - [ ] PR düzeyinde etiket ve özellikler

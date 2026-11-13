@@ -1,24 +1,30 @@
 """Aegis komut satırı arayüzü."""
 
 import io
+import json
 import logging
+import math
 import os
 import subprocess
 import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import polars as pl
 import typer
 from rich.console import Console
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, TimeElapsedColumn
+from rich.table import Table
 
 from aegis import __version__
 from aegis.config import load_config
 from aegis.diff import filter_diff, git_commit_messages, git_diff, load_ignore_spec, parse_diff
 from aegis.features import compute_kamei
 from aegis.gatekeeper import HeuristicGatekeeper, RiskBand
+from aegis.gatekeeper.model import MODELS, train_model
+from aegis.gatekeeper.split import time_split
 from aegis.github.action import run_action
 from aegis.github.client import GitHubClient
 from aegis.llm import ResponseCache
@@ -30,6 +36,7 @@ from aegis.mining import (
     repo_slug,
     slug_from_url,
 )
+from aegis.mining.dataset import build_d1
 from aegis.mining.labels import github_label_source
 from aegis.mining.miner import count_commits, remote_url
 from aegis.mining.szz import run_szz
@@ -207,10 +214,74 @@ def mine(
     console.print(f"[dim]Çıktı: {out_dir}[/dim]")
 
 
+def _fmt(value: float) -> str:
+    return "—" if math.isnan(value) else f"{value:.3f}"
+
+
 @app.command()
-def train() -> None:
-    """Gatekeeper risk modelini eğitir. (Faz 2)"""
-    _not_implemented("Faz 2")
+def train(
+    repo: str = typer.Option(..., "--repo", help="D1'deki repo, ör. scrapy__scrapy."),
+    model: str = typer.Option("all", "--model", help="lr, rf, lightgbm veya all."),
+    imbalance: str = typer.Option(
+        "none", "--imbalance", help="Sınıf dengesizliği: none, weights veya undersample."
+    ),
+    data_root: Path | None = typer.Option(
+        None, "--data", help="Madencilik çıktılarının kökü (varsayılan: [mining].data_dir)."
+    ),
+    models_dir: Path = typer.Option(
+        Path(".aegis/models"), "--models-dir", help="Eğitilen modellerin kaydedileceği dizin."
+    ),
+    report: Path | None = typer.Option(
+        None, "--report", help="Metrikleri JSON olarak yaz (varsayılan: eval/reports/)."
+    ),
+    seed: int = typer.Option(0, "--seed", help="Rastgelelik tohumu."),
+    config_path: Path | None = typer.Option(None, "--config", help="Yapılandırma dosyası."),
+) -> None:
+    """D1'deki bir repo için risk modellerini zaman sıralı bölmeyle eğitir ve değerlendirir."""
+    config = load_config(Path("."), config_path)
+    names = list(MODELS) if model == "all" else [model]
+    if any(n not in MODELS for n in names) or imbalance not in ("none", "weights", "undersample"):
+        console.print("[red]--model lr|rf|lightgbm|all, --imbalance none|weights|undersample[/red]")
+        raise typer.Exit(2)
+    d1_path = (data_root or Path(config.mining.data_dir)) / "d1.parquet"
+    if not d1_path.is_file():
+        console.print(f"[red]{d1_path} yok; önce aegis dataset.[/red]")
+        raise typer.Exit(2)
+    rows = pl.read_parquet(d1_path).filter(pl.col("repo") == repo)
+    if rows.height == 0:
+        console.print(f"[red]D1'de {repo} için satır yok.[/red]")
+        raise typer.Exit(2)
+    try:
+        split = time_split(rows, config.training)
+    except ValueError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(2) from exc
+    console.print(
+        f"{repo}: eğitim {split.train.height} ({int(split.train['buggy'].sum())} hatalı) · "
+        f"doğrulama {split.valid.height} · test {split.test.height} "
+        f"({int(split.test['buggy'].sum())} hatalı) · tampon {config.training.label_delay_days} gün"
+    )
+    table = Table("Model", "ROC-AUC", "PR-AUC", "F1", "MCC", "Recall@%20 efor", "Popt", "Eşik")
+    results: dict[str, Any] = {}
+    for name in names:
+        trained = train_model(split, name, imbalance=imbalance, seed=seed)  # type: ignore[arg-type]
+        trained.save(models_dir / repo / f"{name}-{imbalance}.pkl")
+        m = trained.test
+        table.add_row(
+            name, _fmt(m["roc_auc"]), _fmt(m["pr_auc"]), _fmt(m["f1"]), _fmt(m["mcc"]),
+            _fmt(m["recall_at_20_effort"]), _fmt(m["popt"]), f"{trained.threshold:.3f}",
+        )  # fmt: skip
+        results[name] = {"test": trained.test, "valid": trained.valid, **trained.meta}
+    console.print(table)
+    target = report or Path("eval/reports") / f"train-{repo}-{imbalance}.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        json.dumps({"repo": repo, "imbalance": imbalance, "models": results}, indent=2),
+        "utf-8",
+    )
+    console.print(
+        f"[dim]Test kümesi metrikleri · modeller: {models_dir / repo} · rapor: {target}[/dim]"
+    )
 
 
 _BAND_STYLE = {RiskBand.LOW: "green", RiskBand.MEDIUM: "yellow", RiskBand.HIGH: "red"}
@@ -347,6 +418,41 @@ def github_action(
     """GitHub Action içinde PR'ı inceler ve sonucu yayınlar (her zaman 0 ile çıkar)."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     raise typer.Exit(run_action(repo=repo, config_path=config_path, json_out=json_out))
+
+
+@app.command()
+def dataset(
+    data_root: Path | None = typer.Option(
+        None, "--data", help="Madencilik çıktılarının kökü (varsayılan: [mining].data_dir)."
+    ),
+    out: Path | None = typer.Option(
+        None, "--out", help="D1 Parquet dosyası (varsayılan: <data>/d1.parquet)."
+    ),
+    config_path: Path | None = typer.Option(None, "--config", help="Yapılandırma dosyası."),
+) -> None:
+    """Taranmış tüm repolardan D1 veri setini (Kamei özellikleri + SZZ etiketi) oluşturur."""
+    config = load_config(Path("."), config_path).mining
+    root = data_root or Path(config.data_dir)
+    target = out or root / "d1.parquet"
+    if not root.is_dir():
+        console.print(f"[red]{root} bulunamadı; önce aegis mine.[/red]")
+        raise typer.Exit(2)
+    stats = build_d1(root, target)
+    if not stats:
+        console.print(f"[yellow]{root} altında kamei ve SZZ çıktısı olan repo yok.[/yellow]")
+        raise typer.Exit(1)
+    table = Table("Repo", "Commit", "Fix", "Bug-inducing", "Oran", "≥ 200?")
+    for s in stats:
+        table.add_row(
+            s.repo,
+            str(s.commits),
+            str(s.fixes),
+            str(s.positives),
+            f"%{100 * s.positive_rate:.1f}",
+            "[green]evet[/green]" if s.enough else "[red]hayır[/red]",
+        )
+    console.print(table)
+    console.print(f"[dim]Çıktı: {target} (+ {target.with_suffix('.json').name})[/dim]")
 
 
 @app.command(name="eval")

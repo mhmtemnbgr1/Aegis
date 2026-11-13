@@ -207,3 +207,37 @@ def test_github_label_source_caches(tmp_path: Path) -> None:
     assert source([1, 3, 4]) == {1: ["bug"], 3: [], 4: []}
     assert client.calls == [1, 2, 3, 4]  # cache'teki numaralar tekrar sorulmaz
     assert json.loads(cache.read_text("utf-8"))["1"] == ["bug"]
+
+
+def test_build_d1(tmp_path: Path) -> None:
+    from aegis.mining.dataset import build_d1
+    from aegis.mining.szz import run_szz
+
+    (tmp_path / "p").mkdir()
+    git = GitRepo(tmp_path / "p")
+    git.commit("Add", {"a.py": "x = 1\ny = 2\n"}, date="2024-01-01T00:00:00+00:00")
+    bug = git.commit("Change x", {"a.py": "x = 3\ny = 2\n"}, date="2024-02-01T00:00:00+00:00")
+    git.commit("Docs", {"README.md": "r\n"}, date="2024-03-01T00:00:00+00:00")
+    git.commit("Fix x", {"a.py": "x = 1\ny = 2\n"}, date="2024-04-01T00:00:00+00:00")
+    root = tmp_path / "data"
+    mine_repository(git.path, root / "p", slug="p", functions=False)
+    commits = pl.read_parquet(root / "p" / "commits.parquet")
+    files = pl.read_parquet(root / "p" / "files.parquet")
+    from aegis.features import compute_kamei
+
+    compute_kamei(commits, files).write_parquet(root / "p" / "kamei.parquet")
+    run_szz(git.path, root / "p")
+
+    stats = build_d1(root, root / "d1.parquet")
+    d1 = pl.read_parquet(root / "d1.parquet")
+    assert [s.repo for s in stats] == ["p"]
+    assert (stats[0].commits, stats[0].fixes, stats[0].positives) == (4, 1, 1)
+    assert not stats[0].enough
+    assert d1.filter("buggy")["sha"].to_list() == [bug]
+    assert d1["as_of"].is_sorted()
+    manifest = json.loads((root / "d1.json").read_text("utf-8"))
+    assert manifest["rows"] == 4 and manifest["repos"][0]["head_sha"]
+
+    out = CliRunner().invoke(app, ["dataset", "--data", str(root)])
+    assert out.exit_code == 0, out.output
+    assert "Bug-inducing" in out.output

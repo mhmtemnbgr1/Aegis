@@ -150,6 +150,22 @@ Testler (`tests/test_features.py`): 14 metriğin her biri elle hesaplanmış bir
 
 İlk gözlem: SZZ'nin bug-inducing olarak işaretlediği commit'ler belirgin şekilde daha büyük ve daha dağınıktır. scrapy'de medyan `la` 47'ye karşı 7, ortalama `entropy` 1,46'ya karşı 0,59, medyan `ndev` 27'ye karşı 7. Bu, Kamei'nin bulgularıyla tutarlıdır.
 
+## D1: `d1.parquet` (`aegis dataset`)
+
+`aegis dataset`, `<data_dir>` altında kamei ve SZZ çıktısı olan tüm repoları tek bir veri setinde birleştirir. Yanına sürüm kaydını da yazar (`d1.json`). Bir satır şunları sağlayan bir commit'tir:
+- SZZ penceresi içinde (kesim `szz_meta.json` dosyasında),
+- merge değil,
+- en az bir dosya değiştirmiş.
+
+| Sütun | Açıklama |
+| --- | --- |
+| `repo`, `sha`, `author_date`, `as_of` | Commit ve özelliklerin hesaplandığı an |
+| 14 Kamei metriği | `kamei.parquet` ile aynı |
+| `buggy` | SZZ'ye göre bug-inducing mi (son etiket) |
+| `fixed_at` | Bu hatanın ilk düzeltildiği an; temiz commit'lerde boş |
+
+`fixed_at`, eğitimde etiketin "o an bilinen" haline indirgenmesi için gerekir. Zaman sıralı bölme ve etiket gecikmesi tamponu (`[training]`, #14) `aegis.gatekeeper.split` modülünde. `d1.json` repo başına commit, fix ve bug-inducing sayılarını, oranı ve 200 sınırının geçilip geçilmediğini kaydeder (#13).
+
 ## `meta.json`
 
 Veri sürümü kaydı (NFR-04): şema ve Aegis sürümü, `mined_at`, `remote_url`, taranan `head_sha`, `since`, kullanılan `mining_config`, satır sayıları ve süre. Aynı `head_sha` ve `mining_config` ile yapılan tarama aynı veriyi üretir.

@@ -16,6 +16,8 @@ dependencies = [
     "pydriller>=2.12",
     "polars>=2.1.0",
     "tzdata>=2026.6 ; sys_platform == 'win32'",
+    "scikit-learn>=1.9.1",
+    "lightgbm>=4.7.0",
 ]
 
 [project.scripts]
@@ -56,7 +58,7 @@ strict = true
 files = ["src"]
 
 [[tool.mypy.overrides]]
-module = ["pydriller", "pydriller.*"]
+module = ["pydriller", "pydriller.*", "sklearn", "sklearn.*", "lightgbm", "lightgbm.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

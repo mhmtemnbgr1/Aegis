@@ -161,12 +161,31 @@ class MiningConfig(_Section):
         return patterns
 
 
+class TrainingConfig(_Section):
+    """Gatekeeper eğitimi: zaman sıralı bölme ve etiket gecikmesi (FR-10, #14)."""
+
+    valid_fraction: float = Field(default=0.15, gt=0, lt=1)
+    """Doğrulama kümesi: test öncesindeki commit'lerin payı (zaman sırasıyla)."""
+    test_fraction: float = Field(default=0.2, gt=0, lt=1)
+    """Test kümesi: en yeni commit'lerin payı."""
+    label_delay_days: int = Field(default=90, ge=0)
+    """Her kümenin bitişinden önceki bu kadar günün commit'leri bir önceki kümeye alınmaz:
+    hataları henüz bulunmamış olabilir (etiket gecikmesi)."""
+
+    @model_validator(mode="after")
+    def _room_for_train(self) -> "TrainingConfig":
+        if self.valid_fraction + self.test_fraction >= 1:
+            raise ValueError("valid_fraction + test_fraction 1'den küçük olmalı")
+        return self
+
+
 class AegisConfig(_Section):
     gatekeeper: GatekeeperConfig = GatekeeperConfig()
     filters: FiltersConfig = FiltersConfig()
     agents: dict[str, AgentConfig] = {}
     review: ReviewConfig = ReviewConfig()
     mining: MiningConfig = MiningConfig()
+    training: TrainingConfig = TrainingConfig()
 
     def agent(self, name: str) -> AgentConfig:
         """Ajanın ayarı; tanımlı değilse varsayılan (yerel Ollama)."""
