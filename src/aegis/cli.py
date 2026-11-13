@@ -223,7 +223,7 @@ def train(
     repo: str = typer.Option(..., "--repo", help="D1'deki repo, ör. scrapy__scrapy."),
     model: str = typer.Option("all", "--model", help="lr, rf, lightgbm veya all."),
     imbalance: str = typer.Option(
-        "none", "--imbalance", help="Sınıf dengesizliği: none, weights veya undersample."
+        "none", "--imbalance", help="Sınıf dengesizliği: none, weights, undersample veya smote."
     ),
     data_root: Path | None = typer.Option(
         None, "--data", help="Madencilik çıktılarının kökü (varsayılan: [mining].data_dir)."
@@ -239,13 +239,15 @@ def train(
 ) -> None:
     """D1'deki bir repo için risk modellerini zaman sıralı bölmeyle eğitir ve değerlendirir."""
     # scikit-learn yalnızca eğitimde gerekir; diğer komutlar (ör. review) onu yüklemez.
-    from aegis.gatekeeper.model import MODELS, train_model
+    from aegis.gatekeeper.model import IMBALANCE, MODELS, train_model
     from aegis.gatekeeper.split import time_split
 
     config = load_config(Path("."), config_path)
     names = list(MODELS) if model == "all" else [model]
-    if any(n not in MODELS for n in names) or imbalance not in ("none", "weights", "undersample"):
-        console.print("[red]--model lr|rf|lightgbm|all, --imbalance none|weights|undersample[/red]")
+    if any(n not in MODELS for n in names) or imbalance not in IMBALANCE:
+        console.print(
+            "[red]--model lr|rf|lightgbm|all, --imbalance none|weights|undersample|smote[/red]"
+        )
         raise typer.Exit(2)
     d1_path = (data_root or Path(config.mining.data_dir)) / "d1.parquet"
     if not d1_path.is_file():

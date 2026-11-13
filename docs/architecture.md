@@ -89,13 +89,14 @@ flowchart LR
 | **Aegis'e özgü** | Dokunulan fonksiyonların geçmiş hata kartı sayısı, riskli yol (`auth`, `db`, `payment`…), test değişim oranı | — |
 
 - **SZZ varyantı:** MA-SZZ (meta-change aware), [pyszz](https://github.com/grosa1/pyszz) ile çalıştırılır. Bu varyant boşluk/yorum değişikliklerini, merge'leri ve meta değişiklikleri (dosya taşıma, satır sonu, biçimlendirme) yok sayar. pyszz kurulamazsa PyDriller'ın B-SZZ uygulamasına (`get_commits_last_modified_lines`) geri dönülür. Hangi varyantın kullanıldığı her veri sürümüne yazılır.
-- **Geçmiş sınırı:** SZZ yalnızca son N yıla uygulanır (varsayılan 5). Böylece büyük repolarda madencilik saatler değil dakikalar sürer.
+- **Geçmiş sınırı:** SZZ varsayılan olarak tüm geçmişe uygulanır; `history_years` ile son N yılla sınırlanabilir. 5 yıllık pencerede 6 hedef repodan yalnızca biri 200 bug-inducing commit'e ulaşıyordu (#13). Tüm geçmişte bile SZZ en büyük hedef repoda 4 dakikadan kısa sürer.
 - **Commit etiketi:** SZZ ile bulunan bug-inducing commit'ler pozitif sınıftır.
 - **PR etiketi:** Bir PR, içindeki commit'lerden **en az biri** bug-inducing ise hatalıdır. Squash-merge yapan repolarda PR ile commit zaten aynı şeydir.
 - **PR özellikleri:** Kamei metrikleri PR'ın birleştirilmiş diff'i üzerinden hesaplanır. Bunlara commit sayısı ve PR'daki farklı yazar sayısı eklenir. **Yalnızca PR açıldığı veya güncellendiği anda bilinen** bilgiler kullanılır. PR süresi, review sayısı ve yorum sayısı gibi sonradan oluşan bilgiler kullanılmaz.
 - **Zaman kuralı (`as_of`):** Her özellik, değerlendirilen commit veya PR'ın tarihinde bilinen veriyle hesaplanır. Özellik fonksiyonları zorunlu bir `as_of: datetime` parametresi alır; hafızadan gelen hata yoğunluğu da bu kurala tabidir. Geleceğe tarihli bir kart eklendiğinde özellik değerinin değişmediğini doğrulayan bir birim testi bulunur. Böylece sızıntı kod düzeyinde engellenir.
 - **Doğrulama:** Zaman sıralı bölme. Son N günün commit'leri eğitimden çıkarılır, çünkü hataları henüz keşfedilmemiş olabilir (*etiket gecikmesi*).
 - **Modeller:** Lojistik regresyon (taban çizgisi), Random Forest, LightGBM.
+- **Sınıf dengesizliği (#16):** Sınıf ağırlıkları, alt örnekleme ve SMOTE karşılaştırıldı (6 repo × 3 model, tek tohum). Hiçbiri yöntemsiz eğitimden tutarlı biçimde iyi değil. Repolar üzerinden ortalama test PR-AUC'si LR'de yöntemsiz 0,273, ağırlıklı 0,259, alt örneklemeli 0,266, SMOTE'lu 0,256. MCC'de de en iyisi yöntemsiz. Doğrulamada alt örnekleme önde görünse de bu avantaj test kümesine taşınmıyor. Yeniden örnekleme ayrıca olasılıkları bozar; kalibrasyon (#18) ve bütçe eşiği bu olasılıklara dayandığı için varsayılan **yöntemsiz** eğitimdir. Yöntemler `aegis train --imbalance` ile denenebilir; tablo `eval/compare_imbalance.py` ile üretilir.
 - **Karar:** Skor üç banda ayrılır: düşük, orta, yüksek. Eşik ya doğrudan verilir ya da "PR'ların en fazla %X'i LLM'e gitsin" bütçesinden hesaplanır.
 - **Açıklama:** SHAP ile en etkili 3 özellik çıkarılır ve PR yorumunda gösterilir.
 - **Soğuk başlangıç:** Geçmişi az olan repolarda diğer repolarda eğitilmiş genel model kullanılır.
@@ -378,7 +379,7 @@ src/aegis/
 | Modeller ve config | Pydantic v2, tomllib |
 | Repo madenciliği | PyDriller, pyszz (MA-SZZ) |
 | Veri | pandas / polars, pyarrow (Parquet) |
-| ML | scikit-learn, LightGBM, imbalanced-learn, SHAP |
+| ML | scikit-learn, LightGBM, SHAP (SMOTE scikit-learn ile yerel olarak uygulanır) |
 | Kod ayrıştırma | `ast` (ileride tree-sitter), unidiff |
 | Embedding ve vektör DB | sentence-transformers, LanceDB |
 | LLM | `ollama` (yalnızca yerel model); httpx, tenacity |

@@ -10,7 +10,8 @@ raporlama içindir. Bütçeye dayalı eşik ve kalibrasyon #18'de gelir.
 - `lightgbm`: gradient boosting.
 
 Sınıf dengesizliği (#16): `none` veya `weights` (sınıf ağırlıkları); `undersample` eğitim
-kümesindeki temiz commit'leri hatalı sayısına indirir.
+kümesindeki temiz commit'leri hatalı sayısına indirir; `smote` hatalı commit'leri sentetik
+örneklerle temiz sayısına çıkarır. Yeniden örnekleme yalnızca eğitim kümesine uygulanır.
 """
 
 import pickle
@@ -32,7 +33,8 @@ from aegis.gatekeeper.metrics import best_f1_threshold, evaluate
 from aegis.gatekeeper.split import Split
 
 ModelName = Literal["lr", "rf", "lightgbm"]
-Imbalance = Literal["none", "weights", "undersample"]
+Imbalance = Literal["none", "weights", "undersample", "smote"]
+IMBALANCE: tuple[Imbalance, ...] = ("none", "weights", "undersample", "smote")
 MODELS: tuple[ModelName, ...] = ("lr", "rf", "lightgbm")
 FEATURES: tuple[str, ...] = tuple(KAMEI)
 
@@ -87,6 +89,33 @@ def _undersample(train: pl.DataFrame, seed: int) -> pl.DataFrame:
     return pl.concat([buggy, clean.sample(buggy.height, seed=seed)]).sort("as_of")
 
 
+def smote(
+    x: np.ndarray[Any, np.dtype[np.float64]],
+    y: np.ndarray[Any, Any],
+    *,
+    k: int = 5,
+    seed: int = 0,
+) -> tuple[np.ndarray[Any, np.dtype[np.float64]], np.ndarray[Any, Any]]:
+    """SMOTE (Chawla vd. 2002): azınlık örneği ile k en yakın azınlık komşusu arasında rastgele
+    bir noktada sentetik örnek üretir; sınıflar eşitlenene kadar."""
+    from sklearn.neighbors import NearestNeighbors
+
+    minority = x[y.astype(bool)]
+    need = int((~y.astype(bool)).sum()) - minority.shape[0]
+    if need <= 0 or minority.shape[0] < 2:
+        return x, y
+    rng = np.random.default_rng(seed)
+    k = min(k, minority.shape[0] - 1)
+    # Özellikler log ölçeğinde karşılaştırılır; Kamei metrikleri çok çarpık.
+    neighbors = NearestNeighbors(n_neighbors=k + 1).fit(np.log1p(minority))
+    idx = neighbors.kneighbors(np.log1p(minority), return_distance=False)[:, 1:]
+    base = rng.integers(0, minority.shape[0], need)
+    other = idx[base, rng.integers(0, k, need)]
+    gap = rng.random((need, 1))
+    synthetic = minority[base] + gap * (minority[other] - minority[base])
+    return np.vstack([x, synthetic]), np.concatenate([y, np.ones(need, dtype=y.dtype)])
+
+
 @dataclass
 class TrainedModel:
     name: ModelName
@@ -122,7 +151,10 @@ def train_model(
     if y_train.sum() == 0:
         raise ValueError("eğitim kümesinde hatalı commit yok")
     estimator = make_model(name, balanced=imbalance == "weights", seed=seed)
-    estimator.fit(matrix(train), y_train)
+    x_train = matrix(train)
+    if imbalance == "smote":
+        x_train, y_train = smote(x_train, y_train, seed=seed)
+    estimator.fit(x_train, y_train)
     model = TrainedModel(name, imbalance, estimator, 0.5, {}, {})
 
     valid_prob = model.predict_proba(split.valid)
@@ -140,7 +172,7 @@ def train_model(
         "aegis_version": __version__,
         "trained_at": datetime.now(UTC).isoformat(),
         "features": list(FEATURES),
-        "train_rows": train.height,
+        "train_rows": len(y_train),
         "train_positives": int(y_train.sum()),
         "valid_start": split.valid_start.isoformat(),
         "test_start": split.test_start.isoformat(),

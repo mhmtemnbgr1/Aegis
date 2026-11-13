@@ -12,7 +12,7 @@ from typer.testing import CliRunner
 from aegis.cli import app
 from aegis.config import TrainingConfig
 from aegis.features.kamei import KAMEI
-from aegis.gatekeeper.model import MODELS, TrainedModel, train_model
+from aegis.gatekeeper.model import MODELS, TrainedModel, smote, train_model
 from aegis.gatekeeper.split import time_split
 
 START = datetime(2022, 1, 1, tzinfo=UTC)
@@ -62,6 +62,21 @@ def test_undersample_and_weights_run() -> None:
     assert under.meta["train_positives"] * 2 == under.meta["train_rows"]
     weighted = train_model(split, "lr", imbalance="weights")
     assert weighted.meta["train_rows"] == split.train.height
+    over = train_model(split, "lr", imbalance="smote")
+    assert over.meta["train_positives"] * 2 == over.meta["train_rows"]
+
+
+def test_smote_interpolates_between_minority_neighbours() -> None:
+    x = np.array([[0.0, 0.0], [1.0, 1.0], [2.0, 2.0], [10.0, 0.0], [11.0, 0.0], [12.0, 0.0]])
+    y = np.array([False, False, False, True, True, True])
+    x = np.vstack([x, np.zeros((4, 2))])
+    y = np.concatenate([y, np.zeros(4, dtype=bool)])
+    xs, ys = smote(x, y, k=2, seed=1)
+    assert ys.sum() == (~ys).sum() == 7
+    new = xs[len(x) :]
+    assert np.all((new[:, 0] >= 10) & (new[:, 0] <= 12) & (new[:, 1] == 0))
+    only_clean, _ = smote(x[:3], y[:3])
+    assert np.array_equal(only_clean, x[:3])
 
 
 def test_cli_train(tmp_path: Path) -> None:
