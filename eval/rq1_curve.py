@@ -24,7 +24,7 @@ import json
 import math
 import re
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from statistics import mean, stdev
 from typing import Any
@@ -35,11 +35,14 @@ from scipy.stats import wilcoxon
 
 from aegis.config import AegisConfig, TrainingConfig
 from aegis.gatekeeper.calibration import pr_score
-from aegis.gatekeeper.model import FEATURES, train_model
+from aegis.gatekeeper.model import FEATURES, FULL_FEATURES, train_model
 from aegis.gatekeeper.split import labels_as_of, rolling_windows, split_before
 
 SHARES = [round(x, 2) for x in np.linspace(0, 1, 21)]
-METHODS = ("lr", "rf", "lightgbm", "heuristic")
+METHODS = ("lr", "rf", "lightgbm", "lr+", "rf+", "lightgbm+", "lr+@5y", "heuristic")
+"""`+`: Kamei + riskli yol + test oranı; `@5y`: yalnızca pencereden önceki son 5 yılla eğitim."""
+SHOWN = ("lr", "lr+", "rf+", "lightgbm+", "heuristic")
+"""Eğride çizilen yöntemler (okunabilirlik için)."""
 SEEDS = (0, 1, 2, 3, 4)
 MIN_PRS = 200
 COST_SHARE, SAFETY_RECALL = 0.4, 0.9
@@ -106,13 +109,18 @@ def model_scores(
     groups: list[pl.DataFrame],
 ) -> list[np.ndarray]:
     """Her PR grubu için commit modeli → PR skorları (RF/LightGBM: tohumlar üzerinden ortalama)."""
+    base, _, window = name.partition("@")
+    features = FULL_FEATURES if base.endswith("+") else FEATURES
+    model_name = base.rstrip("+")
+    if window == "5y":
+        commits = commits.filter(pl.col("as_of") >= start - timedelta(days=round(5 * 365.25)))
     split = split_before(commits, start, cfg)
     needed = {s for g in groups for c in g["commits"] for s in c}
     rows = commits.filter(pl.col("sha").is_in(needed))
-    seeds = (0,) if name == "lr" else SEEDS
+    seeds = (0,) if model_name == "lr" else SEEDS
     probs: list[dict[str, float]] = []
     for seed in seeds:
-        model = train_model(split, name, seed=seed, features=FEATURES)  # type: ignore[arg-type]
+        model = train_model(split, model_name, seed=seed, features=features)  # type: ignore[arg-type]
         probs.append(dict(zip(rows["sha"], model.predict_proba(rows), strict=True)))
     return [
         np.mean(
@@ -198,10 +206,13 @@ def report(records: list[dict[str, Any]]) -> str:
     i = SHARES.index(COST_SHARE)
     for a, b in (
         ("lr", "heuristic"),
-        ("rf", "heuristic"),
-        ("lightgbm", "heuristic"),
-        ("lr", "rf"),
-        ("lr", "lightgbm"),
+        ("lr+", "heuristic"),
+        ("rf+", "heuristic"),
+        ("lr+", "lr"),
+        ("rf+", "rf"),
+        ("lightgbm+", "lightgbm"),
+        ("lr+", "rf+"),
+        ("lr+", "lr+@5y"),
     ):
         pairs = [(r[a]["curve"][i], r[b]["curve"][i]) for r in records]
         pairs = [(x, z) for x, z in pairs if not (math.isnan(x) or math.isnan(z))]
@@ -227,6 +238,10 @@ COLORS = {
     "lr": "#2563eb",
     "rf": "#059669",
     "lightgbm": "#d97706",
+    "lr+": "#7c3aed",
+    "rf+": "#0d9488",
+    "lightgbm+": "#ca8a04",
+    "lr+@5y": "#db2777",
     "heuristic": "#dc2626",
     "random": "#9a9a9a",
 }
@@ -261,7 +276,7 @@ def _panel(x0: float, y0: float, size: int, title: str, rs: list[dict[str, Any]]
         parts.append(
             f'<text x="{x0 - 6}" y="{py(t) + 3}" text-anchor="end" font-size="10">{t:g}</text>'
         )
-    for name in METHODS:
+    for name in SHOWN:
         m = np.nanmean([r[name]["curve"] for r in rs], axis=0)
         s = np.nanstd([r[name]["curve"] for r in rs], axis=0)
         upper = [f"{px(x):.1f},{py(min(1, v)):.1f}" for x, v in zip(SHARES, m + s, strict=True)]
@@ -293,7 +308,8 @@ def svg(records: list[dict[str, Any]]) -> str:
         parts += _panel((k % cols) * cell + pad, (k // cols) * cell + pad, size, title, rs)
     y = rows * cell + 22
     x = 20.0
-    for name, color in COLORS.items():
+    for name in (*SHOWN, "random"):
+        color = COLORS[name]
         parts.append(f'<rect x="{x}" y="{y - 9}" width="14" height="4" fill="{color}"/>')
         parts.append(f'<text x="{x + 20}" y="{y - 3}" font-size="12">{name}</text>')
         x += 120

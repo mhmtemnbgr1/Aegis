@@ -16,6 +16,7 @@ from pathlib import Path
 import polars as pl
 
 from aegis.config import AegisConfig
+from aegis.features.extra import extra_metrics
 from aegis.features.history import ChangeHistory, FileChange, developer_id
 from aegis.features.kamei import kamei_metrics
 from aegis.gatekeeper.base import RiskBand, band_for
@@ -88,14 +89,25 @@ def load_history(data_dir: Path) -> ChangeHistory:
     )
 
 
-def range_features(commits: list[RangeCommit], history: ChangeHistory) -> pl.DataFrame:
-    """Her commit için 14 Kamei metriği (`as_of` = commit zamanı)."""
+def range_features(
+    commits: list[RangeCommit], history: ChangeHistory, config: AegisConfig | None = None
+) -> pl.DataFrame:
+    """Her commit için 14 Kamei metriği (`as_of` = commit zamanı), riskli yol ve test oranı."""
+    config = config or AegisConfig()
+    risky = config.gatekeeper.heuristic.risky_paths
+    tests = config.mining.test_path_patterns
     from aegis.features.history import Change
 
     rows = []
     for c in commits:
         change = Change(c.developer, c.files, c.is_fix)
-        rows.append({"sha": c.sha, **kamei_metrics(change, history, as_of=c.time)})
+        rows.append(
+            {
+                "sha": c.sha,
+                **kamei_metrics(change, history, as_of=c.time),
+                **extra_metrics(change, risky=risky, test_patterns=tests),
+            }
+        )
         # Madencilikten daha eski tarihli bir commit eklenemez: özellikleri yine as_of ile
         # doğrudur; yalnızca aralığın sonraki commit'leri onu geçmişte görmez.
         with contextlib.suppress(ValueError):
@@ -144,7 +156,7 @@ def score_range(
     recent_scores: list[float] | None = None,
 ) -> ModelScore:
     model = TrainedModel.load(model_path)
-    features = range_features(commits, history)
+    features = range_features(commits, history, config)
     probs = [float(p) for p in model.predict_proba(features)] if features.height else []
     score = model.score_pr(features) if features.height else 0.0
     low, high, threshold_source = budget_bands(model, config, recent_scores)

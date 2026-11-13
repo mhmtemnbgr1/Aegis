@@ -30,6 +30,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import FunctionTransformer, StandardScaler
 
 from aegis import __version__
+from aegis.features.extra import EXTRA
 from aegis.features.kamei import KAMEI
 from aegis.gatekeeper.calibration import (
     Calibrator,
@@ -48,6 +49,9 @@ Imbalance = Literal["none", "weights", "undersample", "smote"]
 IMBALANCE: tuple[Imbalance, ...] = ("none", "weights", "undersample", "smote")
 MODELS: tuple[ModelName, ...] = ("lr", "rf", "lightgbm")
 FEATURES: tuple[str, ...] = tuple(KAMEI)
+"""Yalnızca 14 Kamei metriği (taban çizgisi)."""
+FULL_FEATURES: tuple[str, ...] = (*KAMEI, *EXTRA)
+"""Kamei + Aegis'e özgü diff özellikleri: riskli yol, test değişim oranı (FR-12)."""
 
 
 def make_model(name: ModelName, *, balanced: bool = False, seed: int = 0) -> Any:

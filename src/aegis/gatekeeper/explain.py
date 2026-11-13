@@ -44,6 +44,8 @@ TEXT: dict[str, Any] = {
     "exp": lambda v: f"yazarın bu repoda {_fmt(v)} önceki commit'i var",
     "rexp": lambda v: f"yazarın yakın dönem deneyimi {v:.1f} (yeni commit'ler daha ağır)",
     "sexp": lambda v: f"yazarın bu alt sistemlerde {_fmt(v)} önceki commit'i var",
+    "risky_files": lambda v: f"{_fmt(v)} dosya riskli bir yolda (auth, db, payment…)",
+    "test_ratio": lambda v: f"değişen satırların %{100 * v:.0f}'i test kodunda",
     "n_commits": lambda v: f"PR {_fmt(v)} commit içeriyor",
     "n_authors": lambda v: f"PR'da {_fmt(v)} farklı yazar var",
 }

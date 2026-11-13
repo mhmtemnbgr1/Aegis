@@ -30,3 +30,8 @@ Thumbs.db
 # Değerlendirme çıktıları
 eval/reports/*
 !eval/reports/.gitkeep
+
+# Etiketleme: üretilen paketler ve inceleme sayfaları (eval/labeling.py ile yeniden üretilir)
+eval/labels/*-packet.md
+eval/labels/*-review.html
+eval/labels/.szz-*.csv

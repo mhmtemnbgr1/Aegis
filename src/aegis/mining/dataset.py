@@ -4,7 +4,8 @@ Her repo için madencilik çıktıları birleştirilir:
 
 - satırlar: SZZ penceresindeki (`history_years`; varsayılan tüm geçmiş), merge olmayan ve en az
   bir dosya değiştiren commit'ler,
-- özellikler: `kamei.parquet` (14 metrik, `as_of` = commit zamanı),
+- özellikler: `kamei.parquet` (14 metrik, `as_of` = commit zamanı) ve diff'ten riskli yol ile
+  test değişim oranı (`features.extra`, FR-12),
 - etiket: `buggy` = commit, SZZ'nin bulduğu bir bug-inducing commit mi; `fixed_at` bu hatanın
   ilk düzeltildiği an (etiketin bilindiği zaman, temiz commit'lerde boş).
 
@@ -21,6 +22,9 @@ from typing import Any
 import polars as pl
 
 from aegis import __version__
+from aegis.config import AegisConfig
+from aegis.features.extra import EXTRA, extra_metrics
+from aegis.features.history import iter_changes
 from aegis.features.kamei import KAMEI
 from aegis.mining import schema
 
@@ -41,8 +45,9 @@ class RepoStats:
     enough: bool
 
 
-def build_repo(data_dir: Path) -> tuple[pl.DataFrame, RepoStats]:
+def build_repo(data_dir: Path, config: AegisConfig | None = None) -> tuple[pl.DataFrame, RepoStats]:
     """Tek bir reponun D1 satırları ve özet sayıları."""
+    config = config or AegisConfig()
     commits = pl.read_parquet(data_dir / "commits.parquet")
     kamei = pl.read_parquet(data_dir / "kamei.parquet")
     szz = pl.read_parquet(data_dir / "szz.parquet")
@@ -52,12 +57,24 @@ def build_repo(data_dir: Path) -> tuple[pl.DataFrame, RepoStats]:
 
     # Her inducing commit'in ilk düzeltildiği an: etiketin "bilindiği" zaman (#14).
     fixed = szz.group_by("inducing_sha").agg(pl.col("fix_date").min().alias("fixed_at"))
+    risky = config.gatekeeper.heuristic.risky_paths
+    tests = config.mining.test_path_patterns
+    extra = pl.DataFrame(
+        [
+            {"sha": sha, **extra_metrics(change, risky=risky, test_patterns=tests)}
+            for sha, _, _, change in iter_changes(
+                commits, pl.read_parquet(data_dir / "files.parquet")
+            )
+        ],
+        schema={"sha": pl.String(), **{name: pl.Float64() for name in EXTRA}},
+    )
     rows = (
         kamei.join(commits.select("sha", "author_date", "files_changed"), on="sha", how="inner")
         .filter((pl.col("author_date") >= cutoff) & (pl.col("files_changed") > 0))
+        .join(extra, on="sha", how="left")
         .join(fixed, left_on="sha", right_on="inducing_sha", how="left")
         .with_columns(pl.col("fixed_at").is_not_null().alias("buggy"))
-        .select("repo", "sha", "author_date", "as_of", *KAMEI, "buggy", "fixed_at")
+        .select("repo", "sha", "author_date", "as_of", *KAMEI, *EXTRA, "buggy", "fixed_at")
         .sort("as_of", maintain_order=True)
     )
     positives = int(rows["buggy"].sum())
@@ -109,7 +126,7 @@ def _d1_schema() -> dict[str, pl.DataType]:
         "sha": pl.String(),
         "author_date": schema.UTC_TS,
         "as_of": schema.UTC_TS,
-        **{name: pl.Float64() for name in KAMEI},
+        **{name: pl.Float64() for name in (*KAMEI, *EXTRA)},
         "buggy": pl.Boolean(),
         "fixed_at": schema.UTC_TS,
     }
