@@ -155,6 +155,11 @@ def mine(
         if not (out_dir / "commits.parquet").is_file():
             console.print(f"[red]{out_dir} altında tarama çıktısı yok; önce aegis mine.[/red]")
             raise typer.Exit(2)
+        # Fix kalıpları değişmiş olabilir: kararlar SZZ'den önce güncel kurallarla yenilenir.
+        from aegis.mining.miner import reclassify
+
+        before, after = reclassify(out_dir, config)
+        console.print(f"Fix kararları yenilendi: {before} → {after}")
     else:
         with progress_bar() as progress:
             task = progress.add_task(f"{slug} taranıyor", total=total)
@@ -264,7 +269,7 @@ def train(
     model eğitir; D1'de olmayan yeni repolar bu modeli kullanır.
     """
     # scikit-learn yalnızca eğitimde gerekir; diğer komutlar (ör. review) onu yüklemez.
-    from aegis.gatekeeper.model import FEATURES, IMBALANCE, MODELS, train_model
+    from aegis.gatekeeper.model import FULL_FEATURES, IMBALANCE, MODELS, train_model
     from aegis.mining.prs import PR_FEATURES
 
     if TYPE_CHECKING:
@@ -325,7 +330,7 @@ def train(
             imbalance=imbalance,
             calibration=cast("Method", method),
             seed=seed,
-            features=PR_FEATURES if level == "pr" else FEATURES,
+            features=PR_FEATURES if level == "pr" else FULL_FEATURES,
         )
         suffix = "-cross" if scenario == "cross" else ""
         prefix = "pr-" if level == "pr" else ""

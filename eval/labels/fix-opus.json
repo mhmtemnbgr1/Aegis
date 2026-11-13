@@ -1,0 +1,802 @@
+{
+ "1": [
+  "hayir",
+  "Yalnızca test dosyasındaki hatalı/kararsız test düzeltiliyor, üretim kodu değişmiyor."
+ ],
+ "2": [
+  "evet",
+  "HEAD/204 düzeltmesinde eksik return ifadeleri eklenerek gövdenin iki kez işlenmesi hatası gideriliyor."
+ ],
+ "3": [
+  "hayir",
+  "Bağımlılık sürüm kısıtının kaldırılması, kod hatası düzeltmesi değil."
+ ],
+ "4": [
+  "hayir",
+  "Yalnızca doküman örnekleri güncelleniyor."
+ ],
+ "5": [
+  "hayir",
+  "Snapcraft yapılandırmasını otomatik üreten derleme/paketleme değişikliği."
+ ],
+ "6": [
+  "evet",
+  "Pandas apply için yanlış toplam hesaplamasına yol açan *args aktarımı kaldırılarak hata düzeltiliyor."
+ ],
+ "7": [
+  "evet",
+  "--quiet ile --check-status uyarısının gösterilmemesi hatalı koşulu düzeltiliyor (Fixes #1028)."
+ ],
+ "8": [
+  "evet",
+  "stack_context'teki bellek sızıntısı düzeltiliyor."
+ ],
+ "9": [
+  "evet",
+  "Loglama yönlendirmesinin her zaman stdout'a yazması yerine mevcut handler akışını kullanması sağlanarak yanlış çıktı akışı düzeltiliyor."
+ ],
+ "10": [
+  "hayir",
+  "Mesajı ve diff'i istemci kodunun yeniden düzenlenmesi."
+ ],
+ "11": [
+  "hayir",
+  "Python 3.9 için yalnızca test verisi ayarlanıyor."
+ ],
+ "12": [
+  "evet",
+  "If-None-Match başlığının çoklu ve zayıf etag değerleriyle yanlış ayrıştırılması düzeltiliyor."
+ ],
+ "13": [
+  "evet",
+  "Veri verildiğinde yöntemin POST olmaması hatası düzeltiliyor (ayrıca --data-raw ekleniyor)."
+ ],
+ "14": [
+  "evet",
+  "csviter'daki kodlama kaynaklı hata düzeltiliyor."
+ ],
+ "15": [
+  "hayir",
+  "Yalnızca sürüm notları güncellemesi."
+ ],
+ "16": [
+  "hayir",
+  "Doküman bağımlılığının sürüm yükseltmesi."
+ ],
+ "17": [
+  "hayir",
+  "HTTP auth işlevinin başka bir modüle taşındığı yeniden düzenleme."
+ ],
+ "18": [
+  "evet",
+  "APIRouter'ın on_startup/on_shutdown parametrelerinin üzerine yazılması hatası düzeltiliyor."
+ ],
+ "19": [
+  "evet",
+  "Ek durum kodlarıyla 'default' ek yanıtının yanlış işlenmesi düzeltiliyor."
+ ],
+ "20": [
+  "hayir",
+  "pytest.ini'de yalnızca biçim/yeni satır değişikliği."
+ ],
+ "21": [
+  "evet",
+  "Union tipli istek gövdesinin yanlış ayrıştırılması düzeltiliyor."
+ ],
+ "22": [
+  "hayir",
+  "Bağımlılık alt sürüm sınırının düşürülmesi, paketleme değişikliği."
+ ],
+ "23": [
+  "evet",
+  "IronPython'da TypeError'a yol açan platform tespiti düzeltiliyor."
+ ],
+ "24": [
+  "hayir",
+  "Yalnızca sürüm notları güncellemesi."
+ ],
+ "25": [
+  "hayir",
+  "Geliştirme bağımlılıklarının kilit dosyasında güncellenmesi."
+ ],
+ "26": [
+  "hayir",
+  "Gereksinim dosyalarının yeniden adlandırılması ve test yapılandırması."
+ ],
+ "27": [
+  "evet",
+  "tqdm_notebook'ta geçici çubuğun yanlışlıkla görüntülenmesi düzeltiliyor."
+ ],
+ "28": [
+  "hayir",
+  "Sınıf hiyerarşisini düzenleyen yeniden yapılandırma."
+ ],
+ "29": [
+  "hayir",
+  "Yalnızca yorum satırı düzeltmesi."
+ ],
+ "30": [
+  "evet",
+  "install_signal_handlers parametresinin reactor.run'a aktarılmaması nedeniyle bozulan scrapy shell düzeltiliyor."
+ ],
+ "31": [
+  "hayir",
+  "Yalnızca sürüm notları güncellemesi."
+ ],
+ "32": [
+  "evet",
+  "Satır içi yorumlu trailer'larda kararsız biçimlendirme hatası düzeltiliyor (Fixes #238)."
+ ],
+ "33": [
+  "evet",
+  "Yorumlardan sonra gelen modül docstring'lerinin normal dize sayılması hatası düzeltiliyor."
+ ],
+ "34": [
+  "hayir",
+  "Yalnızca CI matrisi güncellemesi."
+ ],
+ "35": [
+  "evet",
+  "Python 3 uyumluluğunda yanlış istisna türü (NameError yerine ImportError) düzeltiliyor."
+ ],
+ "36": [
+  "hayir",
+  "ClientContextFactory'nin yapılandırılabilir hale getirilmesi ve SSL geçici çözümlerinin eklenmesi bir özellik."
+ ],
+ "37": [
+  "hayir",
+  "Kod temizliği/yeniden düzenleme."
+ ],
+ "38": [
+  "hayir",
+  "Yalnızca sürüm notları güncellemesi."
+ ],
+ "39": [
+  "evet",
+  "Dize öncesindeki * işaretinden sonra yanlış boşluk konması düzeltiliyor (Fixes #305)."
+ ],
+ "40": [
+  "hayir",
+  "Request nesnesine flags özelliği eklenmesi yeni özellik."
+ ],
+ "41": [
+  "hayir",
+  "Yalnızca test zaman aşımı düzeltmesi."
+ ],
+ "42": [
+  "hayir",
+  "linkify işlevi ekleyen yeni özellik."
+ ],
+ "43": [
+  "hayir",
+  "Ağırlıklı olarak test ekleme ve test düzeltmeleri."
+ ],
+ "44": [
+  "hayir",
+  "Lisans dosyası ekleme."
+ ],
+ "45": [
+  "hayir",
+  "Otomatik üretilen man sayfası tarih güncellemesi."
+ ],
+ "46": [
+  "evet",
+  "Python 3'te var olmayan anydbm modül adının dbm olarak düzeltilmesi."
+ ],
+ "47": [
+  "hayir",
+  "Contracts özelliğinin ilk taslağı, yeni özellik."
+ ],
+ "48": [
+  "hayir",
+  "Doküman güncellemesi."
+ ],
+ "49": [
+  "evet",
+  "Çok satırlı dizelerin parantez dışında yanlışlıkla yeni satıra taşınması düzeltiliyor."
+ ],
+ "50": [
+  "hayir",
+  "Doküman/LLM istem metni düzeltmeleri."
+ ],
+ "51": [
+  "evet",
+  "OAuth1'deki Python 3 uyumsuzluk hataları düzeltiliyor."
+ ],
+ "52": [
+  "hayir",
+  "CI yayın iş akışı düzeltmesi."
+ ],
+ "53": [
+  "hayir",
+  "CI iş akışı yapılandırması."
+ ],
+ "54": [
+  "evet",
+  "Content-Length içeren 304 yanıtlarının hatalı işlenmesi düzeltiliyor."
+ ],
+ "55": [
+  "hayir",
+  "Yalnızca sürüm notları güncellemesi."
+ ],
+ "56": [
+  "evet",
+  "Pygments kurulu değilken setup.py'nin çalışmaması hatası düzeltiliyor."
+ ],
+ "57": [
+  "evet",
+  "Pydantic V2 ile isteğe bağlı dizilerin serileştirilmesinde assert hatası düzeltiliyor."
+ ],
+ "58": [
+  "hayir",
+  "Starlette yükseltmesi ve State eklenmesi."
+ ],
+ "59": [
+  "hayir",
+  "process_attr'ın kurucu parametresine dönüştürüldüğü API değişikliği."
+ ],
+ "60": [
+  "hayir",
+  "CI/CD sabitleme ve güvenlik sıkılaştırması."
+ ],
+ "61": [
+  "hayir",
+  "CI iş akışı değişikliği."
+ ],
+ "62": [
+  "hayir",
+  "Preview stilinde parantez kaldırma özelliğinin genişletilmesi."
+ ],
+ "63": [
+  "hayir",
+  "Web sitesi şablonundaki bozuk bağlantı, üretim kodu değil."
+ ],
+ "64": [
+  "hayir",
+  "flake8 için NOQA eklenmesi, lint değişikliği."
+ ],
+ "65": [
+  "evet",
+  "response_model'in None değerini geçersiz kılmaması hatası düzeltiliyor."
+ ],
+ "66": [
+  "evet",
+  "İstek satırında eksik sorgu dizesinin gösterilmemesi hatası düzeltiliyor."
+ ],
+ "67": [
+  "hayir",
+  "setup.py meta veri eklemesi."
+ ],
+ "68": [
+  "hayir",
+  "Yalnızca sürüm notları güncellemesi."
+ ],
+ "69": [
+  "evet",
+  "Content-Type vendor kaldırmadaki AttributeError düzeltiliyor."
+ ],
+ "70": [
+  "hayir",
+  "İlerleme çubuğunu devre dışı bırakma seçeneği ekleyen yeni özellik."
+ ],
+ "71": [
+  "hayir",
+  "Yalnızca README güncellemesi."
+ ],
+ "72": [
+  "hayir",
+  "Yalnızca test düzeltmesi."
+ ],
+ "73": [
+  "evet",
+  "Görsel deposunun S3/GCS ACL ayarlarının dikkate alınmaması hatası düzeltiliyor."
+ ],
+ "74": [
+  "hayir",
+  "Yalnızca testlerin iyileştirilmesi."
+ ],
+ "75": [
+  "hayir",
+  "Dilimlerin PEP 8'e uygun biçimlendirilmesi için stil davranışı değişikliği."
+ ],
+ "76": [
+  "hayir",
+  "Yalnızca import sıralaması."
+ ],
+ "77": [
+  "hayir",
+  "Artık standart olan modüllerin koşullu importlarının kaldırıldığı temizlik."
+ ],
+ "78": [
+  "evet",
+  "Future döndüren callback'teki istisnaların sessizce yutulması hatası düzeltiliyor."
+ ],
+ "79": [
+  "hayir",
+  "Sürüm hazırlığı ve doküman güncellemesi."
+ ],
+ "80": [
+  "hayir",
+  "Hex rakamlarını büyük harfe çeviren stil değişikliği."
+ ],
+ "81": [
+  "evet",
+  "make_current'ın old_asyncio'yu ezmesi hatası düzeltiliyor ve eski asyncio döngüsü doğru geri yükleniyor."
+ ],
+ "82": [
+  "evet",
+  "urllib3'ten kaldırılan DEFAULT_CIPHERS nedeniyle oluşan import hatası düzeltiliyor."
+ ],
+ "83": [
+  "hayir",
+  "Bakım betiği eklenmesi."
+ ],
+ "84": [
+  "hayir",
+  "Sayısal normalleştirmede küçük temizlik/yeniden düzenleme."
+ ],
+ "85": [
+  "hayir",
+  "Test/CI bağımlılık düzenlemesi."
+ ],
+ "86": [
+  "hayir",
+  "Logo görseli değişikliği."
+ ],
+ "87": [
+  "hayir",
+  "Yalnızca sürüm notları güncellemesi."
+ ],
+ "88": [
+  "hayir",
+  "Docstring ve test adı temizliği."
+ ],
+ "89": [
+  "hayir",
+  "Test/derleme yapılandırma temizliği."
+ ],
+ "90": [
+  "hayir",
+  "Doküman bağlantısı düzeltmesi."
+ ],
+ "91": [
+  "evet",
+  "Yakalanmayan RequestHandler istisnalarında yığın izinin loglanmaması düzeltiliyor."
+ ],
+ "92": [
+  "hayir",
+  "CI ve paketleme yapılandırması."
+ ],
+ "93": [
+  "evet",
+  "-j, -v ve yönlendirilmiş stdout birlikteyken oluşan hata düzeltiliyor (Closes #109)."
+ ],
+ "94": [
+  "hayir",
+  "aiohttp kullanımdan kaldırma uyarısı için ileriye dönük uyumluluk önlemi."
+ ],
+ "95": [
+  "hayir",
+  "Yalnızca test yoksayma listesi güncellemesi."
+ ],
+ "96": [
+  "evet",
+  "get_retry_request ile oluşturulan isteklerde yanlış pozitif uyarı verilmesi düzeltiliyor (Fixes #8447)."
+ ],
+ "97": [
+  "hayir",
+  "Satırların ayraçlardan önce bölünmesi şeklinde stil davranışı değişikliği."
+ ],
+ "98": [
+  "hayir",
+  "CI yapılandırma düzeltmesi."
+ ],
+ "99": [
+  "hayir",
+  "add_xpath'e re argümanı ekleyen yeni özellik."
+ ],
+ "100": [
+  "hayir",
+  "Dokümana geçmiş sürüm notları eklenmesi."
+ ],
+ "101": [
+  "hayir",
+  "Metaclass parametresinin adı değiştiriliyor; davranış değişmeyen yeniden adlandırma."
+ ],
+ "102": [
+  "hayir",
+  "Prettier pre-commit yapılandırması ve dokümanların biçim güncellemesi."
+ ],
+ "103": [
+  "evet",
+  "Tanımsız __version__ ve __doc__ adları paketten doğru içe aktarılarak NameError hatası gideriliyor."
+ ],
+ "104": [
+  "hayir",
+  "Yalnızca fonlama, güvenlik politikası ve doküman dosyaları ekleniyor."
+ ],
+ "105": [
+  "hayir",
+  "Dependabot bağımlılık sürüm yükseltmesi."
+ ],
+ "106": [
+  "hayir",
+  "Hatalı değişikliği geri alan bir revert; kılavuz geri almaları hayir sayıyor."
+ ],
+ "107": [
+  "hayir",
+  "RequestHandler'a yeni detach metodu eklenen bir özellik."
+ ],
+ "108": [
+  "hayir",
+  "Pandas örneği eklenip README güncelleniyor; yalnızca doküman/örnek."
+ ],
+ "109": [
+  "evet",
+  "Yanıtın her zaman UTF-8 varsayılarak çözülmesi hatası, yanıt kodlamasını kullanacak şekilde düzeltiliyor."
+ ],
+ "110": [
+  "hayir",
+  "Aynı isimli birden çok alan desteği ekleyen yeni özellik."
+ ],
+ "111": [
+  "evet",
+  "Python 3'te _sh yardımcı fonksiyonunun bytes döndürmesi decode ile düzeltiliyor."
+ ],
+ "112": [
+  "evet",
+  "Preview stilinde çok satırlı unpacking hedeflerindeki çökme/kararsız biçimleme düzeltiliyor."
+ ],
+ "113": [
+  "hayir",
+  "Shell'de tüm HTTP durumlarını işlemek için davranış değişikliği; belirgin bir hata düzeltmesi değil."
+ ],
+ "114": [
+  "evet",
+  "PyPy'de çerez güncellemesinin bozulması, jar üzerinde doğrudan yinelemeyle düzeltiliyor."
+ ],
+ "115": [
+  "hayir",
+  "item_completed'e sonuç listesini geçiren API değişikliği; hata düzeltmesinden çok arayüz genişletmesi."
+ ],
+ "116": [
+  "belirsiz",
+  "Mesaj test düzeltmesi diyor ama üretim kilitleme kodu kapsamlı biçimde değişiyor; amaç net değil."
+ ],
+ "117": [
+  "evet",
+  "Açık temalı terminallerde okunamayan beyaz diff başlıkları düzeltiliyor."
+ ],
+ "118": [
+  "hayir",
+  "Değişiklik yalnızca examples klasöründeki örnek betikte; üretim kodu değil."
+ ],
+ "119": [
+  "hayir",
+  "Yalnızca yorum satırı değişikliği."
+ ],
+ "120": [
+  "evet",
+  "Python 2.5'te heapq'nun __le__ kullanması nedeniyle bozulan zamanlayıcı sıralaması düzeltiliyor."
+ ],
+ "121": [
+  "hayir",
+  "_environ metodunu public/static yapan API değişikliği."
+ ],
+ "122": [
+  "hayir",
+  "Yalnızca yeni indirme testleri ekleniyor."
+ ],
+ "123": [
+  "hayir",
+  "Snap kanallarını belgeleyen doküman değişikliği."
+ ],
+ "124": [
+  "hayir",
+  "Makefile'daki pre-commit test seçiminin değiştirilmesi; araç/CI değişikliği."
+ ],
+ "125": [
+  "hayir",
+  "Pandas entegrasyonundaki kod tekrarını azaltan yeniden düzenleme."
+ ],
+ "126": [
+  "hayir",
+  "Changelog'daki yazım hatası düzeltmesi."
+ ],
+ "127": [
+  "hayir",
+  "Tembel yükleme ile başlangıç süresini iyileştiren performans değişikliği."
+ ],
+ "128": [
+  "evet",
+  "Path ve query parametrelerinin dict'i geçerli kabul etmesi hatası düzeltiliyor."
+ ],
+ "129": [
+  "hayir",
+  "README'ye kapsam rozeti ekleniyor."
+ ],
+ "130": [
+  "evet",
+  "Çok parçalı form ayrıştırmasındaki DoS açığı limitlerle kapatılıyor."
+ ],
+ "131": [
+  "evet",
+  "epoll ile httpclient etkileşimindeki IOError istisnaları doğru yakalanarak hata gideriliyor."
+ ],
+ "132": [
+  "evet",
+  "close() ve reset() içinde yanlış/eksik EMA durum sıfırlaması düzeltiliyor."
+ ],
+ "133": [
+  "hayir",
+  "Changelog'un ayrı dosyaya taşınması; doküman düzenlemesi."
+ ],
+ "134": [
+  "hayir",
+  "Yalnızca .gitignore güncellemesi."
+ ],
+ "135": [
+  "evet",
+  "Köşeli parantez indekslemesindeki tek sonda virgülün kaldırılıp anlamı değiştirmesi hatası düzeltiliyor."
+ ],
+ "136": [
+  "hayir",
+  "Sürüm numarası güncellemesi."
+ ],
+ "137": [
+  "hayir",
+  "README'de etimoloji açıklaması düzeltmesi; yalnızca doküman."
+ ],
+ "138": [
+  "evet",
+  "Sözlük literallerinde ** açma işlecinin yanlış yerleştirilmesi düzeltiliyor."
+ ],
+ "139": [
+  "evet",
+  "Mesaj asyncio gather için düzeltme diyor; elle yazılmış hatalı gather yerine asyncio.gather sarmalayıcısı kullanılıyor."
+ ],
+ "140": [
+  "hayir",
+  "--skip-string-normalization seçeneği ekleyen yeni özellik."
+ ],
+ "141": [
+  "evet",
+  "Kapanmış stats domain'ine yazmaya çalışıp hata veren satır devre dışı bırakılarak hata önleniyor."
+ ],
+ "142": [
+  "evet",
+  "case bloklarındaki if guard'ların sonda virgülle yanlış bölünmesi hatası düzeltiliyor."
+ ],
+ "143": [
+  "hayir",
+  "Travis CI yapılandırma değişikliği."
+ ],
+ "144": [
+  "hayir",
+  "Yalnızca test ekleniyor."
+ ],
+ "145": [
+  "hayir",
+  "README'deki Gitter bağlantısı düzeltmesi; doküman."
+ ],
+ "146": [
+  "evet",
+  "add_callback'te _closing kontrolünün yalnızca diğer iş parçacığı yolunda yapılması hatası düzeltilip her zaman kontrol ediliyor."
+ ],
+ "147": [
+  "evet",
+  "Python dışı hücre sihirlerinde tokenize hatası oluşması düzeltiliyor."
+ ],
+ "148": [
+  "hayir",
+  "include/exclude dokümantasyonu ve yardım metni netleştiriliyor."
+ ],
+ "149": [
+  "hayir",
+  "Yalnızca regresyon testi ekleniyor."
+ ],
+ "150": [
+  "hayir",
+  "fork_processes'e süreç yeniden başlatma özelliği ekleniyor."
+ ],
+ "151": [
+  "hayir",
+  "Sürüm yayımı ve sürüm notu güncellemesi."
+ ],
+ "152": [
+  "hayir",
+  "Python 3.12 desteği için CI ve metadata güncellemesi."
+ ],
+ "153": [
+  "evet",
+  "xmliter'in döndürdüğü düğümlere başlık (namespace) eklememesi hatası düzeltiliyor."
+ ],
+ "154": [
+  "evet",
+  "autoflake'in kaldırdığı import nedeniyle oluşan email_validator hatası düzeltiliyor."
+ ],
+ "155": [
+  "evet",
+  "Kötü birleştirmeden kalan hatalı yinelenmiş kod kaldırılarak boş değerlerin işlenmesi düzeltiliyor."
+ ],
+ "156": [
+  "evet",
+  "Python 3'te Content-Type başlığının alınamaması hatası düzeltiliyor."
+ ],
+ "157": [
+  "evet",
+  "Rapor dosyası açılmamışken None üzerinde yazma ile oluşan çökme engelleniyor."
+ ],
+ "158": [
+  "evet",
+  "Import'larda geçersiz sonda virgül bırakılması hatası düzeltiliyor."
+ ],
+ "159": [
+  "hayir",
+  "crawl komutuna --report seçeneği ekleyen yeni özellik."
+ ],
+ "160": [
+  "evet",
+  "Pydantic varsayılanlarından gelen kısıtlı bytes hatası düzeltiliyor."
+ ],
+ "161": [
+  "hayir",
+  "Sürüm notları güncellemesi."
+ ],
+ "162": [
+  "hayir",
+  "GitHub Actions yayın iş akışında sürüm referansı düzeltmesi; CI."
+ ],
+ "163": [
+  "hayir",
+  "README'deki yol düzeltmesi; yalnızca doküman."
+ ],
+ "164": [
+  "evet",
+  "Proxy TunnelError mesajının 32 karakterde kesilerek bilgi kaybetmesi hatası düzeltiliyor."
+ ],
+ "165": [
+  "hayir",
+  "UTF akış kontrolünü yardımcı fonksiyona taşıyan yeniden düzenleme."
+ ],
+ "166": [
+  "hayir",
+  "Eski Python sürümleri desteğinin kaldırılması ve CI güncellemesi."
+ ],
+ "167": [
+  "hayir",
+  "stdin'den stdout'a biçimlendirme desteği ekleyen yeni özellik."
+ ],
+ "168": [
+  "hayir",
+  "Önbellekli çözümleyiciyi eklentiye taşıyan yeniden düzenleme."
+ ],
+ "169": [
+  "evet",
+  "libcurl'ün dosya tanımlayıcı ve zaman aşımlarını kaybetmesi hatasına karşı geçici çözüm ekleniyor."
+ ],
+ "170": [
+  "evet",
+  "Python 3.6 öncesi kodda geçersiz sözdizimi üreten sonda virgüller düzeltiliyor."
+ ],
+ "171": [
+  "evet",
+  "Notebook'ta boş satırlar ve hata sonrası yanlış bar stili sorunu düzeltiliyor."
+ ],
+ "172": [
+  "evet",
+  "JSON Schema modelinin boolean şemaları reddetmesi hatası düzeltiliyor."
+ ],
+ "173": [
+  "evet",
+  "Oturum çerezlerinin istek/yanıt arasında doğru taşınmaması hatası düzeltiliyor."
+ ],
+ "174": [
+  "hayir",
+  "Handler düzeyinde template_path geçersiz kılma özelliği ekleniyor."
+ ],
+ "175": [
+  "hayir",
+  "CI bağımlılık kurulumunu uv'ye geçiren altyapı değişikliği."
+ ],
+ "176": [
+  "hayir",
+  "Sürüm talimatlarının ayrı dosyaya taşınması; doküman."
+ ],
+ "177": [
+  "evet",
+  "Yanıt modeli doğrulamasında exclude_unset ve alias'ların yanlış işlenmesi düzeltiliyor."
+ ],
+ "178": [
+  "hayir",
+  "Primer'ın ayrı CI iş akışına taşınması."
+ ],
+ "179": [
+  "evet",
+  "Docstring kapanış tırnaklarının gereksiz yere ayrı satıra konması hatası (#3320) düzeltiliyor."
+ ],
+ "180": [
+  "hayir",
+  "Çeviri iş akışında fetch-depth ve cron ayarı; CI değişikliği."
+ ],
+ "181": [
+  "evet",
+  "Domain'lerin düzgün kapanmasını engelleyen hata düzeltiliyor."
+ ],
+ "182": [
+  "hayir",
+  "Renk paletinin yeniden düzenlenmesi."
+ ],
+ "183": [
+  "evet",
+  "6.0.0'da bozulan websocket set_nodelay metodu düzeltiliyor."
+ ],
+ "184": [
+  "evet",
+  "Dinamik miniters hesaplamasındaki hata düzeltiliyor."
+ ],
+ "185": [
+  "hayir",
+  "README yazım/biçim düzeltmesi."
+ ],
+ "186": [
+  "hayir",
+  "--debug çıktısına eklenti bilgisi ekleyen özellik."
+ ],
+ "187": [
+  "hayir",
+  "Issue şablonundaki ifade düzeltmesi."
+ ],
+ "188": [
+  "hayir",
+  "Sürüm notları güncellemesi."
+ ],
+ "189": [
+  "hayir",
+  "Stil düzeltmesi ve yorum ekleme; davranış aynı."
+ ],
+ "190": [
+  "hayir",
+  "--verbose seçeneği ekleyen yeni özellik."
+ ],
+ "191": [
+  "evet",
+  "Namespace kullanıldığında nodename'in her yinelemede yeniden öneklenmesiyle bozulan xmliter_lxml düzeltiliyor."
+ ],
+ "192": [
+  "hayir",
+  "Yalnızca testler güncelleniyor."
+ ],
+ "193": [
+  "evet",
+  "Mesaj ve diff birkaç adaptördeki küçük hataları (yanlış tip kontrolü, regex) düzeltiyor."
+ ],
+ "194": [
+  "hayir",
+  "Güvenlik yardımcılarına auto_error seçeneği ekleyen yeni özellik."
+ ],
+ "195": [
+  "evet",
+  "EWOULDBLOCK sonrası yazma tamponunun değiştirilmesiyle OpenSSL'de oluşan hata düzeltiliyor."
+ ],
+ "196": [
+  "evet",
+  "total=None durumunda contrib bildirimcilerinin yanlış formatı düzeltiliyor."
+ ],
+ "197": [
+  "hayir",
+  "CONTRIBUTING doküman güncellemesi."
+ ],
+ "198": [
+  "evet",
+  "process_map'te threading.RLock pickle hatası düzeltiliyor."
+ ],
+ "199": [
+  "evet",
+  "json_encoders içermeyen Config'li modellerde jsonable_encoder hatası düzeltiliyor."
+ ],
+ "200": [
+  "evet",
+  "Oturum başlıklarının komut satırı başlıklarını (User-Agent) ezmesi hatası düzeltiliyor."
+ ]
+}

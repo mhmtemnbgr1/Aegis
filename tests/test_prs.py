@@ -45,6 +45,8 @@ def _build(tmp_path: Path, *, merge_date: str, later: bool) -> tuple[GitRepo, pl
     kamei = compute_kamei(commits, pl.read_parquet(data / "files.parquet"))
     change_core = commits.filter(pl.col("message").str.starts_with("Change core"))["sha"][0]
     d1 = kamei.with_columns(
+        pl.lit(0.0).alias("risky_files"),
+        pl.lit(0.0).alias("test_ratio"),
         (pl.col("sha") == change_core).alias("buggy"),
         pl.when(pl.col("sha") == change_core)
         .then(pl.lit(datetime(2024, 6, 1, tzinfo=UTC)))
@@ -85,7 +87,7 @@ def test_no_post_hoc_information(tmp_path: Path) -> None:
     for col in ("as_of", *PR_FEATURES):
         assert base[col].to_list() == late_merge[col].to_list(), col
     assert not FORBIDDEN & set(base.columns)
-    assert set(PR_FEATURES) - set(KAMEI) == {"n_commits", "n_authors"}
+    assert set(PR_FEATURES) - set(KAMEI) == {"risky_files", "test_ratio", "n_commits", "n_authors"}
 
 
 def test_pr_model_uses_pr_features() -> None:
@@ -95,7 +97,10 @@ def test_pr_model_uses_pr_features() -> None:
     from tests.test_gk_model import _d1
 
     rows = _d1(400, seed=6).with_columns(
-        pl.lit(2.0).alias("n_commits"), pl.lit(1.0).alias("n_authors")
+        pl.lit(2.0).alias("n_commits"),
+        pl.lit(1.0).alias("n_authors"),
+        pl.lit(0.0).alias("risky_files"),
+        pl.lit(0.5).alias("test_ratio"),
     )
     model = train_model(
         time_split(rows, TrainingConfig(label_delay_days=14)), "lr", features=PR_FEATURES

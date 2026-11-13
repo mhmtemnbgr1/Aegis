@@ -27,11 +27,13 @@ from typing import Any, Literal
 
 import polars as pl
 
+from aegis.config import AegisConfig
+from aegis.features.extra import EXTRA, extra_metrics
 from aegis.features.history import Change, ChangeHistory, developer_id
 from aegis.features.kamei import KAMEI, kamei_metrics
 from aegis.mining.gitfiles import git, tree_changes
 
-PR_FEATURES: tuple[str, ...] = (*KAMEI, "n_commits", "n_authors")
+PR_FEATURES: tuple[str, ...] = (*KAMEI, *EXTRA, "n_commits", "n_authors")
 FORBIDDEN = frozenset(
     {
         "merged_at",
@@ -85,11 +87,22 @@ def find_prs(repo: Path, ref: str = "HEAD") -> list[PullRequest]:
 
 
 def pr_features(
-    change: Change, history: ChangeHistory, *, as_of: datetime, n_commits: int, n_authors: int
+    change: Change,
+    history: ChangeHistory,
+    *,
+    as_of: datetime,
+    n_commits: int,
+    n_authors: int,
+    config: AegisConfig | None = None,
 ) -> dict[str, float]:
     """Bir PR'ın özellikleri: yalnızca değişiklik, `as_of` öncesi geçmiş ve PR'ın commit'leri."""
     return {
         **kamei_metrics(change, history, as_of=as_of),
+        **extra_metrics(
+            change,
+            risky=(config or AegisConfig()).gatekeeper.heuristic.risky_paths,
+            test_patterns=(config or AegisConfig()).mining.test_path_patterns,
+        ),
         "n_commits": float(n_commits),
         "n_authors": float(n_authors),
     }
@@ -117,7 +130,10 @@ def build_pr_rows(repo: Path, data_dir: Path, d1: pl.DataFrame) -> pl.DataFrame:
         if pr.style == "squash":
             row = by_sha[pr.sha]
             as_of = row["as_of"]
-            features = {k: row[k] for k in KAMEI} | {"n_commits": 1.0, "n_authors": 1.0}
+            features = {k: row[k] for k in (*KAMEI, *EXTRA)} | {
+                "n_commits": 1.0,
+                "n_authors": 1.0,
+            }
         else:
             if history is None:
                 history = ChangeHistory.from_frames(

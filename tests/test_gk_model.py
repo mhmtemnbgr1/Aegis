@@ -25,6 +25,8 @@ def _d1(n: int = 400, seed: int = 0) -> pl.DataFrame:
     la = rng.exponential(30, n)
     nf = rng.integers(1, 8, n).astype(float)
     data["la"], data["nf"] = la, nf
+    data["risky_files"] = rng.integers(0, 2, n).astype(float)
+    data["test_ratio"] = rng.random(n)
     risk = 1 / (1 + np.exp(-(0.04 * la + 0.4 * nf - 4)))
     buggy = rng.random(n) < risk
     when = [START + timedelta(days=i) for i in range(n)]

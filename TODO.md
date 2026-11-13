@@ -72,8 +72,8 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 
 - [x] Miner: PyDriller ile commit, dosya ve fonksiyon değişiklikleri ([şema](docs/mining-schema.md))
 - [x] Fix-commit tespiti
-- [ ] Fix-commit tespiti için 200 örneklik doğrulama seti
-- [ ] SZZ (git blame tabanlı MA ve B varyantları; tüm geçmiş) — kod hazır, 50 eşlemenin elle kontrolü bekliyor
+- [x] Fix-commit tespiti için 200 örneklik doğrulama seti (precision %71 → %86; LLM önerileriyle tek kişi)
+- [x] SZZ (git blame tabanlı MA ve B varyantları; tüm geçmiş) — 50 eşleme kontrol edildi, doğruluk %31
 - [x] Kamei JIT metrikleri
 - [x] Zaman kuralı: `as_of` ile sızıntısız özellik hesabı
 - [x] Sentetik git deposu testleri
@@ -91,7 +91,7 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [x] SHAP açıklamaları
 - [x] `aegis train` ve `aegis score`
 - [x] Sezgisel gatekeeper'ın eğitilmiş modelle değiştirilmesi
-- [ ] Maliyet–recall eğrisi ve iki işletme noktası (ilk sonuçlar)
+- [x] Maliyet–recall eğrisi ve iki işletme noktası (ilk sonuçlar)
 
 ## Faz 4 — Bug-Fix Hafızası · 22 Kas
 

@@ -15,6 +15,7 @@ kümesindeki temiz commit'leri hatalı sayısına indirir; `smote` hatalı commi
 örneklerle temiz sayısına çıkarır. Yeniden örnekleme yalnızca eğitim kümesine uygulanır.
 """
 
+import math
 import pickle
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -29,6 +30,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import FunctionTransformer, StandardScaler
 
 from aegis import __version__
+from aegis.features.extra import EXTRA
 from aegis.features.kamei import KAMEI
 from aegis.gatekeeper.calibration import (
     Calibrator,
@@ -47,6 +49,9 @@ Imbalance = Literal["none", "weights", "undersample", "smote"]
 IMBALANCE: tuple[Imbalance, ...] = ("none", "weights", "undersample", "smote")
 MODELS: tuple[ModelName, ...] = ("lr", "rf", "lightgbm")
 FEATURES: tuple[str, ...] = tuple(KAMEI)
+"""Yalnızca 14 Kamei metriği (taban çizgisi)."""
+FULL_FEATURES: tuple[str, ...] = (*KAMEI, *EXTRA)
+"""Kamei + Aegis'e özgü diff özellikleri: riskli yol, test değişim oranı (FR-12)."""
 
 
 def make_model(name: ModelName, *, balanced: bool = False, seed: int = 0) -> Any:
@@ -210,18 +215,20 @@ def train_model(
     model.valid_scores = [float(v) for v in valid_prob]
     model.threshold = best_f1_threshold(y_valid, valid_prob)
     model.valid = evaluate(y_valid, valid_prob, effort(split.valid), model.threshold)
-    y_test = split.test["buggy"].to_numpy()
-    test_prob = model.predict_proba(split.test)
-    model.test = evaluate(y_test, test_prob, effort(split.test), model.threshold)
-    model.reliability = reliability(y_test, test_prob)
-    for ratio in BUDGETS:
-        low, _ = model.thresholds(ratio)
-        sent = test_prob >= low
-        model.budget[f"{ratio:g}"] = {
-            "threshold": low,
-            "llm_share": float(sent.mean()),
-            "recall": float(sent[y_test.astype(bool)].mean()) if y_test.any() else float("nan"),
-        }
+    # Test kümesi boş olabilir (ör. kayan pencerede test ayrıca puanlanır, #21).
+    if split.test.height:
+        y_test = split.test["buggy"].to_numpy()
+        test_prob = model.predict_proba(split.test)
+        model.test = evaluate(y_test, test_prob, effort(split.test), model.threshold)
+        model.reliability = reliability(y_test, test_prob)
+        for ratio in BUDGETS:
+            low, _ = model.thresholds(ratio)
+            sent = test_prob >= low
+            model.budget[f"{ratio:g}"] = {
+                "threshold": low,
+                "llm_share": float(sent.mean()),
+                "recall": float(sent[y_test.astype(bool)].mean()) if y_test.any() else math.nan,
+            }
     model.meta = {
         "aegis_version": __version__,
         "trained_at": datetime.now(UTC).isoformat(),

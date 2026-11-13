@@ -28,7 +28,7 @@ def repo(tmp_path: Path) -> tuple[GitRepo, dict[str, str]]:
         ),
         "ws": git.commit("Tidy spacing", {"app.py": REFORMATTED}, date="2024-01-03T10:00:00+00:00"),
         "testfix": git.commit(
-            "Fix flaky test",
+            "Fix race in conftest",
             {"tests/test_app.py": "def test_x():\n    assert True\n"},
             date="2024-01-04T10:00:00+00:00",
         ),
@@ -183,3 +183,11 @@ def test_full_history_is_default(tmp_path: Path) -> None:
     assert (result.fixes_in_window, result.inducing_commits) == (1, 1)
     windowed = MiningConfig(history_years=5)
     assert run_szz(git.path, tmp_path / "o", windowed).fixes_in_window == 0
+
+
+def test_import_lines_are_not_blamed() -> None:
+    from aegis.mining.szz import _is_useless
+
+    assert _is_useless("import os") and _is_useless("    from . import x")
+    assert _is_useless("from pkg.mod import (")
+    assert not _is_useless("imports = load()") and not _is_useless("from_cache = True")
