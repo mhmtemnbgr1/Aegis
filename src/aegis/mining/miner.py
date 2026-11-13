@@ -245,3 +245,36 @@ def _classify(
         c["is_fix"] = fix.is_fix
         c["fix_signals"] = list(fix.signals)
         c["linked_issues"] = list(fix.linked_issues)
+
+
+def reclassify(out_dir: Path, config: MiningConfig | None = None) -> tuple[int, int]:
+    """Mevcut tarama çıktısında fix kararlarını güncel sınıflandırıcıyla yeniden verir.
+
+    Fix kalıpları değiştiğinde (ör. #8 sonrası) yeniden tarama gerekmez: `commits.parquet`'teki
+    `is_fix`/`fix_signals` ve `kamei.parquet`'teki FIX metriği güncellenir. Bağlı issue
+    etiketinden gelen kararlar (`label:` sinyali) korunur. (önceki, yeni) fix sayısını döndürür.
+    """
+    config = config or MiningConfig()
+    path = out_dir / "commits.parquet"
+    commits = pl.read_parquet(path)
+    classifier = FixClassifier(config)
+    is_fix: list[bool] = []
+    signals: list[list[str]] = []
+    for message, merge, old in commits.select("message", "is_merge", "fix_signals").iter_rows():
+        fix = classifier.classify(message, is_merge=merge)
+        labelled = [s for s in (old or []) if s.startswith("label:")]
+        is_fix.append(fix.is_fix or bool(labelled))
+        signals.append([*fix.signals, *labelled])
+    before = int(commits["is_fix"].sum())
+    commits = commits.with_columns(
+        pl.Series("is_fix", is_fix), pl.Series("fix_signals", signals, dtype=pl.List(pl.String()))
+    )
+    commits.write_parquet(path)
+    kamei_path = out_dir / "kamei.parquet"
+    if kamei_path.is_file():
+        flags = commits.select("sha", pl.col("is_fix").cast(pl.Float64).alias("_fix"))
+        kamei = pl.read_parquet(kamei_path).join(flags, on="sha", how="left")
+        kamei.with_columns(pl.col("_fix").fill_null(pl.col("fix")).alias("fix")).drop(
+            "_fix"
+        ).write_parquet(kamei_path)
+    return before, sum(is_fix)

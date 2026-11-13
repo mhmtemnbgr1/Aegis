@@ -13,7 +13,7 @@ Varyantlar:
 
 - `b` (B-SZZ): düz diff ve düz blame.
 - `ma` (MA-SZZ'ye yakın): diff ve blame boşluk değişikliklerini yok sayar (`-w`); boş, yalnız
-  yorum olan ve docstring satırları blame edilmez; merge commit'leri ve
+  yorum olan, import ve docstring satırları blame edilmez; merge commit'leri ve
   `max_files_per_commit`'i aşan toplu değişiklikler (biçimlendirme, taşıma, lisans başlığı vb.)
   `--ignore-revs-file` ile atlanır.
 
@@ -68,9 +68,17 @@ def _git(repo: Path, *args: str) -> str:
     return result.stdout
 
 
+_IMPORT = re.compile(r"^(import\s+\w|from\s+[\w.]+\s+import(\s|\(|$))")
+
+
 def _is_useless(line: str) -> bool:
+    """Boş, yalnız yorum ya da import satırı.
+
+    Import satırları hatalı mantık taşımaz; fix'ler çoğu zaman yan etki olarak import'ları da
+    düzenler ve SZZ bu satırları yazan ilgisiz commit'i suçlar (#9 elle kontrolünde görüldü).
+    """
     stripped = line.strip()
-    return not stripped or stripped.startswith("#")
+    return not stripped or stripped.startswith("#") or bool(_IMPORT.match(stripped))
 
 
 def docstring_lines(source: str) -> set[int]:

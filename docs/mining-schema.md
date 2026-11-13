@@ -181,6 +181,38 @@ Testler (`tests/test_features.py`): 14 metriğin her biri elle hesaplanmış bir
 
 Toplam 27.813 satır. fastapi ve httpie 200 sınırının biraz altında kalıyor; ikisi de D1'de tutuluyor ve sonuçlarda bu not ediliyor. fastapi'nin pozitif oranı (%2,4) diğerlerinden çok düşük; çok sayıda dokümantasyon ve çeviri commit'i içeriyor. Sınıf dengesizliği yöntemleri (#16) bu repoda ayrıca raporlanmalı.
 
+Yukarıdaki sayılar #8 öncesine aittir. Fix sınıflandırıcısı sıkılaştırıldıktan sonraki sayılar aşağıdaki "Etiket kalitesi" bölümündedir.
+
+### Etiket kalitesi (#8, #9; 13 Kasım 2026)
+
+**Yöntem.** İki örneklem `eval/labeling.py` ile sabit tohumla çekildi:
+- **#9:** 6 repodan 50 fix → bug-inducing eşlemesi (tüm geçmiş, `ma`).
+- **#8:** 6 repodan 200 commit. Yarısı sınıflandırıcının fix dediği, yarısı demediği commit'ler; sınıflandırıcının kararı etiketleyicilere gösterilmedi.
+
+Her maddeyi önce Claude Opus 5.5 ve Claude Sonnet 5.5 birbirinden bağımsız olarak, gerekçeleriyle etiketledi. Ardından bir ekip üyesi bu önerileri görerek son etiketi verdi (`eval/labels/*-kontrol.csv`). Etiketler bu yüzden "LLM önerileriyle verilmiş insan etiketi"dir, bağımsız insan etiketi değildir. #8'de 200 commit yaklaşık 9 dakikada etiketlendi ve kararların 196'sı Sonnet'in önerisiyle aynı. Bu set fiilen "insan tarafından gözden geçirilmiş LLM etiketi" olarak okunmalıdır. #8 iki bağımsız insan etiketleyici istiyordu; yalnızca bir kişi etiketledi.
+
+| Set | İnsan – Opus | İnsan – Sonnet | Opus – Sonnet |
+| --- | --- | --- | --- |
+| #9 SZZ (50) | 47/50, κ 0,87 | 44/50, κ 0,76 | 42/50, κ 0,67 |
+| #8 fix (200) | 189/200, κ 0,89 | 196/200, κ 0,96 | 190/200, κ 0,90 |
+
+**SZZ doğruluğu (#9).** Belirsizler hariç 48 eşlemenin 15'i doğru: **%31**. Repo bazında fastapi %67, scrapy %50, tornado %29, black %25, tqdm %14, httpie %0. Yanlışların yaklaşık üçte biri "fix" sayılan commit'in hata düzeltmesi olmamasından geliyor (typing, Python sürümü bırakma, refactor). Kalanı, fix'in hatayla ilgisiz satırlara da dokunması ve SZZ'nin o satırları yazan commit'i suçlamasından geliyor (import, sabit tanımı, imza, taşıma). Sonuç `eval/agreement.py szz` ile üretilir.
+
+**Fix sınıflandırıcısı (#8).** İlk sürüm: precision %71 (95 fix'in 67'si gerçek), recall ~%79 (tabakalı örneklem popülasyona ağırlıklandırıldı). Yanlış pozitifler yalnız test, link, yorum, stil, CI ve bağımlılık düzeltmeleri ile gitmoji önekli commit'lerdi. Bu kalıplar `fix_exclude_patterns`'a eklendi: precision **%86**, recall %78 (`eval/tune_fix.py`). Anahtar kelimeyi yalnızca başlıkta aramak (`fix_subject_only`) precision'ı %96'ya çıkarıyor ama recall'ı %62'ye düşürdüğü için varsayılan değil. Kalıplar aynı 200 commit üzerinde seçildiği için bu sayılar iyimserdir; yeni bir örneklemde doğrulanmalıdır.
+
+**SZZ'de denenen düzeltmeler.** Import satırları artık suçlanmıyor (`ma`). 50 eşlemede bu ve yeni fix kalıpları SZZ doğruluğunu değiştirmedi (%31 → %29–32). "Fix başına yalnızca en çok suçlanan" ya da "en yeni" commit'i tutmak gibi kurallar da doğruluğu ancak %36–38'e çıkarırken doğru eşlemelerin yarıdan fazlasını kaybettirdi; uygulanmadı. Eşleme düzeyindeki ~%30 doğruluk, bu verideki ölçülmüş bir sınırlamadır.
+
+**Yeni sayılar** (`aegis mine --szz-only` fix kararlarını güncel kurallarla yeniler):
+
+| Repo | Fix (önce → sonra) | Bug-inducing | Oran |
+| --- | --- | --- | --- |
+| scrapy | 1.321 → 1.140 | 1.139 | %11,8 |
+| tornado | 730 → 658 | 578 | %14,0 |
+| black | 639 → 542 | 386 | %15,4 |
+| tqdm | 482 → 400 | 396 | %21,8 |
+| fastapi | 332 → 204 | 138 | %1,7 |
+| httpie | 235 → 183 | 168 | %9,9 |
+
 ## `meta.json`
 
 Veri sürümü kaydı (NFR-04): şema ve Aegis sürümü, `mined_at`, `remote_url`, taranan `head_sha`, `since`, kullanılan `mining_config`, satır sayıları ve süre. Aynı `head_sha` ve `mining_config` ile yapılan tarama aynı veriyi üretir.

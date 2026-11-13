@@ -1,0 +1,802 @@
+{
+ "1": [
+  "hayir",
+  "Yalnızca test düzeltmesi."
+ ],
+ "2": [
+  "evet",
+  "Eksik return ifadeleri eklenerek hatalı akış düzeltiliyor."
+ ],
+ "3": [
+  "hayir",
+  "Bağımlılık sürüm kısıtı kaldırılıyor."
+ ],
+ "4": [
+  "hayir",
+  "Yalnızca doküman güncellemesi."
+ ],
+ "5": [
+  "hayir",
+  "Build/paketleme otomasyonu ekleniyor."
+ ],
+ "6": [
+  "evet",
+  "Pandas apply için yanlış total hesabı düzeltiliyor."
+ ],
+ "7": [
+  "evet",
+  "--quiet ile eksik kalan uyarı gösterimi düzeltiliyor."
+ ],
+ "8": [
+  "evet",
+  "stack_context bellek sızıntısı düzeltiliyor."
+ ],
+ "9": [
+  "evet",
+  "Logging yönlendirmesinin yanlış stdout çıktısı düzeltiliyor."
+ ],
+ "10": [
+  "hayir",
+  "İstemci kodu yeniden düzenleniyor."
+ ],
+ "11": [
+  "hayir",
+  "Yalnızca test verisi uyarlaması."
+ ],
+ "12": [
+  "evet",
+  "If-None-Match başlığı yanlış ayrıştırılıyordu, düzeltiliyor."
+ ],
+ "13": [
+  "evet",
+  "curl dönüşümünde eksik method hatası düzeltiliyor."
+ ],
+ "14": [
+  "evet",
+  "csviter encoding hatası düzeltiliyor."
+ ],
+ "15": [
+  "hayir",
+  "Yalnızca sürüm notu."
+ ],
+ "16": [
+  "hayir",
+  "Bağımlılık sürüm yükseltmesi."
+ ],
+ "17": [
+  "hayir",
+  "Yeniden düzenleme (auth taşındı)."
+ ],
+ "18": [
+  "evet",
+  "APIRouter on_startup/on_shutdown parametreleri düzeltiliyor."
+ ],
+ "19": [
+  "evet",
+  "Ek 'default' yanıtı hatası düzeltiliyor."
+ ],
+ "20": [
+  "hayir",
+  "Yalnızca lint ayarı."
+ ],
+ "21": [
+  "evet",
+  "Union ile request body ayrıştırma hatası düzeltiliyor."
+ ],
+ "22": [
+  "hayir",
+  "Minimum bağımlılık sürümü düşürülüyor."
+ ],
+ "23": [
+  "evet",
+  "IronPython'da çökme düzeltiliyor."
+ ],
+ "24": [
+  "hayir",
+  "Yalnızca sürüm notu."
+ ],
+ "25": [
+  "hayir",
+  "Geliştirme bağımlılıkları kilit dosyası güncellemesi."
+ ],
+ "26": [
+  "hayir",
+  "Gereksinim dosyası yeniden adlandırma."
+ ],
+ "27": [
+  "evet",
+  "tqdm_notebook geçici çubuk görüntüleme hatası düzeltiliyor."
+ ],
+ "28": [
+  "hayir",
+  "Sınıf mirası yeniden düzenlemesi/doküman."
+ ],
+ "29": [
+  "hayir",
+  "Yalnızca yorum düzeltmesi."
+ ],
+ "30": [
+  "evet",
+  "scrapy shell sinyal işleyici hatası düzeltiliyor."
+ ],
+ "31": [
+  "hayir",
+  "Yalnızca sürüm notu."
+ ],
+ "32": [
+  "evet",
+  "Yorumlu trailer'larda kararsız biçimlendirme düzeltiliyor."
+ ],
+ "33": [
+  "evet",
+  "Modül docstring'inin yanlış ele alınması düzeltiliyor."
+ ],
+ "34": [
+  "hayir",
+  "CI yapılandırması."
+ ],
+ "35": [
+  "evet",
+  "setup.py'deki yanlış istisna türü yakalama düzeltiliyor."
+ ],
+ "36": [
+  "belirsiz",
+  "SSL hata geçici çözümleri varsayılan açılıyor, özellik mi düzeltme mi belirsiz."
+ ],
+ "37": [
+  "hayir",
+  "Temizlik/yeniden düzenleme."
+ ],
+ "38": [
+  "hayir",
+  "Yalnızca sürüm notu."
+ ],
+ "39": [
+  "evet",
+  "'*' sonrası yanlış boşluk biçimlendirmesi düzeltiliyor."
+ ],
+ "40": [
+  "hayir",
+  "Yeni özellik (request flags)."
+ ],
+ "41": [
+  "hayir",
+  "Yalnızca test değişikliği."
+ ],
+ "42": [
+  "hayir",
+  "Yeni özellik (linkify)."
+ ],
+ "43": [
+  "hayir",
+  "Test ekleme."
+ ],
+ "44": [
+  "hayir",
+  "Lisans dosyası ekleniyor."
+ ],
+ "45": [
+  "hayir",
+  "Otomatik üretilmiş içerik güncellemesi."
+ ],
+ "46": [
+  "evet",
+  "py3'te yanlış dbm modül adı düzeltiliyor."
+ ],
+ "47": [
+  "hayir",
+  "Yeni özellik (contracts taslağı)."
+ ],
+ "48": [
+  "hayir",
+  "Doküman güncellemesi."
+ ],
+ "49": [
+  "evet",
+  "Çok satırlı string'lerin yanlış taşınması düzeltiliyor."
+ ],
+ "50": [
+  "hayir",
+  "Yalnızca doküman/prompt düzeltmesi."
+ ],
+ "51": [
+  "evet",
+  "oauth1 python3 sorunları düzeltiliyor."
+ ],
+ "52": [
+  "hayir",
+  "CI düzeltmesi."
+ ],
+ "53": [
+  "hayir",
+  "CI yapılandırması."
+ ],
+ "54": [
+  "evet",
+  "304 yanıtlarında Content-Length kabul edilerek hata düzeltiliyor."
+ ],
+ "55": [
+  "hayir",
+  "Yalnızca sürüm notu."
+ ],
+ "56": [
+  "evet",
+  "setup.py pygments yokken çalışmıyordu, düzeltiliyor."
+ ],
+ "57": [
+  "evet",
+  "Opsiyonel dizi serileştirme hatası düzeltiliyor."
+ ],
+ "58": [
+  "hayir",
+  "Bağımlılık yükseltmesi ve yeni State özelliği."
+ ],
+ "59": [
+  "hayir",
+  "Yeniden düzenleme."
+ ],
+ "60": [
+  "hayir",
+  "CI/güvenlik sertleştirme yapılandırması."
+ ],
+ "61": [
+  "hayir",
+  "CI iş akışı değişikliği."
+ ],
+ "62": [
+  "evet",
+  "Parantezli generator biçimlendirme eksikliği düzeltiliyor."
+ ],
+ "63": [
+  "hayir",
+  "Web sitesi bağlantısı, üretim kodu değil."
+ ],
+ "64": [
+  "hayir",
+  "Lint yorumu."
+ ],
+ "65": [
+  "evet",
+  "response_model None'ı geçersiz saymıyordu, düzeltiliyor."
+ ],
+ "66": [
+  "evet",
+  "İstek başlığında eksik query string düzeltiliyor."
+ ],
+ "67": [
+  "hayir",
+  "Metadata ekleme."
+ ],
+ "68": [
+  "hayir",
+  "Yalnızca sürüm notu."
+ ],
+ "69": [
+  "evet",
+  "Content-Type regex AttributeError hatası düzeltiliyor."
+ ],
+ "70": [
+  "hayir",
+  "Yeni özellik (disable seçeneği)."
+ ],
+ "71": [
+  "hayir",
+  "Doküman değişikliği."
+ ],
+ "72": [
+  "hayir",
+  "Test düzeltmesi."
+ ],
+ "73": [
+  "evet",
+  "Görüntü deposu ACL ayarları yok sayılıyordu, düzeltiliyor."
+ ],
+ "74": [
+  "hayir",
+  "Test iyileştirmesi."
+ ],
+ "75": [
+  "hayir",
+  "Yeni biçimlendirme özelliği."
+ ],
+ "76": [
+  "hayir",
+  "Yalnızca import sıralaması."
+ ],
+ "77": [
+  "hayir",
+  "Yeniden düzenleme."
+ ],
+ "78": [
+  "evet",
+  "Future döndüren callback'teki hata sessizce yutuluyordu, düzeltiliyor."
+ ],
+ "79": [
+  "hayir",
+  "Sürüm hazırlığı."
+ ],
+ "80": [
+  "hayir",
+  "Stil değişikliği."
+ ],
+ "81": [
+  "evet",
+  "asyncio loop geri yükleme hatası düzeltiliyor."
+ ],
+ "82": [
+  "evet",
+  "urllib3 DEFAULT_CIPHERS bulunamama hatası düzeltiliyor."
+ ],
+ "83": [
+  "hayir",
+  "Yeni yardımcı betik."
+ ],
+ "84": [
+  "hayir",
+  "Küçük temizlik."
+ ],
+ "85": [
+  "hayir",
+  "Test/CI ortamı düzeltmesi."
+ ],
+ "86": [
+  "hayir",
+  "Görsel dosyası."
+ ],
+ "87": [
+  "hayir",
+  "Yalnızca sürüm notu."
+ ],
+ "88": [
+  "hayir",
+  "Docstring/test adı temizliği."
+ ],
+ "89": [
+  "hayir",
+  "Build/test yapılandırma temizliği."
+ ],
+ "90": [
+  "hayir",
+  "Doküman bağlantı düzeltmesi."
+ ],
+ "91": [
+  "evet",
+  "Yakalanmamış istisna stack trace kaydı düzeltiliyor."
+ ],
+ "92": [
+  "hayir",
+  "CI ve paketleme yapılandırması."
+ ],
+ "93": [
+  "evet",
+  "-j -v ve yönlendirilmiş stdout hatası düzeltiliyor."
+ ],
+ "94": [
+  "hayir",
+  "Gelecek uyumluluğu için kullanım dışı bırakma önlemi."
+ ],
+ "95": [
+  "hayir",
+  "Test ignore listesi güncellemesi."
+ ],
+ "96": [
+  "evet",
+  "Gereksiz meta kopyalama uyarısı düzeltiliyor."
+ ],
+ "97": [
+  "hayir",
+  "Yeni biçimlendirme davranışı."
+ ],
+ "98": [
+  "hayir",
+  "CI yapılandırması."
+ ],
+ "99": [
+  "hayir",
+  "Yeni özellik (re argümanı)."
+ ],
+ "100": [
+  "hayir",
+  "Doküman eklemesi."
+ ],
+ "101": [
+  "hayir",
+  "Metaclass __new__ ilk argüman adı standarda çevrilmiş, davranış değişmiyor."
+ ],
+ "102": [
+  "hayir",
+  "Prettier pre-commit yapılandırma ve biçim güncellemesi."
+ ],
+ "103": [
+  "evet",
+  "__version__ ve __doc__ import hatası düzeltiliyor."
+ ],
+ "104": [
+  "hayir",
+  "Güvenlik politikası ve doküman eklenmesi."
+ ],
+ "105": [
+  "hayir",
+  "Bağımlılık sürümü güncellemesi."
+ ],
+ "106": [
+  "belirsiz",
+  "Bir regresyonu (#1042) geri alma ile gideriyor; geri alma olduğu için kural hayir diyor ama regresyon düzeltmesi."
+ ],
+ "107": [
+  "hayir",
+  "Yeni detach yöntemi ekleniyor."
+ ],
+ "108": [
+  "hayir",
+  "Örnek ve doküman eklenmesi."
+ ],
+ "109": [
+  "evet",
+  "UTF-8 varsayımı yerine yanıtın kodlaması kullanılarak yanlış çözme düzeltiliyor."
+ ],
+ "110": [
+  "hayir",
+  "Aynı isimli birden çok alan desteği, yeni özellik."
+ ],
+ "111": [
+  "evet",
+  "Py3'te subprocess çıktısı bytes dönüyordu, decode eklenerek düzeltiliyor."
+ ],
+ "112": [
+  "evet",
+  "Preview modunda çok satırlı hedeflerde çökme/kararsız biçimlendirme düzeltiliyor."
+ ],
+ "113": [
+  "belirsiz",
+  "Shell'de hata durum kodlu yanıtların işlenmesi için meta ekleniyor; hata mı davranış değişikliği mi belirsiz."
+ ],
+ "114": [
+  "evet",
+  "PyPy'de cookie güncelleme sorunu düzeltiliyor."
+ ],
+ "115": [
+  "evet",
+  "item_completed sonuç listesini gizliyordu, argüman olarak geçiriliyor."
+ ],
+ "116": [
+  "belirsiz",
+  "Test ve kapsam düzeltmesi ile kilit yeniden düzenlemesi karışık, net bir hata düzeltmesi görünmüyor."
+ ],
+ "117": [
+  "hayir",
+  "Diff başlıklarının renk tercihi kozmetik değişiklik."
+ ],
+ "118": [
+  "belirsiz",
+  "Yalnızca örnek betikte bilinmeyen toplam durumu düzeltiliyor, üretim kodu değil."
+ ],
+ "119": [
+  "hayir",
+  "Yalnızca yorum değişikliği."
+ ],
+ "120": [
+  "evet",
+  "Python 2.5'te heapq __le__ kullandığı için eksik karşılaştırma eklenerek hata düzeltiliyor."
+ ],
+ "121": [
+  "hayir",
+  "Metot herkese açık/statik yapılıyor, yeniden düzenleme."
+ ],
+ "122": [
+  "hayir",
+  "Yalnızca test ekleniyor."
+ ],
+ "123": [
+  "hayir",
+  "Doküman güncellemesi."
+ ],
+ "124": [
+  "hayir",
+  "Makefile pre-commit ayarı."
+ ],
+ "125": [
+  "hayir",
+  "Tekrarı azaltan yeniden düzenleme ve kullanımdan kaldırma uyarısı."
+ ],
+ "126": [
+  "hayir",
+  "Changelog yazım hatası."
+ ],
+ "127": [
+  "hayir",
+  "Başlangıç süresi performans iyileştirmesi."
+ ],
+ "128": [
+  "evet",
+  "Yol ve sorgu parametrelerinin dict'i geçerli kabul etmesi hatası düzeltiliyor."
+ ],
+ "129": [
+  "hayir",
+  "Rozet ekleniyor."
+ ],
+ "130": [
+  "evet",
+  "Çok parçalı form ayrıştırmada DoS açığına karşı sınırlar getiriliyor."
+ ],
+ "131": [
+  "evet",
+  "httpclient/epoll etkileşim hataları için istisna yakalama düzeltiliyor."
+ ],
+ "132": [
+  "evet",
+  "close() ve reset() içindeki EMA durumu hataları düzeltiliyor."
+ ],
+ "133": [
+  "hayir",
+  "Changelog dosyası ayrılıyor."
+ ],
+ "134": [
+  "hayir",
+  "gitignore girdisi."
+ ],
+ "135": [
+  "evet",
+  "Köşeli parantez indekslemede tek sondaki virgül hatalı siliniyordu."
+ ],
+ "136": [
+  "hayir",
+  "Sürüm numarası güncellemesi."
+ ],
+ "137": [
+  "hayir",
+  "Doküman düzeltmesi."
+ ],
+ "138": [
+  "evet",
+  "Sözlük açma (**) yerleşimi hatası düzeltiliyor."
+ ],
+ "139": [
+  "belirsiz",
+  "gather düzeltme ve sadeleştirme birlikte, hatanın niteliği belirsiz."
+ ],
+ "140": [
+  "hayir",
+  "Yeni seçenek ekleniyor."
+ ],
+ "141": [
+  "evet",
+  "Kapanmış istatistik alanını çağıran hatalı satır devre dışı bırakılıyor."
+ ],
+ "142": [
+  "evet",
+  "case if guard'ının gereksiz patlatılması hatası düzeltiliyor."
+ ],
+ "143": [
+  "hayir",
+  "CI betik değişikliği."
+ ],
+ "144": [
+  "hayir",
+  "Yalnızca test ekleniyor."
+ ],
+ "145": [
+  "hayir",
+  "Gitter bağlantısı düzeltmesi, doküman."
+ ],
+ "146": [
+  "belirsiz",
+  "Çoğunlukla yorum düzeltmesi ama _closing kontrolü her zaman yapılıyor."
+ ],
+ "147": [
+  "evet",
+  "Python olmayan hücre magic'lerinde tokenize hatası düzeltiliyor."
+ ],
+ "148": [
+  "hayir",
+  "Dokümantasyon netleştirmesi."
+ ],
+ "149": [
+  "hayir",
+  "Yalnızca regresyon testi ekleniyor."
+ ],
+ "150": [
+  "hayir",
+  "Çıkan süreçleri yeniden başlatma yeni özellik."
+ ],
+ "151": [
+  "hayir",
+  "Sürüm yayını."
+ ],
+ "152": [
+  "hayir",
+  "Python 3.12 desteği ekleniyor, yapılandırma."
+ ],
+ "153": [
+  "evet",
+  "xmliter düğümlere başlık eklemiyordu, hata düzeltiliyor."
+ ],
+ "154": [
+  "evet",
+  "email_validator importunun autoflake tarafından silinmesi hatası düzeltiliyor."
+ ],
+ "155": [
+  "evet",
+  "Hatalı birleştirmeden kalan yinelenen kod kaldırılıyor."
+ ],
+ "156": [
+  "evet",
+  "Python 3'te Content-Type okuma hatası düzeltiliyor."
+ ],
+ "157": [
+  "evet",
+  "Dosya None iken yazma hatası için kontrol ekleniyor."
+ ],
+ "158": [
+  "evet",
+  "Import'larda geçersiz sondaki virgül bırakma hatası düzeltiliyor."
+ ],
+ "159": [
+  "hayir",
+  "Yeni --report seçeneği."
+ ],
+ "160": [
+  "evet",
+  "Pydantic varsayılanlarından gelen kısıtlı bytes hatası düzeltiliyor."
+ ],
+ "161": [
+  "hayir",
+  "Sürüm notu güncellemesi."
+ ],
+ "162": [
+  "hayir",
+  "CI iş akışı eylem sürümü."
+ ],
+ "163": [
+  "hayir",
+  "README düzeltmesi."
+ ],
+ "164": [
+  "belirsiz",
+  "Proxy tünel hata mesajı kesme sınırı artırılıyor; hata mı iyileştirme mi belirsiz."
+ ],
+ "165": [
+  "hayir",
+  "Yeniden düzenleme, davranış aynı."
+ ],
+ "166": [
+  "hayir",
+  "Eski Python sürümü desteği kaldırılıyor."
+ ],
+ "167": [
+  "hayir",
+  "Stdin'den stdout'a yeni özellik."
+ ],
+ "168": [
+  "hayir",
+  "Çözücüyü eklentiye taşıyan yeniden düzenleme."
+ ],
+ "169": [
+  "evet",
+  "libcurl hatalarının düşürdüğü fd/zaman aşımı için geçici çözüm ekleniyor."
+ ],
+ "170": [
+  "evet",
+  "Güvensiz yerlerde geçersiz sondaki virgül üretimi düzeltiliyor."
+ ],
+ "171": [
+  "evet",
+  "Notebook'ta boş satırlar ve hata stili sorunu düzeltiliyor."
+ ],
+ "172": [
+  "evet",
+  "JSON Schema'nın bool kabul etmemesi hatası düzeltiliyor."
+ ],
+ "173": [
+  "evet",
+  "İstek/yanıt oturum cookie'leri hatası düzeltiliyor."
+ ],
+ "174": [
+  "hayir",
+  "Handler düzeyinde template_path geçersiz kılma, yeni özellik."
+ ],
+ "175": [
+  "hayir",
+  "CI bağımlılık kurulum değişikliği."
+ ],
+ "176": [
+  "hayir",
+  "Doküman bölünmesi."
+ ],
+ "177": [
+  "evet",
+  "Yanıt modelinde exclude_unset ve alias hatası düzeltiliyor."
+ ],
+ "178": [
+  "hayir",
+  "CI iş akışı taşınıyor."
+ ],
+ "179": [
+  "evet",
+  "Docstring kapanış tırnaklarının ayrı satıra konması hatası düzeltiliyor."
+ ],
+ "180": [
+  "hayir",
+  "CI iş akışı düzeltmesi."
+ ],
+ "181": [
+  "evet",
+  "Alanların düzgün kapanmasını engelleyen hata düzeltiliyor."
+ ],
+ "182": [
+  "hayir",
+  "Palet yeniden düzenlemesi."
+ ],
+ "183": [
+  "evet",
+  "set_nodelay bozuktu, düzeltiliyor."
+ ],
+ "184": [
+  "evet",
+  "Dinamik miniters hatası düzeltiliyor."
+ ],
+ "185": [
+  "hayir",
+  "README yazım düzeltmesi."
+ ],
+ "186": [
+  "hayir",
+  "Debug çıktısına eklenti bilgisi, yeni özellik."
+ ],
+ "187": [
+  "hayir",
+  "Issue şablonu yazım düzeltmesi."
+ ],
+ "188": [
+  "hayir",
+  "Sürüm notu güncellemesi."
+ ],
+ "189": [
+  "hayir",
+  "Stil ve yorum düzenlemesi."
+ ],
+ "190": [
+  "hayir",
+  "Yeni --verbose seçeneği."
+ ],
+ "191": [
+  "evet",
+  "xmliter_lxml'in tekrarlı düğümlerde yanlış sonuç vermesi düzeltiliyor."
+ ],
+ "192": [
+  "hayir",
+  "Yalnızca test güncelleniyor."
+ ],
+ "193": [
+  "evet",
+  "Adaptörlerdeki küçük hatalar düzeltiliyor."
+ ],
+ "194": [
+  "hayir",
+  "auto_error eklenmesi yeni özellik."
+ ],
+ "195": [
+  "evet",
+  "EWOULDBLOCK sonrası yazma tamponunun değiştirilmesi hatası düzeltiliyor."
+ ],
+ "196": [
+  "evet",
+  "total=None için biçim hatası düzeltiliyor."
+ ],
+ "197": [
+  "hayir",
+  "Katkı belgesi biçim değişikliği."
+ ],
+ "198": [
+  "evet",
+  "process_map'te RLock pickle hatası düzeltiliyor."
+ ],
+ "199": [
+  "evet",
+  "Config'li ama json_encoders'sız modellerde jsonable_encoder hatası düzeltiliyor."
+ ],
+ "200": [
+  "evet",
+  "Oturum ve varsayılan başlıkların sırası hatası düzeltiliyor."
+ ]
+}

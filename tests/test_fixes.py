@@ -105,3 +105,56 @@ def test_custom_patterns_from_toml() -> None:
 def test_invalid_regex_rejected() -> None:
     with pytest.raises(ValueError, match="geçersiz regex"):
         MiningConfig(fix_patterns=["("])
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "fix tests",
+        "test: Fix ResolveTimeoutTestCase",
+        "fix smoothing test",
+        "Fix broken link",
+        "iostream: Fix copy/pasted comment",
+        "Fix style, add comments",
+        "Fix appveyor.yml",
+        "fix: action version",
+        ":lock: Fix development dependencies security (#174)",
+        "✅ Fix frontend test timeout with Starlette Git (#16408)",
+        "👷 Fix checkout GitHub Action fetch-depth",
+    ],
+)
+def test_non_bug_fixes_are_excluded(message: str) -> None:
+    assert not FixClassifier().classify(message).is_fix
+
+
+def test_subject_only_mode() -> None:
+    message = "Add option to disable progress bar.\n\nShould fix GH-1"
+    assert FixClassifier().classify(message).is_fix
+    subject_only = MiningConfig(fix_subject_only=True)
+    assert not FixClassifier(subject_only).classify(message).is_fix
+    assert FixClassifier(subject_only).classify("Fix crash on empty input").is_fix
+
+
+def test_reclassify_updates_mined_output(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    from aegis.mining import mine_repository
+    from aegis.mining.miner import reclassify
+    from tests.gitrepo import GitRepo
+
+    (tmp_path / "r").mkdir()
+    git = GitRepo(tmp_path / "r")
+    git.commit("Add core", {"core.py": "a = 1\n"})
+    git.commit("fix tests", {"core.py": "a = 2\n"}, date="2024-02-01T00:00:00+00:00")
+    git.commit("Fix crash", {"core.py": "a = 3\n"}, date="2024-03-01T00:00:00+00:00")
+    old = MiningConfig(fix_exclude_patterns=[])
+    mine_repository(git.path, tmp_path / "o", old, functions=False)
+    import polars as pl
+
+    from aegis.features.kamei import compute_kamei
+
+    commits = pl.read_parquet(tmp_path / "o" / "commits.parquet")
+    compute_kamei(commits, pl.read_parquet(tmp_path / "o" / "files.parquet")).write_parquet(
+        tmp_path / "o" / "kamei.parquet"
+    )
+    assert reclassify(tmp_path / "o", MiningConfig()) == (2, 1)
+    kamei = pl.read_parquet(tmp_path / "o" / "kamei.parquet").sort("as_of")
+    assert kamei["fix"].to_list() == [0.0, 0.0, 1.0]

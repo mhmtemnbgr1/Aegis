@@ -133,8 +133,26 @@ class MiningConfig(_Section):
         r"\bformatting\b",
         r"\bwhitespace\b",
         r"\bci\b",
+        # #8 elle kontrolünde yanlış fix sayılanlar: yalnız test, link, yorum, stil, CI ve
+        # bağımlılık düzeltmeleri; gitmoji önekleri (✏ yazım, 👷/💚 CI, ✅ test, 🔒 bağımlılık…).
+        r"^tests?\b",
+        r"\btests?:",
+        r"\bfix(e[sd])?\s+(\w+\s+){0,3}tests?\b",
+        r"\blinks?\b",
+        r"\bcomments?\b",
+        r"\bstyle\b",
+        r"\bdependenc(y|ies)\b",
+        r"\bdeps\b",
+        r"\bappveyor\b",
+        r"\b(github )?actions?\b",
+        r"\bworkflows?\b",
+        r"^(✏|👷|💚|✅|🔒|📝|⬆|🔧|🎨|:pencil2:|:construction_worker:|:green_heart:"
+        r"|:white_check_mark:|:lock:|:memo:|:arrow_up:|:wrench:|:art:)",
     ]
     """Commit'in ilk satırında eşleşirse kalıp eşleşmesi fix sayılmaz; hata etiketi yine sayılır."""
+    fix_subject_only: bool = False
+    """True ise fix kalıpları yalnızca commit başlığında (ilk satır) aranır; gövdedeki "should
+    fix #1" gibi geçişler fix sayılmaz."""
     bug_labels: list[str] = [
         "bug",
         "type: bug",

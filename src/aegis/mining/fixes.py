@@ -46,6 +46,7 @@ class FixClassifier:
         self._patterns = [re.compile(p, re.IGNORECASE) for p in config.fix_patterns]
         self._excludes = [re.compile(p, re.IGNORECASE) for p in config.fix_exclude_patterns]
         self._bug_labels = {label.strip().lower() for label in config.bug_labels}
+        self._subject_only = config.fix_subject_only
 
     def classify(
         self,
@@ -60,10 +61,9 @@ class FixClassifier:
         if is_merge:
             return FixClassification(False, (*signals, "merge"), issues)
 
-        keyword = next(
-            (m.group(0).lower() for p in self._patterns if (m := p.search(message))), None
-        )
         subject = message.strip().splitlines()[0] if message.strip() else ""
+        text = subject if self._subject_only else message
+        keyword = next((m.group(0).lower() for p in self._patterns if (m := p.search(text))), None)
         excluded = next(
             (m.group(0).lower() for p in self._excludes if (m := p.search(subject))), None
         )

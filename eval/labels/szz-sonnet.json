@@ -1,0 +1,202 @@
+{
+ "1": [
+  "evet",
+  "INDUCING, liste tiplerine izin veren assert satırını yazdı; fix bu satırın Python 3.7'de List[...] annotasyonunu reddetmesini düzeltiyor."
+ ],
+ "2": [
+  "evet",
+  "INDUCING, özyinelemeli modellerde sonsuz döngüye yol açan create_cloned_field(f) çağrısını ekledi; fix bunu cloned_types ile düzeltiyor."
+ ],
+ "3": [
+  "hayir",
+  "FIX Enum şema hatasını düzeltiyor; silinen satır ilgisiz bir yeniden düzenleme, hata INDUCING'den kaynaklanmıyor."
+ ],
+ "4": [
+  "hayir",
+  "FIX bir özellik ekleme (tag metadata); kaldırılan logger import'u hata düzeltmesi değil."
+ ],
+ "5": [
+  "evet",
+  "INDUCING dosyayı ilk kez yazdı ve hatalı loc=('body', alias) mantığını içeriyordu; taşıma olduğuna dair işaret yok."
+ ],
+ "6": [
+  "evet",
+  "INDUCING alanları Any yerine 'Schema' yaptı, bu da bool şemaları reddetti; fix SchemaOrBool ile düzeltiyor."
+ ],
+ "7": [
+  "hayir",
+  "FIX içe aktarma satırını değiştiriyor; INDUCING yalnızca AppType import'unu ekledi, hata mantığı değil."
+ ],
+ "8": [
+  "evet",
+  "INDUCING, düzeltilen scope'lu SecurityRequirement mantığını ilk kez yazdı; fix bu bloğu kaldırıyor."
+ ],
+ "9": [
+  "evet",
+  "INDUCING, handle içinde self.app'i doğrudan çağırarak arka plan görevleri/başlıkları atlayan mantığı yazdı; fix bunu değiştiriyor."
+ ],
+ "10": [
+  "hayir",
+  "Satır yalnızca taşındı/yeniden düzenlendi; unicode düzeltmesiyle ilgisiz."
+ ],
+ "11": [
+  "hayir",
+  "İşaretli satırlar import/isim yeniden düzenlemesi; fix bytes çıktısına geçiş, hata INDUCING'in satırlarında değil."
+ ],
+ "12": [
+  "hayir",
+  "INDUCING yalnızca str kontrolü ekledi; fix requests v1.0 API değişikliğine uyum, hata INDUCING'den kaynaklanmıyor."
+ ],
+ "13": [
+  "hayir",
+  "Yalnızca bağımlılık sürümü artışı; hata yazan bir mantık değil."
+ ],
+ "14": [
+  "belirsiz",
+  "Dosya bütünüyle yeni görünüyor (yeniden adlandırma olabilir); dict ile tekrar eden anahtarı ezen mantığın kökeni belli değil."
+ ],
+ "15": [
+  "hayir",
+  "INDUCING yalnızca dönüş değerini namedtuple'a sardı; yinelenen alan adı hatası bundan önce de vardı."
+ ],
+ "16": [
+  "hayir",
+  "FIX bir tip/yeniden düzenleme; CaseInsensitiveDict kullanımı --ssl ile --compress hatasının kaynağı değil."
+ ],
+ "17": [
+  "hayir",
+  "INDUCING yalnızca path()'i özelliğe çevirdi/biçimlendirdi; open('w') ile json.dump deseni öncesinde de vardı."
+ ],
+ "18": [
+  "hayir",
+  "FIX bir setup.py'den setup.cfg'ye geçiş, hata düzeltmesi değil."
+ ],
+ "19": [
+  "evet",
+  "İlk commit Report()'u check bilgisi olmadan oluşturup çıkış kodu mantığını yazdı; fix bunu düzeltiyor."
+ ],
+ "20": [
+  "hayir",
+  "Yalnızca tip ek açıklaması düzenlemesi; fix docstring/temizlik, hata yok."
+ ],
+ "21": [
+  "hayir",
+  "INDUCING yalnızca anahtar kelime argümanını değiştirdi; güç operatörü hatası bundan bağımsız."
+ ],
+ "22": [
+  "evet",
+  "md5'ten sha256'ya geçiş cache dosya adını uzattı; fix cache dosya uzunluğunu düzeltiyor."
+ ],
+ "23": [
+  "hayir",
+  "Optional tip notasyonu; fix Python 3.9 desteğini bırakıyor, hata düzeltmesi değil."
+ ],
+ "24": [
+  "hayir",
+  "Yalnızca biçimlendirme; fix tip sözdizimi modernizasyonu."
+ ],
+ "25": [
+  "hayir",
+  "INDUCING yalnızca Set'ten set'e tip değişikliği; fix performans iyileştirmesi."
+ ],
+ "26": [
+  "evet",
+  "INDUCING parantezleri düşüren bloğu tuple hedefi için ayrım yapmadan yazdı; fix tuple istisnası ekliyor."
+ ],
+ "27": [
+  "evet",
+  "INDUCING str(url) çağrısını ekleyerek unicode URL'lerde kodlama hatası yarattı; fix unicode_to_str kullanıyor."
+ ],
+ "28": [
+  "evet",
+  "INDUCING, proje dışında assert ile çöken/scrapy.cfg bulamayan mantığı yazdı; fix NotConfigured fırlatıyor."
+ ],
+ "29": [
+  "evet",
+  "INDUCING PartialDownloadError'ı yeniden denenecek istisnalara ekledi; fix bu davranışı kaldırıyor."
+ ],
+ "30": [
+  "hayir",
+  "INDUCING yalnızca boş yol için '/' ekledi; %2F unquote hatası bundan önce de vardı."
+ ],
+ "31": [
+  "hayir",
+  "İşaretli satır DNS çözücü kurulumu; fix lazy start_requests için yeniden yapılandırma, hata bu satırda değil."
+ ],
+ "32": [
+  "hayir",
+  "İşaretli satırlar imza/tip düzenlemeleri; fix bir refactor."
+ ],
+ "33": [
+  "evet",
+  "INDUCING connectionLost'a from_protocol ve _send_pending_requests ekledi, yanlış hata iletimi ve bekleyen istekler sorunu buradan geliyor."
+ ],
+ "34": [
+  "hayir",
+  "Fix yalnızca tip düzeltmesi; INDUCING is_listlike değişikliği hata değil."
+ ],
+ "35": [
+  "hayir",
+  "Boş şifrenin None olması INDUCING'den önce de vardı; INDUCING satırı yalnızca taşıdı."
+ ],
+ "36": [
+  "hayir",
+  "Fix Python 3 uyumluluk içe aktarma düzenlemesi; INDUCING yalnızca import sırasını değiştirdi."
+ ],
+ "37": [
+  "belirsiz",
+  "Fix Python 2.7 uyumu başlığı altında imzaya parametre ekliyor; INDUCING'in hata yazıp yazmadığı belli değil."
+ ],
+ "38": [
+  "evet",
+  "INDUCING finish'te HEAD yanıtı için ayrım yapmadan chunked bitiş verisi yazdı; fix HEAD kontrolü ekliyor."
+ ],
+ "39": [
+  "belirsiz",
+  "INDUCING bir yeniden düzenleme; fix thread yönetimini baştan tasarlıyor, hatalı satırı belirlemek zor."
+ ],
+ "40": [
+  "hayir",
+  "Fix standart kütüphaneye geçen temizlik; INDUCING yalnızca isim/py2 uyumluluk kaldırma."
+ ],
+ "41": [
+  "evet",
+  "INDUCING yalnızca socket oluşturma hatalarını yakalayan eksik hata işleme yazdı; fix senkron hataları ve kapatmayı düzeltiyor."
+ ],
+ "42": [
+  "evet",
+  "INDUCING CancelledError'ı bağlantıyı kapatmadan sessizce döndürdü; fix conn.close() ekliyor."
+ ],
+ "43": [
+  "hayir",
+  "Yalnızca biçimlendirme/flake8 değişikliği; fix yeni disable özelliği."
+ ],
+ "44": [
+  "hayir",
+  "ncols geçişi önceden vardı; fix dynamic_ncols desteği ekleyen bir iyileştirme."
+ ],
+ "45": [
+  "evet",
+  "INDUCING write'ı file=sys.stdout varsayılanıyla yazdı, yönlendirmeyi bozan hata; fix None varsayılanına geçiyor."
+ ],
+ "46": [
+  "hayir",
+  "INDUCING yalnızca AttributeError yakalamayı ekledi; fix total hesaplamasını taşıyan farklı bir değişiklik."
+ ],
+ "47": [
+  "hayir",
+  "Fix leave=None özelliği ekliyor; INDUCING'in close mantığı hata değil."
+ ],
+ "48": [
+  "hayir",
+  "Yalnızca biçim düzeltmesi; fix py2 desteğini bırakma, hata değil."
+ ],
+ "49": [
+  "hayir",
+  "Fix yalnızca bir yorum ekliyor; INDUCING'de hata yok."
+ ],
+ "50": [
+  "hayir",
+  "Fix doküman referansı düzeltmesi/tamamlama güncellemesi; INDUCING hatalı satırı yazmadı."
+ ]
+}
