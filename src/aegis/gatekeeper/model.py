@@ -15,6 +15,7 @@ kümesindeki temiz commit'leri hatalı sayısına indirir; `smote` hatalı commi
 örneklerle temiz sayısına çıkarır. Yeniden örnekleme yalnızca eğitim kümesine uygulanır.
 """
 
+import math
 import pickle
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -210,18 +211,20 @@ def train_model(
     model.valid_scores = [float(v) for v in valid_prob]
     model.threshold = best_f1_threshold(y_valid, valid_prob)
     model.valid = evaluate(y_valid, valid_prob, effort(split.valid), model.threshold)
-    y_test = split.test["buggy"].to_numpy()
-    test_prob = model.predict_proba(split.test)
-    model.test = evaluate(y_test, test_prob, effort(split.test), model.threshold)
-    model.reliability = reliability(y_test, test_prob)
-    for ratio in BUDGETS:
-        low, _ = model.thresholds(ratio)
-        sent = test_prob >= low
-        model.budget[f"{ratio:g}"] = {
-            "threshold": low,
-            "llm_share": float(sent.mean()),
-            "recall": float(sent[y_test.astype(bool)].mean()) if y_test.any() else float("nan"),
-        }
+    # Test kümesi boş olabilir (ör. kayan pencerede test ayrıca puanlanır, #21).
+    if split.test.height:
+        y_test = split.test["buggy"].to_numpy()
+        test_prob = model.predict_proba(split.test)
+        model.test = evaluate(y_test, test_prob, effort(split.test), model.threshold)
+        model.reliability = reliability(y_test, test_prob)
+        for ratio in BUDGETS:
+            low, _ = model.thresholds(ratio)
+            sent = test_prob >= low
+            model.budget[f"{ratio:g}"] = {
+                "threshold": low,
+                "llm_share": float(sent.mean()),
+                "recall": float(sent[y_test.astype(bool)].mean()) if y_test.any() else math.nan,
+            }
     model.meta = {
         "aegis_version": __version__,
         "trained_at": datetime.now(UTC).isoformat(),

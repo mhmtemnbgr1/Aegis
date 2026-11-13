@@ -100,3 +100,58 @@ def cross_split(d1: pl.DataFrame, target: str, config: TrainingConfig | None = N
         valid_start=valid_start,
         test_start=own.test_start,
     )
+
+
+def split_before(
+    rows: pl.DataFrame,
+    test_start: datetime,
+    config: TrainingConfig | None = None,
+    test: pl.DataFrame | None = None,
+) -> Split:
+    """`test_start`'tan (tampon dahil) önceki satırlarla eğitim ve doğrulama kümeleri.
+
+    Repo içi bölmedeki eğitim:doğrulama oranı korunur; etiketler kümenin kullanıldığı anda
+    bilinenle sınırlanır. `test` verilmezse boş bırakılır (ör. PR test kümesi ayrıca puanlanır).
+    """
+    config = config or TrainingConfig()
+    delay = timedelta(days=config.label_delay_days)
+    pool = rows.filter(pl.col("as_of") < test_start - delay).sort("as_of", maintain_order=True)
+    if pool.height < 2:
+        raise ValueError("test döneminden önce yeterli satır yok")
+    share = config.valid_fraction / (1 - config.test_fraction)
+    valid_start: datetime = pool["as_of"][pool.height - max(1, round(pool.height * share))]
+    train = pool.filter(pl.col("as_of") < valid_start - delay)
+    if train.height == 0:
+        raise ValueError("tampon eğitim kümesini boşaltıyor")
+    return Split(
+        train=labels_as_of(train, valid_start),
+        valid=labels_as_of(pool.filter(pl.col("as_of") >= valid_start), test_start),
+        test=test if test is not None else rows.clear(),
+        valid_start=valid_start,
+        test_start=test_start,
+    )
+
+
+def rolling_windows(
+    rows: pl.DataFrame, n_windows: int = 5, span: float = 0.5
+) -> list[tuple[datetime, datetime]]:
+    """Kayan pencereli (rolling-origin) değerlendirme için test pencereleri (#21).
+
+    Satırların zaman sırasıyla son `span` payı, eşit sayıda satır içeren `n_windows` ardışık
+    pencereye bölünür: [başlangıç, bitiş). Her pencerede model yalnızca pencere başlangıcından
+    (tampon dahil) önceki veriyle eğitilir (`split_before`); tek bir test dönemine göre daha çok
+    test örneği ve pencereler arası bir dağılım verir.
+    """
+    if not 0 < span < 1 or n_windows < 1:
+        raise ValueError("span (0, 1) aralığında, n_windows ≥ 1 olmalı")
+    times = rows.sort("as_of", maintain_order=True)["as_of"]
+    n = times.len()
+    first = n - round(n * span)
+    if first <= 0 or n - first < n_windows:
+        raise ValueError("pencereler için yeterli satır yok")
+    bounds = [first + round(i * (n - first) / n_windows) for i in range(n_windows + 1)]
+    end = times[-1] + timedelta(microseconds=1)
+    return [
+        (times[bounds[i]], times[bounds[i + 1]] if bounds[i + 1] < n else end)
+        for i in range(n_windows)
+    ]

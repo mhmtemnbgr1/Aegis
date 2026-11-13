@@ -91,7 +91,7 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [x] SHAP açıklamaları
 - [x] `aegis train` ve `aegis score`
 - [x] Sezgisel gatekeeper'ın eğitilmiş modelle değiştirilmesi
-- [ ] Maliyet–recall eğrisi ve iki işletme noktası (ilk sonuçlar)
+- [x] Maliyet–recall eğrisi ve iki işletme noktası (ilk sonuçlar)
 
 ## Faz 4 — Bug-Fix Hafızası · 22 Kas
 

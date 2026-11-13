@@ -102,3 +102,26 @@ def test_cross_split_needs_other_repos() -> None:
     target = _d1(100).with_columns(pl.lit("t").alias("repo"))
     with pytest.raises(ValueError, match="yeterli commit"):
         cross_split(target, "t", TrainingConfig(label_delay_days=5))
+
+
+def test_split_before_and_rolling_windows() -> None:
+    from aegis.gatekeeper.split import rolling_windows, split_before
+
+    rows = _d1(200, fixes={10: 3, 150: 3})
+    cfg = TrainingConfig(label_delay_days=5)
+    windows = rolling_windows(rows, n_windows=4, span=0.5)
+    assert len(windows) == 4
+    assert windows[0][0] == START + timedelta(days=100)
+    assert all(a[1] == b[0] for a, b in zip(windows, windows[1:], strict=False))
+    covered = sum(
+        rows.filter((pl.col("as_of") >= s) & (pl.col("as_of") < e)).height for s, e in windows
+    )
+    assert covered == 100
+    split = split_before(rows, windows[0][0], cfg)
+    assert split.valid["as_of"].max() < windows[0][0] - timedelta(days=5)
+    assert split.train["as_of"].max() < split.valid_start - timedelta(days=5)
+    assert split.train["buggy"].sum() == 1 and split.test.height == 0
+    with pytest.raises(ValueError):
+        rolling_windows(rows, span=1.0)
+    with pytest.raises(ValueError):
+        split_before(rows, START, cfg)
