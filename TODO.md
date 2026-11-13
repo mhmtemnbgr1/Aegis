@@ -100,7 +100,7 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [x] Embedding ve vektör indeksi (LSA + numpy; Ollama isteğe bağlı)
 - [x] Hibrit arama (yapısal + BM25 + vektör, RRF)
 - [x] Zamansal filtre
-- [ ] Getirme değerlendirmesi (Recall@k, MRR)
+- [x] Getirme değerlendirmesi (Recall@k, MRR) — hibrit MRR 0,582
 - [ ] `aegis index`
 - [ ] Hata kartlarının analiz prompt'una eklenmesi (`memory_refs`)
 - [ ] Hafıza sinyalinin gatekeeper'a özellik olarak eklenmesi
