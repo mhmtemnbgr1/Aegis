@@ -104,7 +104,7 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [x] `aegis index` (artımlı kartlar, sürümlü indeks)
 - [x] Hata kartlarının analiz prompt'una eklenmesi (`memory_refs`; prompt v2)
 - [x] Hafıza sinyalinin gatekeeper'a özellik olarak eklenmesi (dar bütçede +4–7 puan)
-- [ ] Durum arşivinin Release asset olarak yayınlanması (`aegis publish-state`) ve cache — demo için gerekli
+- [x] Durum arşivinin Release asset olarak yayınlanması (`aegis publish-state`) ve cache — demo için gerekli
 - [ ] *(opsiyonel)* `main` merge'lerinde hafıza ve model güncelleme workflow'u
 
 ## ~~Faz 5 — Patch Üretimi ve Doğrulama~~ (v2, kapsam dışı)

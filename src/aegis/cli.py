@@ -19,7 +19,7 @@ from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, T
 from rich.table import Table
 
 from aegis import __version__
-from aegis.config import load_config
+from aegis.config import AegisConfig, load_config
 from aegis.diff import filter_diff, git_commit_messages, git_diff, load_ignore_spec, parse_diff
 from aegis.features import compute_kamei
 from aegis.gatekeeper import HeuristicGatekeeper, RiskBand
@@ -50,6 +50,7 @@ for _stream in (sys.stdout, sys.stderr):
         _stream.reconfigure(errors="replace")
 if TYPE_CHECKING:
     from aegis.gatekeeper.factory import ModelGatekeeper
+    from aegis.state import StatePaths
 
 console = Console()
 
@@ -712,6 +713,111 @@ def _dataset_pr(root: Path, clone_root: Path, target: Path) -> None:
         )  # fmt: skip
     console.print(table)
     console.print(f"[dim]Çıktı: {target}[/dim]")
+
+
+def _state_paths(config: AegisConfig) -> "StatePaths":
+    from aegis.state import StatePaths
+
+    return StatePaths(
+        data=Path(config.mining.data_dir),
+        models=Path(config.gatekeeper.models_dir),
+        memory=Path(config.memory.index_path),
+    )
+
+
+def _state_client(repo: Path) -> GitHubClient | None:
+    url = remote_url(repo)
+    gh_repo = github_repository(url) if url else None
+    token = os.environ.get("GITHUB_TOKEN")
+    return GitHubClient(token, gh_repo) if gh_repo and token else None
+
+
+@app.command(name="publish-state")
+def publish_state_cmd(
+    repo: Path = typer.Argument(Path("."), help="Madenciliği yapılmış yerel git deposu."),
+    out: Path | None = typer.Option(
+        None, "--out", help="Arşivi yalnızca bu dosyaya yaz; GitHub'a yükleme."
+    ),
+    config_path: Path | None = typer.Option(None, "--config", help="Yapılandırma dosyası."),
+) -> None:
+    """Madencilik verisi, modeller ve hafızayı tek arşivde toplayıp Release asset'i yükler (#45).
+
+    Arşiv `[state].release_tag` etiketli Release'e `aegis-state-<repo>.tar.gz` adıyla yüklenir
+    (Release yoksa oluşturulur, aynı adlı eski asset değiştirilir). GITHUB_TOKEN gerekir.
+    """
+    from aegis.mining import repo_slug
+    from aegis.state import asset_name, pack_state, publish_state
+
+    config = load_config(Path("."), config_path)
+    slug = repo_slug(repo)
+    try:
+        archive, manifest = pack_state(
+            slug,
+            _state_paths(config),
+            model_name=config.gatekeeper.model_name,
+            include_memory=not config.memory.embedding_model.startswith(("lsa", "local")),
+        )
+    except FileNotFoundError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(2) from exc
+    size = f"{len(archive) / 1e6:.1f} MB · {len(manifest['files'])} dosya"
+    if out is not None:
+        out.write_bytes(archive)
+        console.print(f"Arşiv: {out} ({size})")
+        return
+    client = _state_client(repo)
+    if client is None:
+        console.print(
+            "[red]Yükleme için GitHub reposu ve GITHUB_TOKEN gerekir (ya da --out).[/red]"
+        )
+        raise typer.Exit(2)
+    url = publish_state(client, config.state.release_tag, slug, archive)
+    console.print(f"Yüklendi: {asset_name(slug)} ({size}) → {url}")
+
+
+@app.command(name="fetch-state")
+def fetch_state_cmd(
+    repo: Path = typer.Argument(Path("."), help="Git deposu (Action'da checkout dizini)."),
+    if_missing: bool = typer.Option(
+        False, "--if-missing", help="Veri dizini zaten varsa (ör. cache'ten) indirme."
+    ),
+    config_path: Path | None = typer.Option(None, "--config", help="Yapılandırma dosyası."),
+) -> None:
+    """Durum arşivini Release'ten indirip açar (#45). Her zaman 0 ile çıkar (fail-open):
+    arşiv yoksa ya da indirilemezse inceleme sezgisel kuralla ve hafızasız sürer."""
+    from aegis.mining import repo_slug
+    from aegis.state import fetch_state
+
+    config = load_config(Path("."), config_path)
+    slug = repo_slug(repo)
+    paths = _state_paths(config)
+    if if_missing and (paths.data / slug / "commits.parquet").is_file():
+        console.print(f"Durum zaten var ({paths.data / slug}); indirilmedi.")
+        return
+    client = _state_client(repo)
+    if client is None:
+        console.print("[yellow]GitHub reposu ya da GITHUB_TOKEN yok; durum indirilmedi.[/yellow]")
+        return
+    try:
+        manifest = fetch_state(client, config.state.release_tag, slug, paths)
+    except Exception as exc:  # fail-open
+        console.print(f"[yellow]Durum arşivi alınamadı: {exc}[/yellow]")
+        return
+    if manifest is None:
+        console.print(f"[yellow]'{config.state.release_tag}' Release'inde arşiv yok.[/yellow]")
+        return
+    console.print(
+        f"Durum alındı: {slug} · head {str(manifest.get('head_sha'))[:10]} · "
+        f"{len(manifest['files'])} dosya · {manifest['created_at'][:10]}"
+    )
+    cards = paths.data / slug / "cards.jsonl"
+    if not manifest.get("memory_included") and cards.is_file():
+        from aegis.memory.cards import read_cards
+        from aegis.memory.index import build_index, digest
+
+        index = build_index(read_cards(cards), config.memory.embedding_model)
+        index.save(paths.memory / slug, digest(cards))
+        console.print(f"Hafıza indeksi kartlardan kuruldu: {len(index.ids)} kart")
 
 
 @app.command(name="eval")
