@@ -79,11 +79,6 @@ input[type=text] { width: 100%; margin-top: 10px; padding: 8px 10px; border-radi
 .chip.hayir { background: var(--del-hi); }
 .chip.belirsiz { background: var(--maybe); color: #fff; }
 .empty { color: var(--muted); font-style: italic; }
-.suggest { margin-top: 18px; border: 1px dashed var(--border); border-radius: 10px; padding: 10px 12px; background: var(--code); }
-.suggest .lbl { font-weight: 700; }
-.suggest .lbl.evet { color: var(--yes); } .suggest .lbl.hayir { color: var(--no); } .suggest .lbl.belirsiz { color: var(--maybe); }
-.suggest p { margin: 4px 0 0; }
-.suggest small { color: var(--muted); }
 kbd { border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; font-size: 12px; }
 @media (max-width: 640px) { .decide { grid-template-columns: 1fr; } }
 </style>
@@ -114,8 +109,6 @@ kbd { border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 
 <script>
 const ITEMS = __DATA__;
 const LABELS = {evet: "Evet", hayir: "Hayır", belirsiz: "Belirsiz"};
-const MODELS = [...new Set(ITEMS.flatMap(it => (it.suggestions || []).map(s => s.model)))];
-function disagree(it) { return new Set((it.suggestions || []).map(s => s.label)).size > 1; }
 const KEY = "szz-review-__TITLE__";
 let answers = {};
 try { answers = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { answers = {}; }
@@ -156,8 +149,6 @@ function render() {
     <div class="commit"><span class="tag ind">INDUCING</span><span class="title">${esc(it.inducing_subject)}</span>
       <span class="meta">${esc(it.inducing_date)} · <a href="${esc(it.inducing_url)}" target="_blank" rel="noopener">GitHub'da aç</a></span></div>
     ${sections}
-    ${(it.suggestions || []).length ? `<div class="suggest"><small>Diğer etiketleyiciler · kendi kararınızı aşağıdan verin${disagree(it) ? " · <b>etiketleyiciler ayrışıyor</b>" : ""}</small>
-      ${it.suggestions.map(s => `<p><b style="text-transform:capitalize">${esc(s.model)}</b>: <span class="lbl ${esc(s.label)}">${LABELS[s.label] || esc(s.label)}</span> — ${esc(s.reason)}</p>`).join("")}</div>` : ""}
     <div class="decide">
       <button class="yes ${a.correct === "evet" ? "on" : ""}" data-v="evet"><b>Evet</b><small>Hatalı satırı bu commit yazdı</small></button>
       <button class="no ${a.correct === "hayir" ? "on" : ""}" data-v="hayir"><b>Hayır</b><small>Sadece biçim/taşıma ya da fix değil</small></button>
@@ -186,8 +177,7 @@ function chips() {
   const count = v => ITEMS.filter(it => (answers[id(it)] || {}).correct === v).length;
   document.getElementById("bar").style.width = (100 * done / ITEMS.length) + "%";
   document.getElementById("stats").textContent =
-    `${done}/${ITEMS.length} işaretlendi · evet ${count("evet")} · hayır ${count("hayir")} · belirsiz ${count("belirsiz")}` +
-    (MODELS.length ? " · " + MODELS.map(m => `${m} ile aynı ${ITEMS.filter(it => { const c = (answers[id(it)] || {}).correct; const s = (it.suggestions || []).find(x => x.model === m); return c && s && s.label === c; }).length}/${done}`).join(" · ") : "");
+    `${done}/${ITEMS.length} işaretlendi · evet ${count("evet")} · hayır ${count("hayir")} · belirsiz ${count("belirsiz")}`;
   document.getElementById("chips").innerHTML = ITEMS.map((it, i) =>
     `<button class="chip ${(answers[id(it)] || {}).correct || ""} ${i === cur ? "cur" : ""}" data-i="${i}">${it.no}</button>`).join("");
   document.querySelectorAll(".chip").forEach(b => b.onclick = () => go(+b.dataset.i));
@@ -204,8 +194,8 @@ document.addEventListener("keydown", e => {
 
 document.getElementById("export").onclick = () => {
   const q = s => '"' + String(s ?? "").replace(/"/g, '""') + '"';
-  const rows = [["no", "fix_sha", "inducing_sha", ...MODELS.map(m => "suggested_" + m), "correct", "note"].join(",")].concat(
-    ITEMS.map(it => { const a = answers[id(it)] || {}; const sug = MODELS.map(m => ((it.suggestions || []).find(x => x.model === m) || {}).label || ""); return [it.no, it.fix_sha, it.inducing_sha, ...sug, a.correct || "", a.note || ""].map(q).join(","); }));
+  const rows = [["no", "fix_sha", "inducing_sha", "correct", "note"].join(",")].concat(
+    ITEMS.map(it => { const a = answers[id(it)] || {}; return [it.no, it.fix_sha, it.inducing_sha, a.correct || "", a.note || ""].map(q).join(","); }));
   const blob = new Blob(["﻿" + rows.join("\n")], {type: "text/csv;charset=utf-8"});
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);

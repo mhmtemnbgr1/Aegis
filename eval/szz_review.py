@@ -172,15 +172,6 @@ def build(data_dir: Path, repo: Path, sample_csv: Path) -> list[dict[str, Any]]:
 def main() -> None:
     data_dir, repo, sample_csv, out = (Path(a) for a in sys.argv[1:5])
     items = build(data_dir, repo, sample_csv)
-    # İsteğe bağlı ek argümanlar: başka etiketleyicilerin dosyaları {"<no>": [etiket, gerekçe]}.
-    for extra in sys.argv[5:]:
-        model = Path(extra).stem.rsplit("-", 1)[-1]
-        suggestions = json.loads(Path(extra).read_text("utf-8"))
-        for it in items:
-            if (s := suggestions.get(str(it["no"]))) is not None:
-                it.setdefault("suggestions", []).append(
-                    {"model": model, "label": s[0], "reason": s[1]}
-                )
     template = (Path(__file__).parent / "szz_review_template.html").read_text("utf-8")
     page = template.replace("__TITLE__", html.escape(data_dir.name)).replace(
         "__DATA__", json.dumps(items, ensure_ascii=False).replace("</", "<\\/")
