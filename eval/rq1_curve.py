@@ -41,7 +41,8 @@ from aegis.gatekeeper.split import labels_as_of, rolling_windows, split_before
 SHARES = [round(x, 2) for x in np.linspace(0, 1, 21)]
 METHODS = ("lr", "rf", "lr+", "rf+", "lr+m", "rf+m", "heuristic")
 """`+`: Kamei + riskli yol + test oranı; `+m`: ayrıca hafıza sinyali (#29); `@5y`: yalnızca
-pencereden önceki son 5 yılla eğitim (ör. `lr+@5y`; LightGBM ve 5 yıl #21/#8 koşularında ölçüldü)."""
+pencereden önceki son 5 yılla eğitim (ör. `lr+@5y`). LightGBM ve 5 yıl #21/#8 koşularında
+ölçüldü."""
 SHOWN = ("lr", "lr+", "lr+m", "rf+m", "heuristic")
 """Eğride çizilen yöntemler (okunabilirlik için)."""
 SEEDS = (0, 1, 2, 3, 4)
