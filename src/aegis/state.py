@@ -57,9 +57,19 @@ def asset_name(slug: str) -> str:
 
 
 def pack_state(
-    slug: str, paths: StatePaths, *, model_name: str = "lr", include_memory: bool = True
+    slug: str,
+    paths: StatePaths,
+    *,
+    model_name: str = "lr",
+    include_memory: bool = True,
+    target: str | None = None,
 ) -> tuple[bytes, dict[str, Any]]:
-    """Arşivin baytları ve sürüm kaydı. Olmayan bölümler atlanır; veri dizini zorunludur."""
+    """Arşivin baytları ve sürüm kaydı. Olmayan bölümler atlanır; veri dizini zorunludur.
+
+    `target`: arşivdeki repo kimliği (varsayılan `slug`). Ör. `httpie__cli` verisi, Action'ın
+    çalışacağı fork'un kimliğiyle (`kullanici__cli`) paketlenir; fork o adla arar.
+    """
+    target = target or slug
     sections = paths.sections(slug, include_memory=include_memory)
     model_file = f"{model_name}-none.pkl"
     if not sections[f"data/{slug}"].is_dir():
@@ -73,7 +83,8 @@ def pack_state(
             for path in sorted(p for p in directory.rglob("*") if p.is_file()):
                 if prefix.startswith("models/") and path.name != model_file:
                     continue
-                name = f"{prefix}/{path.relative_to(directory).as_posix()}"
+                arc_prefix = prefix if prefix == "models/all" else prefix.replace(slug, target, 1)
+                name = f"{arc_prefix}/{path.relative_to(directory).as_posix()}"
                 tar.add(path, arcname=name)
                 files.append(name)
         meta_path = paths.data / slug / "meta.json"
@@ -81,7 +92,8 @@ def pack_state(
         manifest = {
             "schema_version": SCHEMA_VERSION,
             "aegis_version": __version__,
-            "repo": slug,
+            "repo": target,
+            "source_repo": slug,
             "head_sha": meta.get("head_sha"),
             "created_at": datetime.now(UTC).isoformat(),
             "model": model_file,

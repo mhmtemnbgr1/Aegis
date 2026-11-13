@@ -172,6 +172,16 @@ def test_cli_state_commands(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
     assert skipped.exit_code == 0 and "zaten var" in skipped.output
 
 
+def test_pack_as_another_repo(tmp_path: Path) -> None:
+    archive, manifest = pack_state("o__r", _populate(tmp_path / "src"), target="me__r")
+    assert manifest["repo"] == "me__r" and manifest["source_repo"] == "o__r"
+    assert "data/me__r/commits.parquet" in manifest["files"]
+    assert "models/all/lr-none.pkl" in manifest["files"]
+    target = _paths(tmp_path / "dst")
+    unpack_state(archive, target)
+    assert (target.data / "me__r" / "cards.jsonl").is_file()
+
+
 def test_archive_keeps_only_runtime_model_and_can_skip_memory(tmp_path: Path) -> None:
     paths = _populate(tmp_path / "src")
     (paths.models / "o__r" / "rf-smote.pkl").write_bytes(b"deney")  # deney varyantı

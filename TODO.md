@@ -129,7 +129,7 @@ Gereklilikler: [docs/presentation.md](docs/presentation.md)
 
 - [ ] Tez metni
 - [ ] Kaynakçanın doğrulanması
-- [ ] Demo reposu ve demo PR'ları
+- [ ] Demo reposu ve demo PR'ları — yerelde hazır ve prova edildi (`eval/demo/`); fork'ta canlı çalıştırma bekliyor
 - [ ] Canlı demo provası ve yedek video
 - [ ] Jüri sorularının sonuç rakamlarıyla güncellenmesi
 - [ ] *(opsiyonel)* Veri setinin açık lisansla yayınlanması
