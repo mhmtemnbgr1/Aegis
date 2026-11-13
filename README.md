@@ -74,7 +74,13 @@ aegis score main..HEAD --model .aegis/models/<slug>/lr-none.pkl   # skor, bant, 
 
 `[gatekeeper] mode = "model"` ile `aegis score` modeli kendisi bulur; model ya da madencilik geçmişi yoksa sezgisel kurala döner.
 
-Planlanan (Faz 3–4): `aegis index`, `aegis publish-state`.
+Bug-fix hafızası (Faz 4):
+
+```bash
+aegis index .                     # fix commit'lerinden hata kartları (artımlı)
+```
+
+Planlanan (Faz 4): embedding ve hibrit arama, `aegis publish-state`.
 
 ### GitHub Action
 

@@ -74,6 +74,21 @@ class GatekeeperConfig(_Section):
         return self
 
 
+class MemoryConfig(_Section):
+    """Bug-fix hafızası (Katman 2, FR-20…FR-24)."""
+
+    index_path: str = ".aegis/memory"
+    embedding_model: str = "local"
+    top_k: int = Field(default=3, gt=0)
+    retrieval: Literal["hybrid", "vector", "structural"] = "hybrid"
+    max_functions_per_card: int = Field(default=3, gt=0)
+    """Bir kartta saklanan en çok fonksiyon (önceki/sonraki kod)."""
+    max_code_lines: int = Field(default=60, gt=0)
+    """Kartta fonksiyon başına en çok satır; uzun fonksiyonlar kırpılır."""
+    max_diff_lines: int = Field(default=120, gt=0)
+    """Karttaki fix diff'inin en çok satırı."""
+
+
 class FiltersConfig(_Section):
     max_changed_lines_per_file: int | None = Field(default=1500, gt=0)
 
@@ -176,6 +191,7 @@ class MiningConfig(_Section):
         r"(^|/)tests?/",
         r"(^|/)test_[^/]*\.py$",
         r"_tests?\.py$",
+        r"(^|/)tests?\.py$",
         r"(^|/)conftest\.py$",
     ]
     """Eşleşen yollar SZZ'de kaynak sayılmaz; yalnız testlere dokunan fix'ler elenir."""
@@ -214,6 +230,7 @@ class TrainingConfig(_Section):
 class AegisConfig(_Section):
     gatekeeper: GatekeeperConfig = GatekeeperConfig()
     filters: FiltersConfig = FiltersConfig()
+    memory: MemoryConfig = MemoryConfig()
     agents: dict[str, AgentConfig] = {}
     review: ReviewConfig = ReviewConfig()
     mining: MiningConfig = MiningConfig()
