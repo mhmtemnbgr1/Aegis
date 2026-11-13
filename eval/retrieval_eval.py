@@ -120,6 +120,10 @@ def main() -> None:
         if part:
             lines += table(part, slug) + [""]
     print("\n".join(lines))
+    # Sorgu başına sonuçlar: güven aralıkları ve sonuç belgesi için (eval/results.py).
+    import json
+
+    Path("eval/reports/retrieval.json").write_text(json.dumps(rows, indent=0), "utf-8")
 
 
 if __name__ == "__main__":

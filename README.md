@@ -53,6 +53,10 @@ PR'da çıkan sonuç şöyle görünür:
 
 Her faz bir önceki fazın çalışan sistemini derinleştirir. Teslim Aralık 2026 sonu; haftalık takvim ve kesme çizgileri [TODO.md](TODO.md) içinde. Ayrıntılı görevler [TODO.md](TODO.md) dosyasında ve [GitHub Issues](https://github.com/mhmtemnbgr1/Aegis/issues) altında.
 
+## Sonuçlar
+
+LLM gerektirmeyen tüm sonuçlar (veri, etiket kalitesi, risk modeli, maliyet–recall eğrisi, hafıza getirme) güven aralıkları ve testlerle [docs/results.md](docs/results.md) içinde; `uv run python eval/results.py` ile yeniden üretilir.
+
 ## Kullanım
 
 ### Yerelde

@@ -117,7 +117,7 @@ Düzeltme ve test ajanları, Docker sandbox, doğrulayıcı, BugsInPy ve suggest
 - [ ] RQ1: ucuz LLM triage taban çizgisi
 - [ ] RQ2: hafızasız / plasebo / vektör / hibrit karşılaştırması
 - [ ] `aegis eval` ile deneyler
-- [ ] İstatistiksel testler, tablolar, grafikler
+- [ ] İstatistiksel testler, tablolar, grafikler — LLM'siz kısım hazır (`docs/results.md`); LLM deneyleri bekliyor
 - [ ] Dogfooding verileri
 - [ ] *(opsiyonel)* RQ4: PR-Agent karşılaştırması (aynı yerel model)
 - [ ] *(opsiyonel)* RQ5: kör kullanıcı çalışması (6–10 geliştirici)

@@ -39,11 +39,12 @@ from aegis.gatekeeper.model import FEATURES, FULL_FEATURES, MEMORY_FEATURES, tra
 from aegis.gatekeeper.split import labels_as_of, rolling_windows, split_before
 
 SHARES = [round(x, 2) for x in np.linspace(0, 1, 21)]
-METHODS = ("lr", "rf", "lr+", "rf+", "lr+m", "rf+m", "heuristic")
+METHODS = ("lr", "lr+", "lr+m", "lr+mp", "rf+", "rf+m", "rf+mp", "heuristic")
 """`+`: Kamei + riskli yol + test oranı; `+m`: ayrıca hafıza sinyali (#29); `@5y`: yalnızca
-pencereden önceki son 5 yılla eğitim (ör. `lr+@5y`). LightGBM ve 5 yıl #21/#8 koşularında
-ölçüldü."""
-SHOWN = ("lr", "lr+", "lr+m", "rf+m", "heuristic")
+pencereden önceki son 5 yılla eğitim (ör. `lr+@5y`); `+mp`: hafıza plasebosu — hafıza özellikleri
+commit'ler arasında karıştırılır (dağılım aynı, bilgi yok), kazancın içerikten geldiğini sınar.
+LightGBM ve 5 yıl #21/#8 koşularında ölçüldü."""
+SHOWN = ("lr+", "lr+m", "lr+mp", "rf+m", "heuristic")
 """Eğride çizilen yöntemler (okunabilirlik için)."""
 SEEDS = (0, 1, 2, 3, 4)
 MIN_PRS = 200
@@ -112,6 +113,9 @@ def model_scores(
 ) -> list[np.ndarray]:
     """Her PR grubu için commit modeli → PR skorları (RF/LightGBM: tohumlar üzerinden ortalama)."""
     base, _, window = name.partition("@")
+    placebo = base.endswith("+mp")
+    if placebo:
+        base = base.removesuffix("p")
     if base.endswith("+m"):
         features = MEMORY_FEATURES
     elif base.endswith("+"):
@@ -121,6 +125,13 @@ def model_scores(
     model_name = base.removesuffix("+m").rstrip("+")
     if window == "5y":
         commits = commits.filter(pl.col("as_of") >= start - timedelta(days=round(5 * 365.25)))
+    if placebo:
+        # Hafıza değerleri commit'ler arasında sabit tohumla karıştırılır (eğitim ve puanlama).
+        rng = np.random.default_rng(SEEDS[0])
+        perm = rng.permutation(commits.height)
+        commits = commits.with_columns(
+            [commits[c].gather(perm).alias(c) for c in ("mem_func_bugs", "mem_file_bugs")]
+        )
     split = split_before(commits, start, cfg)
     needed = {s for g in groups for c in g["commits"] for s in c}
     rows = commits.filter(pl.col("sha").is_in(needed))
@@ -212,14 +223,14 @@ def report(records: list[dict[str, Any]]) -> str:
     lines.append("| --- | --- | --- |")
     i = SHARES.index(COST_SHARE)
     for a, b in (
-        ("lr+", "heuristic"),
         ("lr+m", "heuristic"),
         ("rf+m", "heuristic"),
-        ("lr+", "lr"),
-        ("rf+", "rf"),
         ("lr+m", "lr+"),
         ("rf+m", "rf+"),
-        ("lr+m", "rf+m"),
+        ("lr+mp", "lr+"),
+        ("rf+mp", "rf+"),
+        ("lr+m", "lr+mp"),
+        ("rf+m", "rf+mp"),
     ):
         pairs = [(r[a]["curve"][i], r[b]["curve"][i]) for r in records]
         pairs = [(x, z) for x, z in pairs if not (math.isnan(x) or math.isnan(z))]
@@ -251,6 +262,8 @@ COLORS = {
     "lr+@5y": "#db2777",
     "lr+m": "#be185d",
     "rf+m": "#047857",
+    "lr+mp": "#a8a29e",
+    "rf+mp": "#d6d3d1",
     "heuristic": "#dc2626",
     "random": "#9a9a9a",
 }
