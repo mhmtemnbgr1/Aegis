@@ -32,6 +32,7 @@ from sklearn.preprocessing import FunctionTransformer, StandardScaler
 from aegis import __version__
 from aegis.features.extra import EXTRA
 from aegis.features.kamei import KAMEI
+from aegis.features.memory import MEMORY
 from aegis.gatekeeper.calibration import (
     Calibrator,
     Method,
@@ -52,6 +53,8 @@ FEATURES: tuple[str, ...] = tuple(KAMEI)
 """Yalnızca 14 Kamei metriği (taban çizgisi)."""
 FULL_FEATURES: tuple[str, ...] = (*KAMEI, *EXTRA)
 """Kamei + Aegis'e özgü diff özellikleri: riskli yol, test değişim oranı (FR-12)."""
+MEMORY_FEATURES: tuple[str, ...] = (*KAMEI, *EXTRA, *MEMORY)
+"""Tam set + hafıza sinyali: değişen fonksiyon ve dosyalardaki geçmiş hata kartı sayısı (#29)."""
 
 
 def make_model(name: ModelName, *, balanced: bool = False, seed: int = 0) -> Any:

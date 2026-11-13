@@ -103,7 +103,7 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [x] Getirme değerlendirmesi (Recall@k, MRR) — hibrit MRR 0,582
 - [ ] `aegis index`
 - [ ] Hata kartlarının analiz prompt'una eklenmesi (`memory_refs`)
-- [ ] Hafıza sinyalinin gatekeeper'a özellik olarak eklenmesi
+- [x] Hafıza sinyalinin gatekeeper'a özellik olarak eklenmesi (dar bütçede +4–7 puan)
 - [ ] Durum arşivinin Release asset olarak yayınlanması (`aegis publish-state`) ve cache — demo için gerekli
 - [ ] *(opsiyonel)* `main` merge'lerinde hafıza ve model güncelleme workflow'u
 
