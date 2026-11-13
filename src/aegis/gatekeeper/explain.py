@@ -44,6 +44,8 @@ TEXT: dict[str, Any] = {
     "exp": lambda v: f"yazarın bu repoda {_fmt(v)} önceki commit'i var",
     "rexp": lambda v: f"yazarın yakın dönem deneyimi {v:.1f} (yeni commit'ler daha ağır)",
     "sexp": lambda v: f"yazarın bu alt sistemlerde {_fmt(v)} önceki commit'i var",
+    "n_commits": lambda v: f"PR {_fmt(v)} commit içeriyor",
+    "n_authors": lambda v: f"PR'da {_fmt(v)} farklı yazar var",
 }
 """Özellik adı → değeri içeren Türkçe cümle."""
 
@@ -95,11 +97,17 @@ def _saabas(estimator: Any, x: NDArray[np.float64]) -> tuple[NDArray[np.float64]
     return total / n, base / n
 
 
+def _features(model: Any) -> tuple[str, ...]:
+    from aegis.gatekeeper.model import FEATURES
+
+    return tuple(getattr(model, "features", FEATURES))
+
+
 def contributions(model: Any, frame: pl.DataFrame) -> tuple[NDArray[np.float64], float]:
     """(n × özellik) katkı matrisi ve taban değer; katkılar + taban = ham model çıktısı."""
     from aegis.gatekeeper.model import matrix
 
-    x = matrix(frame)
+    x = matrix(frame, _features(model))
     if model.name == "lr":
         return _linear(model.estimator, x)
     if model.name == "lightgbm":
@@ -118,15 +126,14 @@ def explain(
     PR yorumunda bu kullanılır: ilişkili özellikler (ör. NF, ND, LA) doğrusal modelde ters işaretli
     katsayı alabildiği için "5 dosya değişti (riski azaltıyor)" gibi sezgiye aykırı cümleler çıkar.
     """
-    from aegis.gatekeeper.model import FEATURES
-
+    features = _features(model)
     phi, _ = contributions(model, frame)
-    x = frame.select(FEATURES).to_numpy().astype(np.float64)
+    x = frame.select(features).to_numpy().astype(np.float64)
     out: list[list[Explanation]] = []
     for row, values in zip(phi, x, strict=True):
         key = -row if increasing_only else -np.abs(row)
         top = [i for i in np.argsort(key, kind="stable") if not increasing_only or row[i] > 0][:k]
-        out.append([Explanation(FEATURES[i], float(values[i]), float(row[i])) for i in top])
+        out.append([Explanation(features[i], float(values[i]), float(row[i])) for i in top])
     return out
 
 

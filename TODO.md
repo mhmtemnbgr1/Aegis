@@ -86,7 +86,7 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [x] LR, Random Forest ve LightGBM (`aegis train`)
 - [x] Sınıf dengesizliği yöntemleri
 - [x] Repo içi ve repolar arası değerlendirme
-- [ ] PR düzeyinde etiket ve özellikler
+- [x] PR düzeyinde etiket ve özellikler
 - [x] Kalibrasyon, bütçe tabanlı eşik, risk bantları
 - [x] SHAP açıklamaları
 - [x] `aegis train` ve `aegis score`
