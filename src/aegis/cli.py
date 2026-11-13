@@ -269,7 +269,7 @@ def train(
     model eğitir; D1'de olmayan yeni repolar bu modeli kullanır.
     """
     # scikit-learn yalnızca eğitimde gerekir; diğer komutlar (ör. review) onu yüklemez.
-    from aegis.gatekeeper.model import FULL_FEATURES, IMBALANCE, MODELS, train_model
+    from aegis.gatekeeper.model import IMBALANCE, MEMORY_FEATURES, MODELS, train_model
     from aegis.mining.prs import PR_FEATURES
 
     if TYPE_CHECKING:
@@ -330,7 +330,7 @@ def train(
             imbalance=imbalance,
             calibration=cast("Method", method),
             seed=seed,
-            features=PR_FEATURES if level == "pr" else FULL_FEATURES,
+            features=PR_FEATURES if level == "pr" else MEMORY_FEATURES,
         )
         suffix = "-cross" if scenario == "cross" else ""
         prefix = "pr-" if level == "pr" else ""
@@ -436,10 +436,17 @@ def score(
 
 def _score_with_model(gk: "ModelGatekeeper") -> None:
     # scikit-learn yalnızca model kullanılırken yüklenir.
-    from aegis.gatekeeper.score import load_history, range_commits, score_range
+    from aegis.gatekeeper.score import load_cards, load_history, range_commits, score_range
 
     commits = range_commits(gk.repo, gk.base, gk.head, gk.config)
-    result = score_range(gk.model_path, commits, load_history(gk.data_dir), gk.config, gk.recent)
+    result = score_range(
+        gk.model_path,
+        commits,
+        load_history(gk.data_dir),
+        gk.config,
+        gk.recent,
+        load_cards(gk.data_dir),
+    )
     path = gk.model_path
     style = _BAND_STYLE[result.band]
     console.print(f"Risk: [bold {style}]{result.score:.2f} ({result.band})[/bold {style}]")

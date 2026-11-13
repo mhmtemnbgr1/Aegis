@@ -26,6 +26,7 @@ from aegis.config import AegisConfig
 from aegis.features.extra import EXTRA, extra_metrics
 from aegis.features.history import iter_changes
 from aegis.features.kamei import KAMEI
+from aegis.features.memory import MEMORY, CardHistory
 from aegis.mining import schema
 
 MIN_POSITIVES = 200
@@ -59,14 +60,29 @@ def build_repo(data_dir: Path, config: AegisConfig | None = None) -> tuple[pl.Da
     fixed = szz.group_by("inducing_sha").agg(pl.col("fix_date").min().alias("fixed_at"))
     risky = config.gatekeeper.heuristic.risky_paths
     tests = config.mining.test_path_patterns
+    # Hafıza sinyali (#29): `aegis index` kartları varsa; yoksa 0 (manifestte `memory: false`).
+    from aegis.memory.cards import read_cards
+
+    history = CardHistory(read_cards(data_dir / "cards.jsonl"))
+    functions_path = data_dir / "functions.parquet"
+    changed: dict[str, list[tuple[str, str]]] = {}
+    if functions_path.is_file():
+        for sha, path, name in (
+            pl.read_parquet(functions_path).select("sha", "path", "name").iter_rows()
+        ):
+            changed.setdefault(sha, []).append((path, name))
     extra = pl.DataFrame(
         [
-            {"sha": sha, **extra_metrics(change, risky=risky, test_patterns=tests)}
-            for sha, _, _, change in iter_changes(
+            {
+                "sha": sha,
+                **extra_metrics(change, risky=risky, test_patterns=tests),
+                **history.metrics([f.path for f in change.files], changed.get(sha, []), as_of=time),
+            }
+            for sha, time, _, change in iter_changes(
                 commits, pl.read_parquet(data_dir / "files.parquet")
             )
         ],
-        schema={"sha": pl.String(), **{name: pl.Float64() for name in EXTRA}},
+        schema={"sha": pl.String(), **{name: pl.Float64() for name in (*EXTRA, *MEMORY)}},
     )
     rows = (
         kamei.join(commits.select("sha", "author_date", "files_changed"), on="sha", how="inner")
@@ -74,7 +90,7 @@ def build_repo(data_dir: Path, config: AegisConfig | None = None) -> tuple[pl.Da
         .join(extra, on="sha", how="left")
         .join(fixed, left_on="sha", right_on="inducing_sha", how="left")
         .with_columns(pl.col("fixed_at").is_not_null().alias("buggy"))
-        .select("repo", "sha", "author_date", "as_of", *KAMEI, *EXTRA, "buggy", "fixed_at")
+        .select("repo", "sha", "author_date", "as_of", *KAMEI, *EXTRA, *MEMORY, "buggy", "fixed_at")
         .sort("as_of", maintain_order=True)
     )
     positives = int(rows["buggy"].sum())
@@ -126,7 +142,7 @@ def _d1_schema() -> dict[str, pl.DataType]:
         "sha": pl.String(),
         "author_date": schema.UTC_TS,
         "as_of": schema.UTC_TS,
-        **{name: pl.Float64() for name in (*KAMEI, *EXTRA)},
+        **{name: pl.Float64() for name in (*KAMEI, *EXTRA, *MEMORY)},
         "buggy": pl.Boolean(),
         "fixed_at": schema.UTC_TS,
     }

@@ -19,6 +19,7 @@ from aegis.config import AegisConfig
 from aegis.features.extra import extra_metrics
 from aegis.features.history import ChangeHistory, FileChange, developer_id
 from aegis.features.kamei import kamei_metrics
+from aegis.features.memory import CardHistory
 from aegis.gatekeeper.base import RiskBand, band_for
 from aegis.gatekeeper.calibration import budget_thresholds
 from aegis.gatekeeper.explain import Explanation
@@ -37,6 +38,8 @@ class RangeCommit:
     subject: str
     is_fix: bool
     files: tuple[FileChange, ...]
+    functions: tuple[tuple[str, str], ...] = ()
+    """Değiştirilen fonksiyonların (dosya, kısa ad) anahtarları (hafıza sinyali, #29)."""
 
 
 @dataclass
@@ -70,6 +73,7 @@ def range_commits(repo: Path, base: str, head: str, config: AegisConfig) -> list
             continue
         sha, time, name, email, message = record.strip("\n").split(_SEP, 4)
         files = file_changes(repo, sha)
+        funcs = _changed_functions(repo, sha, files, config)
         out.append(
             RangeCommit(
                 sha=sha,
@@ -78,9 +82,38 @@ def range_commits(repo: Path, base: str, head: str, config: AegisConfig) -> list
                 subject=message.strip().splitlines()[0] if message.strip() else "",
                 is_fix=classifier.classify(message).is_fix,
                 files=files,
+                functions=funcs,
             )
         )
     return out
+
+
+def _changed_functions(
+    repo: Path, sha: str, files: tuple[FileChange, ...], config: AegisConfig
+) -> tuple[tuple[str, str], ...]:
+    """Commit'in değiştirdiği kaynak fonksiyonlarının (dosya, kısa ad) anahtarları."""
+    from aegis.memory.chunk import changed_lines, functions, touched
+
+    keys: list[tuple[str, str]] = []
+    for f in files:
+        if not f.new_path or not f.new_path.endswith(tuple(config.mining.source_extensions)):
+            continue
+        try:
+            diff = git(repo, "diff", "-U0", f"{sha}~1", sha, "--", f.new_path)
+            source = git(repo, "show", f"{sha}:{f.new_path}")
+        except Exception:  # kök commit ya da okunamayan dosya
+            continue
+        _, new_lines = changed_lines(diff)
+        for span in touched(functions(source, f.new_path), new_lines):
+            keys.append((f.new_path, span.qualname.rsplit(".", 1)[-1]))
+    return tuple(keys)
+
+
+def load_cards(data_dir: Path) -> CardHistory:
+    """Reponun hata kartları (yoksa boş): hafıza sinyali için."""
+    from aegis.memory.cards import read_cards
+
+    return CardHistory(read_cards(data_dir / "cards.jsonl"))
 
 
 def load_history(data_dir: Path) -> ChangeHistory:
@@ -90,7 +123,10 @@ def load_history(data_dir: Path) -> ChangeHistory:
 
 
 def range_features(
-    commits: list[RangeCommit], history: ChangeHistory, config: AegisConfig | None = None
+    commits: list[RangeCommit],
+    history: ChangeHistory,
+    config: AegisConfig | None = None,
+    cards: CardHistory | None = None,
 ) -> pl.DataFrame:
     """Her commit için 14 Kamei metriği (`as_of` = commit zamanı), riskli yol ve test oranı."""
     config = config or AegisConfig()
@@ -106,6 +142,9 @@ def range_features(
                 "sha": c.sha,
                 **kamei_metrics(change, history, as_of=c.time),
                 **extra_metrics(change, risky=risky, test_patterns=tests),
+                **(cards or CardHistory([])).metrics(
+                    [f.path for f in c.files], c.functions, as_of=c.time
+                ),
             }
         )
         # Madencilikten daha eski tarihli bir commit eklenemez: özellikleri yine as_of ile
@@ -154,9 +193,10 @@ def score_range(
     history: ChangeHistory,
     config: AegisConfig,
     recent_scores: list[float] | None = None,
+    cards: CardHistory | None = None,
 ) -> ModelScore:
     model = TrainedModel.load(model_path)
-    features = range_features(commits, history, config)
+    features = range_features(commits, history, config, cards)
     probs = [float(p) for p in model.predict_proba(features)] if features.height else []
     score = model.score_pr(features) if features.height else 0.0
     low, high, threshold_source = budget_bands(model, config, recent_scores)

@@ -71,11 +71,12 @@ class ModelGatekeeper:
 
     def _assess(self) -> RiskAssessment:
         # scikit-learn yalnızca model modunda yüklenir.
-        from aegis.gatekeeper.score import load_history, range_commits, score_range
+        from aegis.gatekeeper.score import load_cards, load_history, range_commits, score_range
 
         commits = range_commits(self.repo, self.base, self.head, self.config)
         history = load_history(self.data_dir)
-        result = score_range(self.model_path, commits, history, self.config, self.recent)
+        cards = load_cards(self.data_dir)
+        result = score_range(self.model_path, commits, history, self.config, self.recent, cards)
         reasons = [e.text for e in result.explanations] or ["aralıkta puanlanacak commit yok"]
         reasons.append(f"model: {self.model_path.parent.name}/{self.model_path.stem}")
         probs = [p for _, _, p in result.commits]

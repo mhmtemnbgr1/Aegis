@@ -35,13 +35,15 @@ from scipy.stats import wilcoxon
 
 from aegis.config import AegisConfig, TrainingConfig
 from aegis.gatekeeper.calibration import pr_score
-from aegis.gatekeeper.model import FEATURES, FULL_FEATURES, train_model
+from aegis.gatekeeper.model import FEATURES, FULL_FEATURES, MEMORY_FEATURES, train_model
 from aegis.gatekeeper.split import labels_as_of, rolling_windows, split_before
 
 SHARES = [round(x, 2) for x in np.linspace(0, 1, 21)]
-METHODS = ("lr", "rf", "lightgbm", "lr+", "rf+", "lightgbm+", "lr+@5y", "heuristic")
-"""`+`: Kamei + riskli yol + test oranı; `@5y`: yalnızca pencereden önceki son 5 yılla eğitim."""
-SHOWN = ("lr", "lr+", "rf+", "lightgbm+", "heuristic")
+METHODS = ("lr", "rf", "lr+", "rf+", "lr+m", "rf+m", "heuristic")
+"""`+`: Kamei + riskli yol + test oranı; `+m`: ayrıca hafıza sinyali (#29); `@5y`: yalnızca
+pencereden önceki son 5 yılla eğitim (ör. `lr+@5y`). LightGBM ve 5 yıl #21/#8 koşularında
+ölçüldü."""
+SHOWN = ("lr", "lr+", "lr+m", "rf+m", "heuristic")
 """Eğride çizilen yöntemler (okunabilirlik için)."""
 SEEDS = (0, 1, 2, 3, 4)
 MIN_PRS = 200
@@ -110,8 +112,13 @@ def model_scores(
 ) -> list[np.ndarray]:
     """Her PR grubu için commit modeli → PR skorları (RF/LightGBM: tohumlar üzerinden ortalama)."""
     base, _, window = name.partition("@")
-    features = FULL_FEATURES if base.endswith("+") else FEATURES
-    model_name = base.rstrip("+")
+    if base.endswith("+m"):
+        features = MEMORY_FEATURES
+    elif base.endswith("+"):
+        features = FULL_FEATURES
+    else:
+        features = FEATURES
+    model_name = base.removesuffix("+m").rstrip("+")
     if window == "5y":
         commits = commits.filter(pl.col("as_of") >= start - timedelta(days=round(5 * 365.25)))
     split = split_before(commits, start, cfg)
@@ -205,14 +212,14 @@ def report(records: list[dict[str, Any]]) -> str:
     lines.append("| --- | --- | --- |")
     i = SHARES.index(COST_SHARE)
     for a, b in (
-        ("lr", "heuristic"),
         ("lr+", "heuristic"),
-        ("rf+", "heuristic"),
+        ("lr+m", "heuristic"),
+        ("rf+m", "heuristic"),
         ("lr+", "lr"),
         ("rf+", "rf"),
-        ("lightgbm+", "lightgbm"),
-        ("lr+", "rf+"),
-        ("lr+", "lr+@5y"),
+        ("lr+m", "lr+"),
+        ("rf+m", "rf+"),
+        ("lr+m", "rf+m"),
     ):
         pairs = [(r[a]["curve"][i], r[b]["curve"][i]) for r in records]
         pairs = [(x, z) for x, z in pairs if not (math.isnan(x) or math.isnan(z))]
@@ -242,6 +249,8 @@ COLORS = {
     "rf+": "#0d9488",
     "lightgbm+": "#ca8a04",
     "lr+@5y": "#db2777",
+    "lr+m": "#be185d",
+    "rf+m": "#047857",
     "heuristic": "#dc2626",
     "random": "#9a9a9a",
 }

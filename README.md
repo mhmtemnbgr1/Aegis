@@ -78,6 +78,7 @@ Bug-fix hafızası (Faz 4):
 
 ```bash
 aegis index .                     # hata kartları (artımlı) ve vektör indeksi
+aegis dataset                     # D1'i hafıza sinyaliyle yeniden üret (index'ten sonra)
 ```
 
 Planlanan (Faz 4): embedding ve hibrit arama, `aegis publish-state`.
