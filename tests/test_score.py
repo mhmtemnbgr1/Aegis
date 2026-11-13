@@ -12,12 +12,12 @@ from aegis.gatekeeper.model import train_model
 from aegis.gatekeeper.score import (
     find_model,
     load_history,
-    parse_file_changes,
     range_commits,
     range_features,
 )
 from aegis.gatekeeper.split import time_split
 from aegis.mining import mine_repository
+from aegis.mining.gitfiles import parse_file_changes
 from tests.gitrepo import GitRepo
 from tests.test_gk_model import _d1
 

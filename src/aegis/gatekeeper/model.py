@@ -81,9 +81,11 @@ def make_model(name: ModelName, *, balanced: bool = False, seed: int = 0) -> Any
     raise ValueError(f"bilinmeyen model: {name}")
 
 
-def matrix(frame: pl.DataFrame) -> np.ndarray[Any, np.dtype[np.float64]]:
+def matrix(
+    frame: pl.DataFrame, features: tuple[str, ...] = FEATURES
+) -> np.ndarray[Any, np.dtype[np.float64]]:
     # LR'deki log1p negatif değer almasın: tüm Kamei metrikleri tanım gereği ≥ 0.
-    return frame.select(FEATURES).to_numpy().astype(np.float64).clip(min=0)
+    return frame.select(features).to_numpy().astype(np.float64).clip(min=0)
 
 
 def effort(frame: pl.DataFrame) -> np.ndarray[Any, np.dtype[np.float64]]:
@@ -141,10 +143,13 @@ class TrainedModel:
     budget: dict[str, dict[str, float]] = field(default_factory=dict)
     """Test kümesinde, doğrulamadan seçilen bütçe eşiğiyle LLM'e giden pay ve yakalanan hatalar."""
     reliability: list[list[float]] = field(default_factory=list)
+    features: tuple[str, ...] = FEATURES
+    """Modelin girdi sütunları: commit düzeyinde 14 Kamei metriği, PR düzeyinde ekleriyle (#73)."""
     """Test kümesi kalibrasyon eğrisi: [ortalama tahmin, gerçek hatalı payı, örnek sayısı]."""
 
     def raw_proba(self, frame: pl.DataFrame) -> np.ndarray[Any, np.dtype[np.float64]]:
-        return np.asarray(self.estimator.predict_proba(matrix(frame))[:, 1], dtype=np.float64)
+        x = matrix(frame, getattr(self, "features", FEATURES))
+        return np.asarray(self.estimator.predict_proba(x)[:, 1], dtype=np.float64)
 
     def predict_proba(self, frame: pl.DataFrame) -> np.ndarray[Any, np.dtype[np.float64]]:
         """Kalibre edilmiş hata olasılıkları (commit başına)."""
@@ -186,17 +191,18 @@ def train_model(
     imbalance: Imbalance = "none",
     calibration: Method = "sigmoid",
     seed: int = 0,
+    features: tuple[str, ...] = FEATURES,
 ) -> TrainedModel:
     train = _undersample(split.train, seed) if imbalance == "undersample" else split.train
     y_train = train["buggy"].to_numpy()
     if y_train.sum() == 0:
         raise ValueError("eğitim kümesinde hatalı commit yok")
     estimator = make_model(name, balanced=imbalance == "weights", seed=seed)
-    x_train = matrix(train)
+    x_train = matrix(train, features)
     if imbalance == "smote":
         x_train, y_train = smote(x_train, y_train, seed=seed)
     estimator.fit(x_train, y_train)
-    model = TrainedModel(name, imbalance, estimator, 0.5, {}, {})
+    model = TrainedModel(name, imbalance, estimator, 0.5, {}, {}, features=features)
 
     y_valid = split.valid["buggy"].to_numpy()
     model.calibrator = fit_calibrator(calibration, model.raw_proba(split.valid), y_valid)
@@ -219,7 +225,7 @@ def train_model(
     model.meta = {
         "aegis_version": __version__,
         "trained_at": datetime.now(UTC).isoformat(),
-        "features": list(FEATURES),
+        "features": list(features),
         "train_rows": len(y_train),
         "train_positives": int(y_train.sum()),
         "train_repos": sorted(set(train["repo"])) if "repo" in train.columns else [],

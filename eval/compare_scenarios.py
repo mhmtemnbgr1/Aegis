@@ -23,6 +23,8 @@ def main() -> None:
     for scenario, suffix in (("within", ""), ("cross", "-cross")):
         for path in sorted(reports.glob(f"train-*-{method}{suffix}.json")):
             data = json.loads(path.read_text("utf-8"))
+            if data.get("level", "commit") != "commit":
+                continue
             if data.get("scenario", "within") != scenario or data["repo"] == "all":
                 continue
             for model, result in data["models"].items():

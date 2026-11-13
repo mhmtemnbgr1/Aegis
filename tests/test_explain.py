@@ -52,7 +52,7 @@ def test_explain_top3_and_text(split) -> None:  # type: ignore[no-untyped-def]
 
 
 def test_every_feature_has_turkish_text() -> None:
-    assert set(TEXT) == set(KAMEI)
+    assert set(TEXT) == set(KAMEI) | {"n_commits", "n_authors"}
     assert Explanation("la", 1234, 0.4).text == "1.234 satır eklendi (riski artırıyor)"
     assert Explanation("fix", 1, -0.1).text == "değişiklik bir hata düzeltmesi (riski azaltıyor)"
     for name in KAMEI:

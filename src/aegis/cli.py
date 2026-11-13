@@ -233,6 +233,9 @@ def train(
         "--scenario",
         help="within: repo kendi geçmişiyle; cross: diğer repolarla eğitilmiş genel model.",
     ),
+    level: str = typer.Option(
+        "commit", "--level", help="commit (d1.parquet) ya da pr (d1-pr.parquet, #73)."
+    ),
     model: str = typer.Option("all", "--model", help="lr, rf, lightgbm veya all."),
     imbalance: str = typer.Option(
         "none", "--imbalance", help="Sınıf dengesizliği: none, weights, undersample veya smote."
@@ -261,7 +264,8 @@ def train(
     model eğitir; D1'de olmayan yeni repolar bu modeli kullanır.
     """
     # scikit-learn yalnızca eğitimde gerekir; diğer komutlar (ör. review) onu yüklemez.
-    from aegis.gatekeeper.model import IMBALANCE, MODELS, train_model
+    from aegis.gatekeeper.model import FEATURES, IMBALANCE, MODELS, train_model
+    from aegis.mining.prs import PR_FEATURES
 
     if TYPE_CHECKING:
         from aegis.gatekeeper.calibration import Method
@@ -284,7 +288,11 @@ def train(
             "--calibration none|sigmoid|isotonic[/red]"
         )
         raise typer.Exit(2)
-    d1_path = (data_root or Path(config.mining.data_dir)) / "d1.parquet"
+    if level not in ("commit", "pr"):
+        console.print("[red]--level commit|pr[/red]")
+        raise typer.Exit(2)
+    d1_name = "d1-pr.parquet" if level == "pr" else "d1.parquet"
+    d1_path = (data_root or Path(config.mining.data_dir)) / d1_name
     if not d1_path.is_file():
         console.print(f"[red]{d1_path} yok; önce aegis dataset.[/red]")
         raise typer.Exit(2)
@@ -317,9 +325,11 @@ def train(
             imbalance=imbalance,
             calibration=cast("Method", method),
             seed=seed,
+            features=PR_FEATURES if level == "pr" else FEATURES,
         )
         suffix = "-cross" if scenario == "cross" else ""
-        trained.save(models_dir / repo / f"{name}-{imbalance}{suffix}.pkl")
+        prefix = "pr-" if level == "pr" else ""
+        trained.save(models_dir / repo / f"{prefix}{name}-{imbalance}{suffix}.pkl")
         m = trained.test
         table.add_row(
             name, _fmt(m["roc_auc"]), _fmt(m["pr_auc"]), _fmt(m["mcc"]),
@@ -335,9 +345,16 @@ def train(
         }
     console.print(table)
     suffix = "-cross" if scenario == "cross" else ""
-    target = report or Path("eval/reports") / f"train-{repo}-{imbalance}{suffix}.json"
+    level_tag = "-pr" if level == "pr" else ""
+    target = report or Path("eval/reports") / f"train{level_tag}-{repo}-{imbalance}{suffix}.json"
     target.parent.mkdir(parents=True, exist_ok=True)
-    payload = {"repo": repo, "scenario": scenario, "imbalance": imbalance, "models": results}
+    payload = {
+        "repo": repo,
+        "level": level,
+        "scenario": scenario,
+        "imbalance": imbalance,
+        "models": results,
+    }
     target.write_text(json.dumps(payload, indent=2), "utf-8")
     console.print(
         f"[dim]Test kümesi metrikleri · modeller: {models_dir / repo} · rapor: {target}[/dim]"
@@ -550,15 +567,26 @@ def dataset(
     out: Path | None = typer.Option(
         None, "--out", help="D1 Parquet dosyası (varsayılan: <data>/d1.parquet)."
     ),
+    level: str = typer.Option(
+        "commit",
+        "--level",
+        help="commit: D1; pr: PR düzeyinde D1 (d1-pr.parquet; önce commit düzeyi gerekir).",
+    ),
     config_path: Path | None = typer.Option(None, "--config", help="Yapılandırma dosyası."),
 ) -> None:
     """Taranmış tüm repolardan D1 veri setini (Kamei özellikleri + SZZ etiketi) oluşturur."""
     config = load_config(Path("."), config_path).mining
     root = data_root or Path(config.data_dir)
-    target = out or root / "d1.parquet"
     if not root.is_dir():
         console.print(f"[red]{root} bulunamadı; önce aegis mine.[/red]")
         raise typer.Exit(2)
+    if level == "pr":
+        _dataset_pr(root, Path(config.clone_dir), out or root / "d1-pr.parquet")
+        return
+    if level != "commit":
+        console.print("[red]--level commit|pr[/red]")
+        raise typer.Exit(2)
+    target = out or root / "d1.parquet"
     stats = build_d1(root, target)
     if not stats:
         console.print(f"[yellow]{root} altında kamei ve SZZ çıktısı olan repo yok.[/yellow]")
@@ -575,6 +603,27 @@ def dataset(
         )
     console.print(table)
     console.print(f"[dim]Çıktı: {target} (+ {target.with_suffix('.json').name})[/dim]")
+
+
+def _dataset_pr(root: Path, clone_root: Path, target: Path) -> None:
+    from aegis.mining.prs import build_d1_pr
+
+    d1 = root / "d1.parquet"
+    if not d1.is_file():
+        console.print(f"[red]{d1} yok; önce aegis dataset.[/red]")
+        raise typer.Exit(2)
+    stats = build_d1_pr(root, clone_root, d1, target)
+    if not stats:
+        console.print(f"[yellow]{clone_root} altında D1 repolarının klonu yok.[/yellow]")
+        raise typer.Exit(1)
+    table = Table("Repo", "PR", "Merge", "Squash", "Stil", "Hatalı", "Oran")
+    for s in stats:
+        table.add_row(
+            s["repo"], str(s["prs"]), str(s["merge"]), str(s["squash"]), s["style"],
+            str(s["positives"]), f"%{100 * s['positive_rate']:.1f}",
+        )  # fmt: skip
+    console.print(table)
+    console.print(f"[dim]Çıktı: {target}[/dim]")
 
 
 @app.command(name="eval")
