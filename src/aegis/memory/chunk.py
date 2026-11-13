@@ -8,6 +8,7 @@ sonuç verir.
 
 import ast
 import re
+import warnings
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
@@ -34,7 +35,10 @@ def module_name(path: str) -> str:
 def functions(source: str, path: str = "") -> list[FunctionSpan]:
     """Dosyadaki tüm fonksiyon ve metotlar (iç içe olanlar dahil), başlangıç satırına göre."""
     try:
-        tree = ast.parse(source)
+        # İncelenen repoların eski kodu (ör. geçersiz kaçış dizileri) SyntaxWarning üretebilir.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", SyntaxWarning)
+            tree = ast.parse(source)
     except (SyntaxError, ValueError):
         return []
     prefix = module_name(path) if path else ""
