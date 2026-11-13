@@ -98,7 +98,7 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [x] Hata kartı modeli ve oluşturucu
 - [x] Fonksiyon düzeyinde parçalama
 - [x] Embedding ve vektör indeksi (LSA + numpy; Ollama isteğe bağlı)
-- [ ] Hibrit arama (yapısal + BM25 + vektör, RRF)
+- [x] Hibrit arama (yapısal + BM25 + vektör, RRF)
 - [x] Zamansal filtre
 - [ ] Getirme değerlendirmesi (Recall@k, MRR)
 - [ ] `aegis index`

@@ -81,7 +81,8 @@ class MemoryConfig(_Section):
     embedding_model: str = "lsa"
     """`lsa` (varsayılan, ek bağımlılık yok), `lsa:<boyut>` ya da `ollama:<model>` (#24)."""
     top_k: int = Field(default=3, gt=0)
-    retrieval: Literal["hybrid", "vector", "structural"] = "hybrid"
+    retrieval: Literal["hybrid", "vector", "structural", "bm25"] = "hybrid"
+    """Getirme modu (#25); `bm25` ablasyon için."""
     max_functions_per_card: int = Field(default=3, gt=0)
     """Bir kartta saklanan en çok fonksiyon (önceki/sonraki kod)."""
     max_code_lines: int = Field(default=60, gt=0)
