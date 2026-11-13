@@ -89,7 +89,7 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [ ] PR düzeyinde etiket ve özellikler
 - [x] Kalibrasyon, bütçe tabanlı eşik, risk bantları
 - [x] SHAP açıklamaları
-- [ ] `aegis train` ve `aegis score`
+- [x] `aegis train` ve `aegis score`
 - [ ] Sezgisel gatekeeper'ın eğitilmiş modelle değiştirilmesi
 - [ ] Maliyet–recall eğrisi ve iki işletme noktası (ilk sonuçlar)
 

@@ -274,7 +274,7 @@ async def test_release_on_timeout(pool):
 
 | ID | Gereksinim | Öncelik |
 | --- | --- | --- |
-| FR-10 | `aegis train` zaman sıralı doğrulamayla model eğitir. | Must |
+| FR-10 | `aegis train` zaman sıralı doğrulamayla model eğitir; `aegis score BASE..HEAD` aralığı skor, bant ve açıklamayla puanlar (#20). | Must |
 | FR-11 | PR düzeyinde 0–1 arası risk skoru üretilir. PR etiketi: içindeki commit'lerden en az biri bug-inducing ise hatalı. Yalnızca PR açılış/güncelleme anında bilinen bilgiler kullanılır. | Must |
 | FR-12 | Ek özellikler: hafızadan gelen hata yoğunluğu, riskli yol, test değişim oranı, commit ve yazar sayısı. | Should |
 | FR-18 | Tüm özellikler zorunlu `as_of` parametresiyle, yalnızca o tarihte bilinen veriyle hesaplanır. | Must |

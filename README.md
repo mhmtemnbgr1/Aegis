@@ -63,6 +63,17 @@ aegis review --base main          # gatekeeper + analiz ajanı; sonuç terminale
 aegis review --base main --no-llm # LLM'siz, yalnızca deterministik kurallar
 ```
 
+Eğitilmiş risk modeli (Faz 2–3):
+
+```bash
+aegis mine .                      # geçmişi tara, fix'leri bul, SZZ ve Kamei metrikleri
+aegis dataset                     # taranan repolardan D1
+aegis train --repo <slug>         # LR / RF / LightGBM; kalibre, zaman sıralı
+aegis score main..HEAD --model .aegis/models/<slug>/lr-none.pkl   # skor, bant, açıklama
+```
+
+`[gatekeeper] mode = "model"` ile `aegis score` modeli kendisi bulur; model ya da madencilik geçmişi yoksa sezgisel kurala döner.
+
 Planlanan (Faz 3–4): `aegis index`, `aegis publish-state`.
 
 ### GitHub Action

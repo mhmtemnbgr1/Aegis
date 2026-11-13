@@ -19,7 +19,7 @@ from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, T
 from rich.table import Table
 
 from aegis import __version__
-from aegis.config import load_config
+from aegis.config import AegisConfig, load_config
 from aegis.diff import filter_diff, git_commit_messages, git_diff, load_ignore_spec, parse_diff
 from aegis.features import compute_kamei
 from aegis.gatekeeper import HeuristicGatekeeper, RiskBand
@@ -346,17 +346,59 @@ _BAND_STYLE = {RiskBand.LOW: "green", RiskBand.MEDIUM: "yellow", RiskBand.HIGH: 
 
 @app.command()
 def score(
+    range_: str | None = typer.Argument(
+        None, metavar="[BASE..HEAD]", help="İncelenecek aralık; verilirse --base/--head yerine."
+    ),
     base: str = typer.Option("main", "--base", help="Karşılaştırılacak taban dal/commit."),
     head: str = typer.Option("HEAD", "--head", help="İncelenecek dal/commit."),
     repo: Path = typer.Option(Path("."), "--repo", help="Git deposunun yolu."),
+    model_path: Path | None = typer.Option(
+        None,
+        "--model",
+        help="Model dosyası (.pkl). Verilirse [gatekeeper].mode yerine model kullanılır.",
+    ),
+    data_root: Path | None = typer.Option(
+        None, "--data", help="Madencilik çıktılarının kökü (varsayılan: [mining].data_dir)."
+    ),
+    models_dir: Path = typer.Option(
+        Path(".aegis/models"), "--models-dir", help="Eğitilmiş modellerin dizini."
+    ),
 ) -> None:
-    """`base...head` aralığı için risk skoru hesaplar (şimdilik sezgisel kural)."""
+    """Aralık için risk skoru, bant ve açıklama basar.
+
+    `[gatekeeper].mode = "model"` ya da `--model` ile eğitilmiş model kullanılır: önce
+    `<models-dir>/<repo>/lr-none.pkl`, yoksa genel model `<models-dir>/all/lr-none.pkl`.
+    Model ya da reponun madencilik geçmişi yoksa sezgisel kurala dönülür.
+    """
+    from aegis.mining import repo_slug
+
+    if range_ is not None:
+        if ".." not in range_ or "..." in range_:
+            console.print("[red]Aralık BASE..HEAD biçiminde olmalı.[/red]")
+            raise typer.Exit(2)
+        base, head = range_.split("..", 1)
     config = load_config(repo)
     try:
         text = git_diff(base, head, repo=repo)
     except subprocess.CalledProcessError as exc:
         console.print(f"[red]git diff başarısız:[/red] {exc.stderr.strip()}")
         raise typer.Exit(2) from exc
+
+    if model_path is not None or config.gatekeeper.mode == "model":
+        slug = repo_slug(repo)
+        data_dir = (data_root or Path(config.mining.data_dir)) / slug
+        path = model_path or _find_model(models_dir, slug)
+        if path is None or not path.is_file():
+            console.print("[yellow]Model bulunamadı; sezgisel kural kullanılıyor.[/yellow]")
+        elif not (data_dir / "commits.parquet").is_file():
+            console.print(
+                f"[yellow]{data_dir} altında madencilik geçmişi yok (önce aegis mine); "
+                "sezgisel kural kullanılıyor.[/yellow]"
+            )
+        else:
+            _score_with_model(path, repo, base, head, data_dir, config)
+            return
+
     filtered = filter_diff(
         parse_diff(text),
         ignore=load_ignore_spec(repo),
@@ -371,6 +413,32 @@ def score(
     if filtered.skipped:
         skipped = ", ".join(f"{s.path} ({s.reason})" for s in filtered.skipped)
         console.print(f"[dim]Elenen dosyalar: {skipped}[/dim]")
+
+
+def _find_model(models_dir: Path, slug: str) -> Path | None:
+    from aegis.gatekeeper.score import find_model
+
+    return find_model(models_dir, slug)
+
+
+def _score_with_model(
+    path: Path, repo: Path, base: str, head: str, data_dir: Path, config: AegisConfig
+) -> None:
+    # scikit-learn yalnızca model kullanılırken yüklenir.
+    from aegis.gatekeeper.score import load_history, range_commits, score_range
+
+    commits = range_commits(repo, base, head, config)
+    result = score_range(path, commits, load_history(data_dir), config)
+    style = _BAND_STYLE[result.band]
+    console.print(f"Risk: [bold {style}]{result.score:.2f} ({result.band})[/bold {style}]")
+    console.print(
+        f"[dim]Model: {path} · bantlar: düşük < {result.low_threshold:.2f} ≤ orta < "
+        f"{result.high_threshold:.2f} ≤ yüksek · {len(commits)} commit[/dim]"
+    )
+    for explanation in result.explanations:
+        console.print(f"  • {explanation.text}")
+    for sha, subject, prob in result.commits:
+        console.print(f"[dim]  {sha[:10]} {prob:.2f} {subject}[/dim]")
 
 
 @app.command()
