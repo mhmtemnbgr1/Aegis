@@ -111,3 +111,35 @@ def test_make_memory(tmp_path: Path) -> None:
     assert [c.id for c in source()] == [cards[0].id]
     early, _ = make_memory(config, git.path, "HEAD~3", "HEAD~2", data_root=root, index_root=index)
     assert early is not None and early() == []  # kart, incelenen commit'ten sonra düzeltildi
+
+
+def test_memory_notes_without_llm_and_in_comment() -> None:
+    from aegis.github.render import render_summary
+    from tests.test_review import SMALL
+
+    calls: list[int] = []
+
+    same = _card(3).model_copy(
+        update={"files": ["app/db/query.py"], "functions": ["app.db.query.find"]}
+    )
+    other = _card(4)  # app/db/pool.py: PR bu dosyaya dokunmuyor
+
+    def source() -> list[BugCard]:
+        calls.append(1)
+        return [same, other]
+
+    result = run_review(RISKY, AegisConfig(), llm_enabled=False, memory=source)
+    assert result.status is ReviewStatus.SKIPPED_NO_LLM
+    assert [(n.id, n.same_file) for n in result.memory_notes] == [
+        (same.id, True),
+        (other.id, False),
+    ]
+    assert result.memory_cards == []  # LLM'e kart gitmedi
+    comment = render_summary(result)
+    assert "geçmişte düzeltilmiş benzer hatalar" in comment and same.id in comment
+    assert "app.db.query.find" in comment
+    assert other.id not in comment  # başka dosyadaki kart yorumda gösterilmez
+
+    low = run_review(SMALL, AegisConfig(), llm_enabled=False, memory=source)
+    assert low.status is ReviewStatus.SKIPPED_LOW_RISK and low.memory_notes == []
+    assert calls == [1]  # düşük riskte hafızaya hiç gidilmez

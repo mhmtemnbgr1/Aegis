@@ -100,6 +100,16 @@ def render_summary(result: ReviewResult) -> str:
         outcome.append(f"{_num(tokens)} token" + (" (cache)" if result.cached else ""))
     lines += ["", f"Sonuç: {' · '.join(outcome)}"]
 
+    # Yalnızca PR'ın değiştirdiği dosyalara dokunmuş kartlar ("bu kodda"); diğerleri LLM'e gider.
+    if same_code := [n for n in result.memory_notes if n.same_file]:
+        lines += ["", "🧠 **Bu kodda geçmişte düzeltilmiş benzer hatalar:**"]
+        for card in same_code:
+            where = f" · `{card.functions[0]}`" if card.functions else ""
+            issue = f" (#{card.issue})" if card.issue else ""
+            lines.append(
+                f"- `{card.id}` {card.fix_date.date()} — {card.summary[:120]}{issue}{where}"
+            )
+
     if result.metadata_warnings:
         lines += [
             "",

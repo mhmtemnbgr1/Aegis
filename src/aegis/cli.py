@@ -563,6 +563,11 @@ def _print_review(result: ReviewResult) -> None:
         console.print(f"\n[bold]Özet:[/bold] {result.summary}")
     for warning in result.metadata_warnings:
         console.print(f"[red]⚠ PR metninde şüpheli talimat:[/red] {warning}")
+    if same_code := [n for n in result.memory_notes if n.same_file]:
+        console.print("\n[bold]Bu kodda geçmişte düzeltilmiş benzer hatalar:[/bold]")
+        for card in same_code:
+            where = f" · {card.functions[0]}" if card.functions else ""
+            console.print(f"  {card.id} {card.fix_date.date()} — {card.summary[:100]}{where}")
     console.print(f"\n[bold]{len(result.findings)} bulgu[/bold]")
     for f in result.findings:
         style = _SEVERITY_STYLE.get(f.severity, "")
@@ -725,9 +730,12 @@ def _state_paths(config: AegisConfig) -> "StatePaths":
     )
 
 
-def _state_client(repo: Path) -> GitHubClient | None:
+def _state_client(repo: Path, as_repo: str | None = None) -> GitHubClient | None:
+    """Reponun GitHub istemcisi; `as_repo` (`sahip__ad`) verilirse o repo."""
     url = remote_url(repo)
-    gh_repo = github_repository(url) if url else None
+    gh_repo = (
+        as_repo.replace("__", "/", 1) if as_repo else (github_repository(url) if url else None)
+    )
     token = os.environ.get("GITHUB_TOKEN")
     return GitHubClient(token, gh_repo) if gh_repo and token else None
 
@@ -737,6 +745,11 @@ def publish_state_cmd(
     repo: Path = typer.Argument(Path("."), help="Madenciliği yapılmış yerel git deposu."),
     out: Path | None = typer.Option(
         None, "--out", help="Arşivi yalnızca bu dosyaya yaz; GitHub'a yükleme."
+    ),
+    as_repo: str | None = typer.Option(
+        None,
+        "--as",
+        help="Arşivi bu repo kimliğiyle paketle ve o repoya yükle (ör. fork: kullanici__cli).",
     ),
     config_path: Path | None = typer.Option(None, "--config", help="Yapılandırma dosyası."),
 ) -> None:
@@ -756,6 +769,7 @@ def publish_state_cmd(
             _state_paths(config),
             model_name=config.gatekeeper.model_name,
             include_memory=not config.memory.embedding_model.startswith(("lsa", "local")),
+            target=as_repo,
         )
     except FileNotFoundError as exc:
         console.print(f"[red]{exc}[/red]")
@@ -765,14 +779,15 @@ def publish_state_cmd(
         out.write_bytes(archive)
         console.print(f"Arşiv: {out} ({size})")
         return
-    client = _state_client(repo)
+    target = as_repo or slug
+    client = _state_client(repo, as_repo)
     if client is None:
         console.print(
             "[red]Yükleme için GitHub reposu ve GITHUB_TOKEN gerekir (ya da --out).[/red]"
         )
         raise typer.Exit(2)
-    url = publish_state(client, config.state.release_tag, slug, archive)
-    console.print(f"Yüklendi: {asset_name(slug)} ({size}) → {url}")
+    url = publish_state(client, config.state.release_tag, target, archive)
+    console.print(f"Yüklendi: {asset_name(target)} ({size}) → {url}")
 
 
 @app.command(name="fetch-state")

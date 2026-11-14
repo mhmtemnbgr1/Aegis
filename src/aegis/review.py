@@ -43,6 +43,31 @@ class ReviewStatus(StrEnum):
     """Aracın kendi hatası."""
 
 
+class MemoryNote(BaseModel):
+    """PR yorumu için bir hata kartının kısa özeti."""
+
+    id: str
+    fix_sha: str
+    fix_date: datetime
+    summary: str
+    functions: list[str] = Field(default_factory=list)
+    issue: int | None = None
+    same_file: bool = False
+    """Kart, PR'ın değiştirdiği dosyalardan birine dokunmuş mu (PR yorumunda yalnızca bunlar)."""
+
+    @classmethod
+    def from_card(cls, card: BugCard, changed: set[str] | None = None) -> "MemoryNote":
+        return cls(
+            id=card.id,
+            fix_sha=card.fix_sha,
+            fix_date=card.fix_date,
+            summary=card.summary,
+            functions=card.functions,
+            issue=card.issue.number if card.issue else None,
+            same_file=bool(changed and set(card.files) & changed),
+        )
+
+
 class ReviewResult(BaseModel):
     run_id: str = Field(default_factory=lambda: uuid.uuid4().hex[:12])
     started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
@@ -61,6 +86,8 @@ class ReviewResult(BaseModel):
     """PR başlığı/açıklaması/commit mesajlarında görülen injection kalıpları."""
     memory_cards: list[str] = Field(default_factory=list)
     """Analiz prompt'una giren hata kartlarının kimlikleri (#33)."""
+    memory_notes: list[MemoryNote] = Field(default_factory=list)
+    """PR yorumunda gösterilen ilgili geçmiş hatalar; LLM olmadan da doldurulur (#50)."""
     memory_error: str | None = None
     """Hafıza getirilemediyse nedeni; inceleme kartsız sürer (fail-open)."""
     provider: str | None = None
@@ -152,6 +179,18 @@ def _run(
     detected = detect_injections(diff, GitIgnoreSpec.from_lines(config.review.injection_exclude))
     model_findings: list[Finding] = []
 
+    # Hafıza, risk düşük değilse LLM'den bağımsız olarak sorulur: kartlar PR yorumunda da
+    # gösterilir (LLM'siz kurulumlarda da geçmiş hatalar görünür) ve varsa analiz ajanına verilir.
+    cards: Sequence[BugCard] = ()
+    if risk.band is not RiskBand.LOW and memory is not None:
+        try:
+            cards = memory()
+        except Exception as exc:  # fail-open: hafıza olmadan incelemeye devam
+            log.warning("hafıza getirilemedi: %s", exc)
+            result.memory_error = f"{type(exc).__name__}: {exc}"
+        changed = {f.path for f in diff.files}
+        result.memory_notes = [MemoryNote.from_card(c, changed) for c in cards]
+
     if risk.band is RiskBand.LOW:
         result.status = ReviewStatus.SKIPPED_LOW_RISK
     elif not llm_enabled:
@@ -165,13 +204,6 @@ def _run(
             language=config.review.language,
             max_memory_chars=config.memory.max_prompt_chars,
         )
-        cards: Sequence[BugCard] = ()
-        if memory is not None:
-            try:
-                cards = memory()
-            except Exception as exc:  # fail-open: hafıza olmadan incelemeye devam
-                log.warning("hafıza getirilemedi: %s", exc)
-                result.memory_error = f"{type(exc).__name__}: {exc}"
         analysis = analyst.analyze(diff, risk, metadata, cards)
         result.memory_cards = analysis.memory_cards
         result.prompt_version = analysis.prompt_version
