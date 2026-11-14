@@ -4,6 +4,8 @@
 
 ```bash
 aegis mine https://github.com/tqdm/tqdm           # .aegis/repos/ altına klonlar ve tarar
+aegis mine ../tqdm                               # kayıtlı SHA'dan sonraki commit'leri işler
+aegis mine ../tqdm --full                        # tüm geçmişi yeniden tara
 aegis mine ../tqdm --since 2021-01-01             # yerel klon, tarih sınırıyla
 aegis mine ../tqdm --no-functions                 # fonksiyon çıkarımı olmadan (daha hızlı)
 GITHUB_TOKEN=... aegis mine ../tqdm --issue-labels  # bağlı issue etiketleriyle fix tespiti
@@ -12,7 +14,13 @@ aegis mine ../tqdm --szz-only --szz-variant b     # taramayı atla, yalnızca SZ
 
 Tarama bittikten sonra SZZ otomatik çalışır (`--no-szz` ile kapatılır).
 
-Commit'ler HEAD'den erişilebilen geçmişten, eskiden yeniye taranır. Varsayılan olarak geçmişin tamamı taranır, çünkü deneyim ve geçmiş metrikleri (#10) eski commit'lere ihtiyaç duyar. `history_years` sınırı SZZ adımında uygulanır (#9).
+İlk tarama HEAD'den erişilebilen tüm commit'leri işler. Uyumlu bir `meta.json` varsa sonraki
+çalıştırmalar yalnızca `last_processed_sha..HEAD` aralığındaki commit'leri işler; kayıtlı SHA
+`meta.json`'da tutulur. Bu aralık merge commit'leriyle içeri alınmış dal commit'lerini de kapsar.
+Kamei geçmiş metrikleri birikmiş commit tablosundan hesaplanır, fakat yalnızca yeni commit'lere
+yazılır; SZZ de yalnızca yeni fix'leri blame eder. `--full` tüm geçmişi yeniden işler.
+Yapılandırma değişmişse, önceki SHA HEAD'in atası değilse veya `--since` verilmişse tarama tam
+yapılır. `history_years` sınırı SZZ adımında uygulanır (#9).
 
 ## `commits.parquet`
 
@@ -219,7 +227,10 @@ Bug-fix hafızasının hata kartları; satır başına bir JSON nesnesi, şema `
 
 ## `meta.json`
 
-Veri sürümü kaydı (NFR-04): şema ve Aegis sürümü, `mined_at`, `remote_url`, taranan `head_sha`, `since`, kullanılan `mining_config`, satır sayıları ve süre. Aynı `head_sha` ve `mining_config` ile yapılan tarama aynı veriyi üretir.
+Veri sürümü kaydı (NFR-04): şema ve Aegis sürümü, `mined_at`, `remote_url`, taranan `head_sha`,
+`last_processed_sha`, `since`, kullanılan `mining_config`, toplam satır sayıları, bu çalıştırmada
+eklenen commit sayısı ve süre. Aynı `head_sha` ve `mining_config` ile yapılan tarama aynı veriyi
+üretir.
 
 ## Pilotlar (13 Kasım 2026)
 
