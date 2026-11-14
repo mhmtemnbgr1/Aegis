@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "aegis_version": "0.0.1",
+  "built_at": "2026-11-14T20:44:56.368196+00:00",
+  "min_positives": 200,
+  "rows": 23265,
+  "repos": [
+    {
+      "repo": "psf__black",
+      "head_sha": "b10cbe43b8169e688ab86989ddcc8ad2a53ff2cd",
+      "szz_variant": "ma",
+      "cutoff": "2018-03-14T19:55:32+00:00",
+      "commits": 2507,
+      "fixes": 544,
+      "positives": 390,
+      "positive_rate": 0.1556,
+      "enough": true
+    },
+    {
+      "repo": "sanic-org__sanic",
+      "head_sha": "5ffc7b3710838eaf016d2f9612a86a08626915e5",
+      "szz_variant": "ma",
+      "cutoff": "2016-05-26T04:38:23+00:00",
+      "commits": 2112,
+      "fixes": 390,
+      "positives": 505,
+      "positive_rate": 0.2391,
+      "enough": true
+    },
+    {
+      "repo": "scrapy__scrapy",
+      "head_sha": "e63a574c767d7a9438c21db158f605f1c44c6e6a",
+      "szz_variant": "ma",
+      "cutoff": "2008-06-26T13:44:50+00:00",
+      "commits": 9630,
+      "fixes": 1141,
+      "positives": 1139,
+      "positive_rate": 0.1183,
+      "enough": true
+    },
+    {
+      "repo": "spotify__luigi",
+      "head_sha": "f5feb7a4655ad73ef56f0ab04d7903ab43b63e12",
+      "szz_variant": "ma",
+      "cutoff": "2011-11-17T20:50:04+00:00",
+      "commits": 3047,
+      "fixes": 543,
+      "positives": 595,
+      "positive_rate": 0.1953,
+      "enough": true
+    },
+    {
+      "repo": "tornadoweb__tornado",
+      "head_sha": "48f6645edfd0ae1fc2ef58902c98876f1f5a37b7",
+      "szz_variant": "ma",
+      "cutoff": "2009-09-09T05:01:24+00:00",
+      "commits": 4148,
+      "fixes": 661,
+      "positives": 575,
+      "positive_rate": 0.1386,
+      "enough": true
+    },
+    {
+      "repo": "tqdm__tqdm",
+      "head_sha": "9cf5a12b1f955468a17f0ba3c59092b23e4258ac",
+      "szz_variant": "ma",
+      "cutoff": "2013-10-26T18:50:04+00:00",
+      "commits": 1821,
+      "fixes": 400,
+      "positives": 395,
+      "positive_rate": 0.2169,
+      "enough": true
+    }
+  ]
+}
