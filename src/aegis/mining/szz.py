@@ -183,6 +183,7 @@ def run_szz(
     data_dir: Path,
     config: MiningConfig | None = None,
     *,
+    incremental_from: str | None = None,
     on_start: Callable[[int], None] | None = None,
     on_fix: Callable[[], None] | None = None,
 ) -> SzzResult:
@@ -206,6 +207,50 @@ def run_szz(
     large = in_window.filter(pl.col("files_changed") > config.max_files_per_commit)
     fixes = in_window.filter(pl.col("files_changed") <= config.max_files_per_commit)
 
+    current_head = json.loads((data_dir / "meta.json").read_text("utf-8")).get("last_processed_sha")
+    previous_pairs: pl.DataFrame | None = None
+    if incremental_from is not None and (data_dir / "szz_meta.json").is_file():
+        old_meta = json.loads((data_dir / "szz_meta.json").read_text("utf-8"))
+        old_head = old_meta.get("head_sha")
+        settings_match = all(
+            old_meta.get(key) == value
+            for key, value in {
+                "variant": config.szz_variant,
+                "history_years": config.history_years,
+                "max_files_per_commit": config.max_files_per_commit,
+                "source_extensions": config.source_extensions,
+                "test_path_patterns": config.test_path_patterns,
+            }.items()
+        )
+        ancestor = (
+            subprocess.run(
+                ["git", "-C", str(repo), "merge-base", "--is-ancestor", old_head, current_head],
+                capture_output=True,
+            ).returncode
+            == 0
+            if old_head and current_head
+            else False
+        )
+        if settings_match and ancestor and (data_dir / "szz.parquet").is_file():
+            if old_head == current_head:
+                new_shas: set[str] = set()
+            else:
+                out = subprocess.run(
+                    ["git", "-C", str(repo), "rev-list", f"{old_head}..{current_head}"],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                ).stdout
+                new_shas = set(out.splitlines())
+            fixes_to_process = fixes.filter(pl.col("sha").is_in(new_shas))
+            previous_pairs = pl.read_parquet(data_dir / "szz.parquet").filter(
+                pl.col("fix_date") >= cutoff
+            )
+        else:
+            fixes_to_process = fixes
+    else:
+        fixes_to_process = fixes
+
     merges = set(commits.filter(pl.col("is_merge"))["sha"])
     dates = dict(zip(commits["sha"], commits["author_date"], strict=True))
     ignored: set[str] = set()
@@ -227,7 +272,7 @@ def run_szz(
 
     source_files = files.filter(
         pl.col("change_type").is_in(["MODIFY", "RENAME"])
-        & pl.col("sha").is_in(fixes["sha"].implode())
+        & pl.col("sha").is_in(fixes_to_process["sha"].implode())
     )
     paths_by_fix: dict[str, list[str]] = {}
     for sha, old_path in source_files.select("sha", "old_path").iter_rows():
@@ -235,10 +280,10 @@ def run_szz(
             paths_by_fix.setdefault(sha, []).append(old_path)
 
     if on_start is not None:
-        on_start(fixes.height)
+        on_start(fixes_to_process.height)
     rows: list[dict[str, Any]] = []
     without_source = 0
-    for fix in fixes.select("sha", "parents", "author_date").iter_rows(named=True):
+    for fix in fixes_to_process.select("sha", "parents", "author_date").iter_rows(named=True):
         paths = paths_by_fix.get(fix["sha"])
         if not paths or not fix["parents"]:
             without_source += 1
@@ -276,7 +321,12 @@ def run_szz(
         if on_fix is not None:
             on_fix()
 
-    pairs = pl.DataFrame(rows, schema=schema.SZZ)
+    new_pairs = pl.DataFrame(rows, schema=schema.SZZ)
+    pairs = (
+        pl.concat([previous_pairs, new_pairs], how="vertical")
+        if previous_pairs is not None
+        else new_pairs
+    )
     pairs.write_parquet(data_dir / "szz.parquet")
     result = SzzResult(
         variant=config.szz_variant,
@@ -293,7 +343,7 @@ def run_szz(
         "schema_version": schema.SCHEMA_VERSION,
         "aegis_version": __version__,
         "computed_at": datetime.now(UTC).isoformat(),
-        "head_sha": commits["sha"][-1] if commits.height else None,
+        "head_sha": current_head or (commits["sha"][-1] if commits.height else None),
         "history_years": config.history_years,
         "max_files_per_commit": config.max_files_per_commit,
         "source_extensions": config.source_extensions,

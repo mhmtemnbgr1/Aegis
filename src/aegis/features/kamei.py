@@ -145,12 +145,19 @@ KAMEI_SCHEMA: dict[str, pl.DataType] = {
 }
 
 
-def compute_kamei(commits: pl.DataFrame, files: pl.DataFrame) -> pl.DataFrame:
-    """Merge olmayan her commit için 14 metrik; `as_of` commit'in kendi commit zamanıdır."""
+def compute_kamei(
+    commits: pl.DataFrame, files: pl.DataFrame, *, only_shas: set[str] | None = None
+) -> pl.DataFrame:
+    """Commit başına 14 metrik; artımlı çalışmada yalnızca `only_shas` hesaplanır.
+
+    Geçmiş özellikleri için `ChangeHistory` tüm commit'lerden kurulur; hedef commit'lerin kendisi
+    metriğe katılmaz çünkü her sorgu `as_of` zamanıyla sınırlandırılır.
+    """
     history = ChangeHistory.from_frames(commits, files)
     repo = commits["repo"][0] if commits.height else ""
+    targets = commits.filter(pl.col("sha").is_in(only_shas)) if only_shas is not None else commits
     rows: list[dict[str, Any]] = [
         {"repo": repo, "sha": sha, "as_of": time, **kamei_metrics(change, history, as_of=time)}
-        for sha, time, _, change in iter_changes(commits, files)
+        for sha, time, _, change in iter_changes(targets, files)
     ]
     return pl.DataFrame(rows, schema=KAMEI_SCHEMA)

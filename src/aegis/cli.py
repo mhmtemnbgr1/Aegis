@@ -36,7 +36,7 @@ from aegis.mining import (
 )
 from aegis.mining.dataset import build_d1
 from aegis.mining.labels import github_label_source
-from aegis.mining.miner import count_commits, remote_url
+from aegis.mining.miner import count_commits, incremental_base_sha, remote_url
 from aegis.mining.szz import run_szz
 from aegis.review import ReviewResult, ReviewStatus, run_review
 from aegis.telemetry.runs import append_run
@@ -103,6 +103,9 @@ def mine(
     szz_only: bool = typer.Option(
         False, "--szz-only", help="Taramayı atla; mevcut çıktı üzerinde yalnızca SZZ çalıştır."
     ),
+    full: bool = typer.Option(
+        False, "--full", help="Önceki taramayı yok sayıp tüm commit geçmişini yeniden tara."
+    ),
     szz_variant: str | None = typer.Option(
         None, "--szz-variant", help="SZZ varyantı: ma veya b (varsayılan: [mining].szz_variant)."
     ),
@@ -125,7 +128,6 @@ def mine(
         else:
             path = Path(repo)
             slug = repo_slug(path)
-        total = count_commits(path, since)
     except subprocess.CalledProcessError as exc:
         console.print(f"[red]git başarısız:[/red] {(exc.stderr or '').strip()}")
         raise typer.Exit(2) from exc
@@ -142,6 +144,21 @@ def mine(
         label_source = github_label_source(
             GitHubClient(token, gh_repo), out_dir / "issue_labels.json"
         )
+
+    try:
+        incremental_from = incremental_base_sha(
+            path,
+            out_dir,
+            config,
+            functions=not no_functions,
+            issue_labels=label_source is not None,
+            since=since,
+            incremental=not full and not szz_only,
+        )
+        total = count_commits(path, since, after=incremental_from)
+    except subprocess.CalledProcessError as exc:
+        console.print(f"[red]git başarısız:[/red] {(exc.stderr or '').strip()}")
+        raise typer.Exit(2) from exc
 
     def progress_bar() -> Progress:
         return Progress(
@@ -163,7 +180,10 @@ def mine(
         console.print(f"Fix kararları yenilendi: {before} → {after}")
     else:
         with progress_bar() as progress:
-            task = progress.add_task(f"{slug} taranıyor", total=total)
+            description = (
+                f"{slug} yeni commit'leri tarıyor" if incremental_from else f"{slug} taranıyor"
+            )
+            task = progress.add_task(description, total=total)
             result = mine_repository(
                 path,
                 out_dir,
@@ -173,9 +193,11 @@ def mine(
                 functions=not no_functions,
                 label_source=label_source,
                 on_commit=lambda: progress.advance(task),
+                incremental=not full,
             )
         console.print(
-            f"[bold]{result.commits}[/bold] commit ({result.merges} merge, "
+            f"[bold]{result.commits}[/bold] {'yeni ' if result.incremental_from else ''}"
+            f"commit ({result.merges} merge, "
             f"[bold]{result.fixes}[/bold] fix) · {result.files} dosya değişikliği · "
             f"{result.functions} fonksiyon değişikliği · {result.duration_seconds:.1f} sn"
         )
@@ -184,12 +206,24 @@ def mine(
                 f"[yellow]{result.function_errors} dosyada fonksiyonlar çıkarılamadı.[/yellow]"
             )
         started = time.perf_counter()
-        features = compute_kamei(
-            pl.read_parquet(out_dir / "commits.parquet"), pl.read_parquet(out_dir / "files.parquet")
-        )
-        features.write_parquet(out_dir / "kamei.parquet")
+        commits = pl.read_parquet(out_dir / "commits.parquet")
+        files = pl.read_parquet(out_dir / "files.parquet")
+        if result.incremental_from is None:
+            features = compute_kamei(commits, files)
+            features.write_parquet(out_dir / "kamei.parquet")
+            count = features.height
+        elif result.processed_shas:
+            new_features = compute_kamei(commits, files, only_shas=set(result.processed_shas))
+            kamei_path = out_dir / "kamei.parquet"
+            old_features = pl.read_parquet(kamei_path)
+            features = pl.concat([old_features, new_features], how="vertical")
+            features.write_parquet(kamei_path)
+            count = new_features.height
+        else:
+            count = 0
         console.print(
-            f"Kamei metrikleri: {features.height} commit · {time.perf_counter() - started:.1f} sn"
+            f"Kamei metrikleri: {count} {'yeni ' if result.incremental_from else ''}commit · "
+            f"{time.perf_counter() - started:.1f} sn"
         )
 
     if not no_szz:
@@ -200,6 +234,7 @@ def mine(
                     path,
                     out_dir,
                     config,
+                    incremental_from=incremental_from,
                     on_start=lambda n: progress.update(szz_task, total=n),
                     on_fix=lambda: progress.advance(szz_task),
                 )

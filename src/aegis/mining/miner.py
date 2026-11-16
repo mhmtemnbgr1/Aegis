@@ -16,7 +16,7 @@ import re
 import subprocess
 import time
 from collections.abc import Callable, Collection, Mapping
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -49,6 +49,8 @@ class MineResult:
     functions: int
     function_errors: int
     duration_seconds: float
+    incremental_from: str | None
+    processed_shas: list[str]
 
 
 def is_remote(spec: str) -> bool:
@@ -99,12 +101,77 @@ def ensure_clone(url: str, clone_root: Path) -> Path:
     return dest
 
 
-def count_commits(repo: Path, since: datetime | None = None) -> int:
-    args = ["git", "-C", str(repo), "rev-list", "--count", "HEAD"]
-    if since is not None:
+def count_commits(repo: Path, since: datetime | None = None, *, after: str | None = None) -> int:
+    args = ["git", "-C", str(repo), "rev-list", "--count"]
+    if after is not None:
+        args.append(f"{after}..HEAD")
+    else:
+        args.append("HEAD")
+    if since is not None and after is None:
         args.insert(-1, f"--since={since.isoformat()}")
     out = subprocess.run(args, check=True, capture_output=True, text=True).stdout
     return int(out.strip())
+
+
+def _new_commit_shas(repo: Path, previous: str, head: str) -> list[str]:
+    if previous == head:
+        return []
+    out = subprocess.run(
+        ["git", "-C", str(repo), "rev-list", "--reverse", "--topo-order", f"{previous}..{head}"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    return [sha for sha in out.splitlines() if sha]
+
+
+def incremental_base_sha(
+    repo: Path,
+    out_dir: Path,
+    config: MiningConfig,
+    *,
+    functions: bool,
+    issue_labels: bool,
+    since: datetime | None = None,
+    incremental: bool = True,
+) -> str | None:
+    """Return the saved head when stored mining output can safely be extended."""
+    if not incremental or since is not None:
+        return None
+    required = (
+        "commits.parquet",
+        "files.parquet",
+        "functions.parquet",
+        "kamei.parquet",
+        "meta.json",
+    )
+    if not all((out_dir / name).is_file() for name in required):
+        return None
+    try:
+        meta = json.loads((out_dir / "meta.json").read_text("utf-8"))
+        previous = str(meta["last_processed_sha"])
+        if (
+            meta.get("remote_url") != remote_url(repo)
+            or meta.get("mining_config")
+            != config.model_dump(mode="json", exclude={"data_dir", "clone_dir"})
+            or meta.get("function_extraction_enabled") is not functions
+            or meta.get("issue_labels") is not issue_labels
+            or meta.get("since") is not None
+        ):
+            return None
+        if (
+            subprocess.run(
+                ["git", "-C", str(repo), "merge-base", "--is-ancestor", previous, "HEAD"],
+                capture_output=True,
+            ).returncode
+            != 0
+        ):
+            logger.warning("kayıtlı SHA HEAD'in atası değil; tam tarama yapılacak")
+            return None
+    except (KeyError, OSError, json.JSONDecodeError):
+        # Older or incomplete metadata cannot safely be extended.
+        return None
+    return previous
 
 
 def _head_sha(repo: Path) -> str:
@@ -126,17 +193,42 @@ def mine_repository(
     functions: bool = True,
     label_source: LabelSource | None = None,
     on_commit: Callable[[], None] | None = None,
+    incremental: bool = True,
 ) -> MineResult:
-    """`repo`'nun HEAD'inden erişilen commit'leri (eskiden yeniye) tarar ve `out_dir`'e yazar."""
+    """Tarama çıktısını yeniler; uyumluysa yalnızca kayıtlı SHA'dan sonraki commit'leri işler."""
     config = config or MiningConfig()
     slug = slug or repo_slug(repo)
     started = time.perf_counter()
+    incremental_from = incremental_base_sha(
+        repo,
+        out_dir,
+        config,
+        functions=functions,
+        issue_labels=label_source is not None,
+        since=since,
+        incremental=incremental,
+    )
+    previous_head = _head_sha(repo)
+    processed_shas = (
+        _new_commit_shas(repo, incremental_from, previous_head)
+        if incremental_from is not None
+        else []
+    )
     commits: list[dict[str, Any]] = []
     files: list[dict[str, Any]] = []
     funcs: list[dict[str, Any]] = []
     function_errors = 0
 
-    for c in Repository(str(repo), since=since).traverse_commits():
+    if incremental_from is None:
+        commit_stream = Repository(str(repo), since=since).traverse_commits()
+    else:
+        commit_stream = (
+            commit
+            for sha in processed_shas
+            for commit in Repository(str(repo), single=sha).traverse_commits()
+        )
+
+    for c in commit_stream:
         added = deleted = 0
         modified = c.modified_files  # merge commit'lerinde PyDriller boş liste döner
         for mf in modified:
@@ -201,14 +293,28 @@ def mine_repository(
     _classify(commits, config, label_source)
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    pl.DataFrame(commits, schema=schema.COMMITS).write_parquet(out_dir / "commits.parquet")
-    pl.DataFrame(files, schema=schema.FILES).write_parquet(out_dir / "files.parquet")
-    pl.DataFrame(funcs, schema=schema.FUNCTIONS).write_parquet(out_dir / "functions.parquet")
+    additions = (
+        ("commits.parquet", schema.COMMITS, commits),
+        ("files.parquet", schema.FILES, files),
+        ("functions.parquet", schema.FUNCTIONS, funcs),
+    )
+    totals: dict[str, pl.DataFrame] = {}
+    for name, columns, rows in additions:
+        new = pl.DataFrame(rows, schema=columns)
+        target = out_dir / name
+        if incremental_from is not None:
+            old = pl.read_parquet(target)
+            total = pl.concat([old, new], how="vertical") if new.height else old
+        else:
+            total = new
+        if incremental_from is None or new.height:
+            total.write_parquet(target)
+        totals[name] = total
 
     result = MineResult(
         slug=slug,
         out_dir=str(out_dir),
-        head_sha=_head_sha(repo),
+        head_sha=previous_head,
         commits=len(commits),
         merges=sum(1 for c in commits if c["is_merge"]),
         fixes=sum(1 for c in commits if c["is_fix"]),
@@ -216,6 +322,12 @@ def mine_repository(
         functions=len(funcs),
         function_errors=function_errors,
         duration_seconds=round(time.perf_counter() - started, 2),
+        incremental_from=incremental_from,
+        processed_shas=(
+            processed_shas
+            if incremental_from is not None
+            else [commit["sha"] for commit in commits]
+        ),
     )
     meta = {
         "schema_version": schema.SCHEMA_VERSION,
@@ -223,10 +335,22 @@ def mine_repository(
         "mined_at": datetime.now(UTC).isoformat(),
         "remote_url": remote_url(repo),
         "since": since.isoformat() if since else None,
-        "functions": functions,
+        "function_extraction_enabled": functions,
         "issue_labels": label_source is not None,
         "mining_config": config.model_dump(mode="json", exclude={"data_dir", "clone_dir"}),
-        **asdict(result),
+        "slug": slug,
+        "out_dir": str(out_dir),
+        "head_sha": result.head_sha,
+        "last_processed_sha": result.head_sha,
+        "incremental_from": result.incremental_from,
+        "new_commits": result.commits,
+        "commits": totals["commits.parquet"].height,
+        "merges": int(totals["commits.parquet"]["is_merge"].sum()),
+        "fixes": int(totals["commits.parquet"]["is_fix"].sum()),
+        "files": totals["files.parquet"].height,
+        "functions": totals["functions.parquet"].height,
+        "function_errors": result.function_errors,
+        "duration_seconds": result.duration_seconds,
     }
     (out_dir / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False), "utf-8")
     return result
