@@ -16,6 +16,7 @@ from pathlib import Path
 import polars as pl
 
 from aegis.config import MiningConfig
+from aegis.mining.dataset import build_repo
 from aegis.mining.fixes import FixClassifier
 
 BASELINE_EXCLUDES = MiningConfig().fix_exclude_patterns[:14]
@@ -38,10 +39,12 @@ def main() -> None:
         "repo", "sha", pl.col("classifier") == "true"
     )
     rows = labels.join(sample, on=["repo", "sha"]).filter(pl.col("correct") != "belirsiz")
-    d1 = pl.read_parquet(".aegis/data/d1.parquet").select("repo", "sha")
+    # Popülasyon: örneklemin çekildiği repoların D1 satırları. D1'e artık alınmayan repolar
+    # (eşik altı, #95) da etiket kalitesine dahil; satırları doğrudan tarama çıktısından kurulur.
+    data = Path(".aegis/data")
     pops = {
-        repo: pl.read_parquet(Path(".aegis/data") / repo / "commits.parquet").join(
-            d1.filter(pl.col("repo") == repo).select("sha"), on="sha"
+        repo: pl.read_parquet(data / repo / "commits.parquet").join(
+            build_repo(data / repo)[0].select("sha"), on="sha"
         )
         for repo in sorted(set(rows["repo"]))
     }

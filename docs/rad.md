@@ -443,7 +443,7 @@ Priorities follow the MoSCoW scheme (Must, Should, Could). The UC column links e
 
 - License: Aegis is released under the MIT License.
 - Dependencies: only open-source dependencies whose licenses are compatible with MIT (MIT, BSD, Apache 2.0, MPL 2.0) are used. The license of each new dependency is checked before it is added.
-- Target repositories: all mined repositories are open source (black: MIT; fastapi: MIT; httpie: BSD-3-Clause; scrapy: BSD-3-Clause; tornado: Apache 2.0; tqdm: MPL 2.0 and MIT). The published dataset keeps references to the original repositories and respects their licenses. BugsInPy is used under its own license terms.
+- Target repositories: all mined repositories are open source (D1: black: MIT; luigi: Apache 2.0; sanic: MIT; scrapy: BSD-3-Clause; tornado: Apache 2.0; tqdm: MPL 2.0 and MIT; demo only: httpie: BSD-3-Clause). The published dataset keeps references to the original repositories and respects their licenses. BugsInPy is used under its own license terms.
 - Code confidentiality: source code never leaves the developer's machine or the runner. The agents use a local model served by Ollama and local embeddings (NFR-03), so no third-party LLM provider receives code.
 - Personal data (KVKK and GDPR): the user study does not collect personal data and the ratings are anonymous. Commit author identities are used only to compute experience metrics and are not published in identifiable form. The dashboard runs locally and does not send any data to third parties.
 - Liability: suggestions are advisory. Aegis never merges code, and the developer who accepts a suggestion remains responsible for the change.

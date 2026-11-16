@@ -21,6 +21,7 @@ Kullanım:
     uv run python eval/retrieval_eval.py [sorgu/repo, ör. 150] > eval/reports/retrieval.md
 """
 
+import json
 import random
 import sys
 from collections import defaultdict
@@ -104,7 +105,9 @@ def table(rows: list[dict[str, Any]], title: str) -> list[str]:
 
 def main() -> None:
     limit = int(sys.argv[1]) if len(sys.argv) > 1 else 150
-    slugs = sorted(p.parent.name for p in DATA.glob("*/cards.jsonl"))
+    d1 = json.loads((DATA / "d1.json").read_text("utf-8"))["repos"]
+    included = {r["repo"] for r in d1 if r.get("included", True)}
+    slugs = sorted(p.parent.name for p in DATA.glob("*/cards.jsonl") if p.parent.name in included)
     rows = [r for slug in slugs for r in evaluate(slug, limit)]
     lines = ["# Hafıza getirme değerlendirmesi (#27)", "", *table(rows, "Tüm repolar"), ""]
     lines += ["### Hibrit ile diğer modlar (sorgu başına ters sıra, Wilcoxon)", ""]
@@ -121,7 +124,6 @@ def main() -> None:
             lines += table(part, slug) + [""]
     print("\n".join(lines))
     # Sorgu başına sonuçlar: güven aralıkları ve sonuç belgesi için (eval/results.py).
-    import json
 
     Path("eval/reports/retrieval.json").write_text(json.dumps(rows, indent=0), "utf-8")
 

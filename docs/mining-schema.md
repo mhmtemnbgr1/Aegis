@@ -213,6 +213,17 @@ Her maddeyi önce Claude Opus 5.5 ve Claude Sonnet 5.5 birbirinden bağımsız o
 | fastapi | 332 → 204 | 138 | %1,7 |
 | httpie | 235 → 183 | 168 | %9,9 |
 
+### D1 repo değişikliği (16 Kasım 2026)
+
+Fix kuralları sıkılaştırıldıktan sonra fastapi (138) ve httpie (168) 200 bug-inducing sınırının altına düştü. Seçim kuralı gereği (`docs/target-repos.md`) bu ikisi D1'den çıkarıldı. Yerlerine BugsInPy'deki adaylardan sınırı geçen spotify/luigi (595) ve sanic-org/sanic (505) alındı (#95). İki repo da güncel kodla, aynı kurallarla yeniden tarandı. `aegis dataset` artık sınırın altındaki repoları D1'e almıyor; onları `d1.json`'da `included: false` ile listeliyor (`--min-positives`). httpie verisi demo ve hafıza için yerinde duruyor.
+
+| Repo | Commit | Fix | Bug-inducing | Oran | PR | Hatalı PR |
+| --- | --- | --- | --- | --- | --- | --- |
+| luigi | 3.047 | 543 | 595 | %19,5 | 1.824 | 407 |
+| sanic | 2.112 | 390 | 505 | %23,9 | 1.218 | 366 |
+
+D1 artık 23.245 commit ve 3.599 bug-inducing commit içeriyor; repo başına ayrıntı `eval/datasets/d1-report.md` dosyasında. Etiket kalitesi örneklemleri (#8, #9) eski altı repodan çekildi; luigi ve sanic için elle kontrol yok. D1'de kalan dört repodaki SZZ eşlemelerinde doğruluk, örneklemin tamamıyla benzer (yaklaşık üçte bir).
+
 ## `cards.jsonl` (`aegis index`)
 
 Bug-fix hafızasının hata kartları; satır başına bir JSON nesnesi, şema `docs/architecture.md` §4 ile aynı (`BugCard`). Kart kimliği `BC-<fix_sha'nın ilk 10 karakteri>`. Fix seçimi D1 ile aynı kurallara uyar (`is_fix`, merge değil, `max_files_per_commit`), ama SZZ penceresi uygulanmaz ve inducing commit'i bulunamayan fix'ler de kart olur (`inducing_shas` boş). Test dosyaları kartın dosya ve fonksiyon listesine girmez.

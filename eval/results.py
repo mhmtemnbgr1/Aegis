@@ -102,9 +102,17 @@ def comparison_table(rows: list[tuple[str, list[float], list[float]]], pct: bool
     return out
 
 
+def included_repos() -> set[str]:
+    """D1'e alınan repolar (manifestte `included`); eşik altı repoların eski raporları sayılmaz."""
+    repos = json.loads((DATA / "d1.json").read_text("utf-8"))["repos"]
+    return {r["repo"] for r in repos if r.get("included", True)}
+
+
 # --- Bölümler --------------------------------------------------------------------------------
 def section_data() -> list[str]:
-    stats = json.loads((DATA / "d1.json").read_text("utf-8"))["repos"]
+    manifest = json.loads((DATA / "d1.json").read_text("utf-8"))
+    stats = [s for s in manifest["repos"] if s.get("included", True)]
+    left_out = [s for s in manifest["repos"] if not s.get("included", True)]
     prs = pl.read_parquet(DATA / "d1-pr.parquet")
     pr_stats = {
         r: (h, int(b), m)
@@ -134,6 +142,13 @@ def section_data() -> list[str]:
         "",
         f"Toplam {total:,} commit, {prs.height:,} PR. Pencere: tüm geçmiş (#13).".replace(",", "."),
     ]
+    if left_out:
+        names = ", ".join(f"{repo_name(s['repo'])} ({s['positives']})" for s in left_out)
+        out += [
+            "",
+            f"{manifest['min_positives']} hatalı commit eşiğinin altında kaldığı için D1'e alınmayan "
+            f"repolar: {names}. Seçim ve gerekçe: `docs/target-repos.md`.",
+        ]
     return out
 
 
@@ -207,7 +222,7 @@ def section_models() -> list[str]:
         reports = [
             r
             for r in reports
-            if r["repo"] != "all"
+            if r["repo"] in included_repos()
             and r.get("scenario", "within") == ("cross" if suffix else "within")
         ]
         for model in ("lr", "rf", "lightgbm"):
