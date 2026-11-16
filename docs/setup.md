@@ -51,7 +51,40 @@ provider = "ollama"
 model = "qwen2.5-coder:7b"
 ```
 
-## 3. Gerçek modelle injection testleri (isteğe bağlı)
+## 3. Ollama ile bug-fix hafızası
+
+Aegis, Ollama'yı sınıflandırıcıyı ince ayar yapmak için değil, geçmiş hata kartlarını yerel
+embedding'lerle aramak ve inceleme ajanına benzer örnekleri vermek için kullanır. Sınıflandırıcı
+eğitimi LR, RF veya LightGBM ile yapılır.
+
+1. Embedding modelini indirin:
+
+   ```bash
+   ollama pull nomic-embed-text
+   ```
+
+2. `.aegis.toml` içinde Ollama embedding modelini seçin:
+
+   ```toml
+   [memory]
+   embedding_model = "ollama:nomic-embed-text"
+   ```
+
+3. Madencilik, kart oluşturma, veri kümesi üretimi ve sınıflandırıcı eğitimini sırayla çalıştırın:
+
+   ```bash
+   uv run aegis mine https://github.com/owner/repo
+   uv run aegis index <yerel-klon-yolu>
+   uv run aegis dataset
+   uv run aegis train --repo <repo-slug>
+   ```
+
+`aegis index`, hata kartlarını ve vektör indeksini üretir. `aegis dataset` komutunu bundan sonra
+çalıştırmak, `mem_func_bugs` ve `mem_file_bugs` hafıza özelliklerini D1'e ekler. Repo slug'ı
+madencilik çıktısında gösterilir. Bu akış Qwen'in ağırlıklarını değiştirmez; Ollama'da çalıştırmak
+üzere ayrı bir ince ayar adapter'ı üretmez.
+
+## 4. Gerçek modelle injection testleri (isteğe bağlı)
 
 CI bu testleri mock LLM ile koşar. Gerçek modelle elle denemek için:
 
@@ -59,7 +92,7 @@ CI bu testleri mock LLM ile koşar. Gerçek modelle elle denemek için:
 AEGIS_LIVE_PROVIDER=ollama AEGIS_LIVE_MODEL=qwen2.5-coder:7b uv run pytest -m live
 ```
 
-## 4. GitHub Action'da LLM
+## 5. GitHub Action'da LLM
 
 GitHub'ın barındırılan runner'larında Ollama yoktur. LLM analizini Action'da açmak için Ollama'nın
 erişilebilir olduğu bir ortam gerekir (ör. Ollama kurulu self-hosted runner). Adresi action'ın
