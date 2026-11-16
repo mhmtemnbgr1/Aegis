@@ -666,6 +666,11 @@ def dataset(
         "--level",
         help="commit: D1; pr: PR düzeyinde D1 (d1-pr.parquet; önce commit düzeyi gerekir).",
     ),
+    min_positives: int = typer.Option(
+        200,
+        "--min-positives",
+        help="Bundan az bug-inducing commit'i olan repolar D1'e alınmaz (0: hepsi).",
+    ),
     config_path: Path | None = typer.Option(None, "--config", help="Yapılandırma dosyası."),
 ) -> None:
     """Taranmış tüm repolardan D1 veri setini (Kamei özellikleri + SZZ etiketi) oluşturur."""
@@ -681,11 +686,11 @@ def dataset(
         console.print("[red]--level commit|pr[/red]")
         raise typer.Exit(2)
     target = out or root / "d1.parquet"
-    stats = build_d1(root, target)
+    stats = build_d1(root, target, min_positives)
     if not stats:
         console.print(f"[yellow]{root} altında kamei ve SZZ çıktısı olan repo yok.[/yellow]")
         raise typer.Exit(1)
-    table = Table("Repo", "Commit", "Fix", "Bug-inducing", "Oran", "≥ 200?")
+    table = Table("Repo", "Commit", "Fix", "Bug-inducing", "Oran", "D1'de?")
     for s in stats:
         table.add_row(
             s.repo,
@@ -693,7 +698,7 @@ def dataset(
             str(s.fixes),
             str(s.positives),
             f"%{100 * s.positive_rate:.1f}",
-            "[green]evet[/green]" if s.enough else "[red]hayır[/red]",
+            "[green]evet[/green]" if s.positives >= min_positives else "[red]hayır[/red]",
         )
     console.print(table)
     console.print(f"[dim]Çıktı: {target} (+ {target.with_suffix('.json').name})[/dim]")
