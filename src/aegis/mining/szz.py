@@ -207,9 +207,7 @@ def run_szz(
     large = in_window.filter(pl.col("files_changed") > config.max_files_per_commit)
     fixes = in_window.filter(pl.col("files_changed") <= config.max_files_per_commit)
 
-    current_head = json.loads((data_dir / "meta.json").read_text("utf-8")).get(
-        "last_processed_sha"
-    )
+    current_head = json.loads((data_dir / "meta.json").read_text("utf-8")).get("last_processed_sha")
     previous_pairs: pl.DataFrame | None = None
     if incremental_from is not None and (data_dir / "szz_meta.json").is_file():
         old_meta = json.loads((data_dir / "szz_meta.json").read_text("utf-8"))

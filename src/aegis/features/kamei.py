@@ -155,9 +155,7 @@ def compute_kamei(
     """
     history = ChangeHistory.from_frames(commits, files)
     repo = commits["repo"][0] if commits.height else ""
-    targets = (
-        commits.filter(pl.col("sha").is_in(only_shas)) if only_shas is not None else commits
-    )
+    targets = commits.filter(pl.col("sha").is_in(only_shas)) if only_shas is not None else commits
     rows: list[dict[str, Any]] = [
         {"repo": repo, "sha": sha, "as_of": time, **kamei_metrics(change, history, as_of=time)}
         for sha, time, _, change in iter_changes(targets, files)

@@ -145,16 +145,20 @@ def mine(
             GitHubClient(token, gh_repo), out_dir / "issue_labels.json"
         )
 
-    incremental_from = incremental_base_sha(
-        path,
-        out_dir,
-        config,
-        functions=not no_functions,
-        issue_labels=label_source is not None,
-        since=since,
-        incremental=not full and not szz_only,
-    )
-    total = count_commits(path, since, after=incremental_from)
+    try:
+        incremental_from = incremental_base_sha(
+            path,
+            out_dir,
+            config,
+            functions=not no_functions,
+            issue_labels=label_source is not None,
+            since=since,
+            incremental=not full and not szz_only,
+        )
+        total = count_commits(path, since, after=incremental_from)
+    except subprocess.CalledProcessError as exc:
+        console.print(f"[red]git başarısız:[/red] {(exc.stderr or '').strip()}")
+        raise typer.Exit(2) from exc
 
     def progress_bar() -> Progress:
         return Progress(
@@ -177,9 +181,7 @@ def mine(
     else:
         with progress_bar() as progress:
             description = (
-                f"{slug} yeni commit'leri tarıyor"
-                if incremental_from
-                else f"{slug} taranıyor"
+                f"{slug} yeni commit'leri tarıyor" if incremental_from else f"{slug} taranıyor"
             )
             task = progress.add_task(description, total=total)
             result = mine_repository(
@@ -194,7 +196,8 @@ def mine(
                 incremental=not full,
             )
         console.print(
-            f"[bold]{result.commits}[/bold] yeni commit ({result.merges} merge, "
+            f"[bold]{result.commits}[/bold] {'yeni ' if result.incremental_from else ''}"
+            f"commit ({result.merges} merge, "
             f"[bold]{result.fixes}[/bold] fix) · {result.files} dosya değişikliği · "
             f"{result.functions} fonksiyon değişikliği · {result.duration_seconds:.1f} sn"
         )
@@ -219,7 +222,8 @@ def mine(
         else:
             count = 0
         console.print(
-            f"Kamei metrikleri: {count} yeni commit · {time.perf_counter() - started:.1f} sn"
+            f"Kamei metrikleri: {count} {'yeni ' if result.incremental_from else ''}commit · "
+            f"{time.perf_counter() - started:.1f} sn"
         )
 
     if not no_szz:

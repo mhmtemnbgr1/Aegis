@@ -248,3 +248,75 @@ def test_build_d1(tmp_path: Path) -> None:
     out = CliRunner().invoke(app, ["dataset", "--data", str(root), "--min-positives", "0"])
     assert out.exit_code == 0, out.output
     assert "Bug-inducing" in out.output
+
+
+MINED = ("commits.parquet", "files.parquet", "functions.parquet", "kamei.parquet", "szz.parquet")
+
+
+def _sorted(df: pl.DataFrame) -> pl.DataFrame:
+    keys = [c for c, t in df.schema.items() if not isinstance(t, pl.List)]
+    return df.sort(keys)
+
+
+def _assert_same_output(a: Path, b: Path) -> None:
+    for name in MINED:
+        left, right = pl.read_parquet(a / name), pl.read_parquet(b / name)
+        assert _sorted(left).equals(_sorted(right)), name
+
+
+def _mine(repo: Path, out: Path, *extra: str) -> str:
+    result = CliRunner().invoke(app, ["mine", str(repo), "--out", str(out), *extra])
+    assert result.exit_code == 0, result.output
+    return result.output
+
+
+def _add_bug_and_fix(repo: GitRepo) -> str:
+    bug = repo.commit(
+        "Change sub",
+        {"calc.py": CALC_V2.replace("a - b", "a - b - 1")},
+        date="2024-01-07T10:00:00Z",
+    )
+    repo.commit("Fix sub off by one", {"calc.py": CALC_V2}, date="2024-01-08T10:00:00Z")
+    return bug
+
+
+def test_incremental_mining_matches_full_scan(history: History, tmp_path: Path) -> None:
+    """Önceki çıktının üzerine yalnızca yeni commit'leri eklemek, sıfırdan taramayla aynı sonucu
+    vermeli: commit, dosya, fonksiyon, Kamei ve SZZ çıktıları (#11)."""
+    repo, _ = history
+    inc, full = tmp_path / "inc", tmp_path / "full"
+    _mine(repo.path, inc)
+    bug = _add_bug_and_fix(repo)
+
+    output = _mine(repo.path, inc)
+    assert "yeni commit'leri tarıyor" in output and "2 yeni commit" in output
+    meta = json.loads((inc / "proj" / "meta.json").read_text("utf-8"))
+    assert meta["commits"] == 8 and meta["new_commits"] == 2
+    assert meta["last_processed_sha"] == repo.run("rev-parse", "HEAD")
+    assert bug in pl.read_parquet(inc / "proj" / "szz.parquet")["inducing_sha"].to_list()
+
+    _mine(repo.path, full)
+    _assert_same_output(inc / "proj", full / "proj")
+
+    # Yeni commit yoksa hiçbir çıktı değişmez.
+    before = {n: pl.read_parquet(inc / "proj" / n) for n in MINED}
+    assert "0 yeni commit" in _mine(repo.path, inc)
+    for name, frame in before.items():
+        assert _sorted(pl.read_parquet(inc / "proj" / name)).equals(_sorted(frame)), name
+
+
+def test_incremental_mining_falls_back_to_full_scan(history: History, tmp_path: Path) -> None:
+    """Kayıtlı SHA artık geçmişte değilse (force push), ayarlar değiştiyse ya da --full verilirse
+    tam tarama yapılır."""
+    repo, shas = history
+    out = tmp_path / "data"
+    _mine(repo.path, out)
+    repo.run("reset", "-q", "--hard", shas["fix"])  # docs commit'i geçmişten silindi
+    _add_bug_and_fix(repo)
+    output = _mine(repo.path, out)
+    assert "yeni commit'leri tarıyor" not in output and "7 commit" in output
+    _mine(repo.path, tmp_path / "ref")
+    _assert_same_output(out / "proj", tmp_path / "ref" / "proj")
+
+    assert "yeni commit" not in _mine(repo.path, out, "--full")
+    assert "yeni commit" not in _mine(repo.path, out, "--no-functions")  # ayar değişti

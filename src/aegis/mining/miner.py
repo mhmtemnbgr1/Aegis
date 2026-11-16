@@ -101,9 +101,7 @@ def ensure_clone(url: str, clone_root: Path) -> Path:
     return dest
 
 
-def count_commits(
-    repo: Path, since: datetime | None = None, *, after: str | None = None
-) -> int:
+def count_commits(repo: Path, since: datetime | None = None, *, after: str | None = None) -> int:
     args = ["git", "-C", str(repo), "rev-list", "--count"]
     if after is not None:
         args.append(f"{after}..HEAD")
@@ -151,7 +149,7 @@ def incremental_base_sha(
         return None
     try:
         meta = json.loads((out_dir / "meta.json").read_text("utf-8"))
-        previous = meta["last_processed_sha"]
+        previous = str(meta["last_processed_sha"])
         if (
             meta.get("remote_url") != remote_url(repo)
             or meta.get("mining_config")
@@ -161,10 +159,13 @@ def incremental_base_sha(
             or meta.get("since") is not None
         ):
             return None
-        if subprocess.run(
-            ["git", "-C", str(repo), "merge-base", "--is-ancestor", previous, "HEAD"],
-            capture_output=True,
-        ).returncode != 0:
+        if (
+            subprocess.run(
+                ["git", "-C", str(repo), "merge-base", "--is-ancestor", previous, "HEAD"],
+                capture_output=True,
+            ).returncode
+            != 0
+        ):
             logger.warning("kayıtlı SHA HEAD'in atası değil; tam tarama yapılacak")
             return None
     except (KeyError, OSError, json.JSONDecodeError):
@@ -300,14 +301,14 @@ def mine_repository(
     totals: dict[str, pl.DataFrame] = {}
     for name, columns, rows in additions:
         new = pl.DataFrame(rows, schema=columns)
-        path = out_dir / name
+        target = out_dir / name
         if incremental_from is not None:
-            old = pl.read_parquet(path)
+            old = pl.read_parquet(target)
             total = pl.concat([old, new], how="vertical") if new.height else old
         else:
             total = new
         if incremental_from is None or new.height:
-            total.write_parquet(path)
+            total.write_parquet(target)
         totals[name] = total
 
     result = MineResult(
