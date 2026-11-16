@@ -228,7 +228,7 @@ def test_build_d1(tmp_path: Path) -> None:
     compute_kamei(commits, files).write_parquet(root / "p" / "kamei.parquet")
     run_szz(git.path, root / "p")
 
-    stats = build_d1(root, root / "d1.parquet")
+    stats = build_d1(root, root / "d1.parquet", min_positives=0)
     d1 = pl.read_parquet(root / "d1.parquet")
     assert [s.repo for s in stats] == ["p"]
     assert (stats[0].commits, stats[0].fixes, stats[0].positives) == (4, 1, 1)
@@ -237,7 +237,14 @@ def test_build_d1(tmp_path: Path) -> None:
     assert d1["as_of"].is_sorted()
     manifest = json.loads((root / "d1.json").read_text("utf-8"))
     assert manifest["rows"] == 4 and manifest["repos"][0]["head_sha"]
+    assert manifest["repos"][0]["included"]
 
-    out = CliRunner().invoke(app, ["dataset", "--data", str(root)])
+    # Varsayılan eşik (200): repo D1'e girmez ama manifestte kalır.
+    build_d1(root, root / "d1.parquet")
+    assert pl.read_parquet(root / "d1.parquet").height == 0
+    manifest = json.loads((root / "d1.json").read_text("utf-8"))
+    assert manifest["rows"] == 0 and not manifest["repos"][0]["included"]
+
+    out = CliRunner().invoke(app, ["dataset", "--data", str(root), "--min-positives", "0"])
     assert out.exit_code == 0, out.output
     assert "Bug-inducing" in out.output

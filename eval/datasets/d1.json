@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "aegis_version": "0.0.1",
+  "built_at": "2026-11-16T19:18:37.893003+00:00",
+  "min_positives": 200,
+  "rows": 23245,
+  "repos": [
+    {
+      "repo": "fastapi__fastapi",
+      "head_sha": "5add7a458d629b07311d48261f696b5ac2bb9a5f",
+      "szz_variant": "ma",
+      "cutoff": "2018-12-05T06:56:50+00:00",
+      "commits": 8037,
+      "fixes": 204,
+      "positives": 138,
+      "positive_rate": 0.0172,
+      "enough": false,
+      "included": false
+    },
+    {
+      "repo": "httpie__cli",
+      "head_sha": "5b604c37c6c67e18e7c3e9aee6c88a8c22b98345",
+      "szz_variant": "ma",
+      "cutoff": "2012-02-25T12:39:38+00:00",
+      "commits": 1690,
+      "fixes": 183,
+      "positives": 168,
+      "positive_rate": 0.0994,
+      "enough": false,
+      "included": false
+    },
+    {
+      "repo": "psf__black",
+      "head_sha": "cf3e0938971fc5cd0d71e7b696e86a6fb953332a",
+      "szz_variant": "ma",
+      "cutoff": "2018-03-14T19:55:32+00:00",
+      "commits": 2502,
+      "fixes": 541,
+      "positives": 386,
+      "positive_rate": 0.1543,
+      "enough": true,
+      "included": true
+    },
+    {
+      "repo": "sanic-org__sanic",
+      "head_sha": "5ffc7b3710838eaf016d2f9612a86a08626915e5",
+      "szz_variant": "ma",
+      "cutoff": "2016-05-26T04:38:23+00:00",
+      "commits": 2112,
+      "fixes": 390,
+      "positives": 505,
+      "positive_rate": 0.2391,
+      "enough": true,
+      "included": true
+    },
+    {
+      "repo": "scrapy__scrapy",
+      "head_sha": "f1e29c3822468f03f090d22714020f86b3d6e9a2",
+      "szz_variant": "ma",
+      "cutoff": "2008-06-26T13:44:50+00:00",
+      "commits": 9625,
+      "fixes": 1140,
+      "positives": 1139,
+      "positive_rate": 0.1183,
+      "enough": true,
+      "included": true
+    },
+    {
+      "repo": "spotify__luigi",
+      "head_sha": "f5feb7a4655ad73ef56f0ab04d7903ab43b63e12",
+      "szz_variant": "ma",
+      "cutoff": "2011-11-17T20:50:04+00:00",
+      "commits": 3047,
+      "fixes": 543,
+      "positives": 595,
+      "positive_rate": 0.1953,
+      "enough": true,
+      "included": true
+    },
+    {
+      "repo": "tornadoweb__tornado",
+      "head_sha": "1d790afd3195228e634e59a81df47bf6c707ead2",
+      "szz_variant": "ma",
+      "cutoff": "2009-09-09T05:01:24+00:00",
+      "commits": 4138,
+      "fixes": 658,
+      "positives": 578,
+      "positive_rate": 0.1397,
+      "enough": true,
+      "included": true
+    },
+    {
+      "repo": "tqdm__tqdm",
+      "head_sha": "9cf5a12b1f955468a17f0ba3c59092b23e4258ac",
+      "szz_variant": "ma",
+      "cutoff": "2013-10-26T18:50:04+00:00",
+      "commits": 1821,
+      "fixes": 400,
+      "positives": 396,
+      "positive_rate": 0.2175,
+      "enough": true,
+      "included": true
+    }
+  ]
+}

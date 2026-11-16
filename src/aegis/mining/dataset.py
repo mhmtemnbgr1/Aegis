@@ -108,10 +108,12 @@ def build_repo(data_dir: Path, config: AegisConfig | None = None) -> tuple[pl.Da
     return rows, stats
 
 
-def build_d1(data_root: Path, out: Path) -> list[RepoStats]:
-    """`data_root` altındaki tüm repoları birleştirip `out` (Parquet) ve yanına manifest yazar.
+def build_d1(data_root: Path, out: Path, min_positives: int = MIN_POSITIVES) -> list[RepoStats]:
+    """`data_root` altındaki repoları birleştirip `out` (Parquet) ve yanına manifest yazar.
 
-    Yalnızca kamei ve SZZ çıktısı olan repo dizinleri alınır.
+    Yalnızca kamei ve SZZ çıktısı olan repo dizinleri alınır. En az `min_positives` bug-inducing
+    commit'i olmayan repolar D1'e girmez (seçim kuralı, `docs/target-repos.md`); manifestte
+    `included: false` ile yine listelenir. Verileri silinmez; demo ve hafıza için kullanılabilir.
     """
     frames: list[pl.DataFrame] = []
     stats: list[RepoStats] = []
@@ -119,7 +121,8 @@ def build_d1(data_root: Path, out: Path) -> list[RepoStats]:
         if not all((repo_dir / f).is_file() for f in ("kamei.parquet", "szz.parquet")):
             continue
         rows, repo_stats = build_repo(repo_dir)
-        frames.append(rows)
+        if repo_stats.positives >= min_positives:
+            frames.append(rows)
         stats.append(repo_stats)
     out.parent.mkdir(parents=True, exist_ok=True)
     data = pl.concat(frames) if frames else pl.DataFrame(schema=_d1_schema())
@@ -128,9 +131,9 @@ def build_d1(data_root: Path, out: Path) -> list[RepoStats]:
         "schema_version": schema.SCHEMA_VERSION,
         "aegis_version": __version__,
         "built_at": datetime.now(UTC).isoformat(),
-        "min_positives": MIN_POSITIVES,
+        "min_positives": min_positives,
         "rows": data.height,
-        "repos": [asdict(s) for s in stats],
+        "repos": [{**asdict(s), "included": s.positives >= min_positives} for s in stats],
     }
     out.with_suffix(".json").write_text(json.dumps(manifest, indent=2), "utf-8")
     return stats
