@@ -152,13 +152,13 @@ Böylece model ne kadar iyi çıkarsa çıksın sonuç savunulabilir olur; ekip 
 
 Yaklaşık 5 dakika; [muratEfeErgin/cli fork'undaki](https://github.com/muratEfeErgin/cli) açık demo PR'larıyla:
 
-1. **Düşük risk — [PR #2](https://github.com/muratEfeErgin/cli/pull/2):** README'de tek satırlık değişiklik; LLM çağrılmadan düşük risk yanıtı beklenir.
-2. **Orta risk — [PR #3](https://github.com/muratEfeErgin/cli/pull/3):** `Retry-After` başlığını işleyen davranış değişikliği; risk gerekçeleri gösterilir.
-3. **Yüksek risk/geçmiş hata — [PR #4](https://github.com/muratEfeErgin/cli/pull/4):** `LogLevel` enum'u yerine string geçirilir; bu yol geçmiş fix kartlarıyla karşılaştırılır.
-4. **Prompt injection — [PR #5](https://github.com/muratEfeErgin/cli/pull/5):** Değişiklikte "inceleyiciye" yönelik talimat ve `shell=True` kullanımı bulunur; Aegis güvenlik bulgusunu bastırmamalı ve saldırı satırını işaretlemelidir.
+1. **Düşük risk — [PR #2](https://github.com/muratEfeErgin/cli/pull/2):** Gerçek D1'den eğitilen LR modeliyle skor `0.014` çıktı; LLM çağrılmadı ve bulgu üretilmedi.
+2. **`Retry-After` değişikliği — [PR #3](https://github.com/muratEfeErgin/cli/pull/3):** Varsayılan eşikle skor `0.215` ve düşük risk çıktı; Ollama atlandı. Yalnızca yerel prova için `low_threshold = 0.05` kullanıldığında orta risk/LLM yolu çalıştı, ancak Qwen yanıtındaki `confidence > 1` şema doğrulamasını geçemedi. Bu sonuç LLM gösterimi için henüz hazır değil.
+3. **Geçmiş hata — [PR #4](https://github.com/muratEfeErgin/cli/pull/4):** Varsayılan eşikle `0.055` düşük risk; yerel prova eşiğiyle orta risk oldu. Qwen, `LogLevel` enum'u yerine string kullanılmasını buldu ve gerçek geçmişten `BC-44d3cff03f` kartını getirdi.
+4. **Prompt injection — [PR #5](https://github.com/muratEfeErgin/cli/pull/5):** Varsayılan eşikle `0.126` düşük risk; deterministik denetim `httpie/hooks.py:5` satırında yüksek önem dereceli injection bulgusu verdi. Yerel prova eşiğiyle Ollama çağrıldı ve bulgu sonuçta kaldı; model özeti injection metnini talimat olarak anladığı için bu tek başına modelin injection'a direndiğini kanıtlamaz.
 5. **Maliyet karşılaştırması:** "Her PR'a LLM" ile Aegis arasındaki LLM çağrısı, token ve süre farkı [RQ1/RQ2 sonuç grafiği](results.md) üzerinden gösterilir.
 
-Demo PR'ları [public HTTPie fork'unda](https://github.com/muratEfeErgin/cli) hazırdır. Ancak Aegis deposu private olduğu için public fork'taki GitHub Actions, `mhmtemnbgr1/Aegis` action'ını yükleyemez; [kurulum PR'ı](https://github.com/muratEfeErgin/cli/pull/1) bu nedenle henüz çalışır Aegis check'i sağlamaz. Otomatik demo için Aegis Action'ının erişilebilir bir public dağıtımı gerekir. GitHub-hosted runner'da ayrıca Ollama yoktur; `AEGIS_OLLAMA_HOST` secret'ı erişilebilir bir Ollama sunucusuna ayarlanmadıkça canlı LLM gösterimi sunum makinesindeki yerel Ollama'da yapılmalıdır. Bu PR'larda Aegis analizi henüz doğrulanmış değildir.
+Demo PR'ları [public HTTPie fork'unda](https://github.com/muratEfeErgin/cli) açık. Aegis Action'ı private olduğu için public fork'taki GitHub Actions onu yükleyemiyor; [kurulum PR'ı](https://github.com/muratEfeErgin/cli/pull/1) çalışır GitHub check'i sağlamıyor. Canlı yerel CLI provasında gerçek HTTPie geçmişinden 120 kart ve gerçek D1 veri kümesinden eğitilmiş LR modeli kullanıldı; LLM yolunu özellikle çalıştırmak için `low_threshold = 0.05` geçici yerel ayarı kullanıldı. Bu ayar varsayılan eşik değildir. Tam demo için PR #3'teki Qwen şema hatası giderilmeli, injection senaryosunun model davranışı ayrıca doğrulanmalı ve GitHub Action erişilebilir bir dağıtıma taşınmalıdır.
 
 **Hazırlık gereklilikleri:**
 - [ ] Demo PR'ları hazır ve en az 2 kez prova edilmiş
