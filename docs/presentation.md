@@ -158,7 +158,7 @@ Yaklaşık 5 dakika; [muratEfeErgin/cli fork'undaki](https://github.com/muratEfe
 4. **Prompt injection — [PR #5](https://github.com/muratEfeErgin/cli/pull/5):** Değişiklikte "inceleyiciye" yönelik talimat ve `shell=True` kullanımı bulunur; Aegis güvenlik bulgusunu bastırmamalı ve saldırı satırını işaretlemelidir.
 5. **Maliyet karşılaştırması:** "Her PR'a LLM" ile Aegis arasındaki LLM çağrısı, token ve süre farkı [RQ1/RQ2 sonuç grafiği](results.md) üzerinden gösterilir.
 
-Fork'a Aegis Action'ını ekleyen [kurulum PR'ı](https://github.com/muratEfeErgin/cli/pull/1) önce birleştirilmelidir. GitHub-hosted runner'da Ollama yoktur; `AEGIS_OLLAMA_HOST` secret'ı tanımlı değilse PR check'i gatekeeper ve deterministik injection denetimiyle çalışır, canlı LLM gösterimi sunum makinesindeki yerel Ollama'da yapılır.
+Demo PR'ları [public HTTPie fork'unda](https://github.com/muratEfeErgin/cli) hazırdır. Ancak Aegis deposu private olduğu için public fork'taki GitHub Actions, `mhmtemnbgr1/Aegis` action'ını yükleyemez; [kurulum PR'ı](https://github.com/muratEfeErgin/cli/pull/1) bu nedenle henüz çalışır Aegis check'i sağlamaz. Otomatik demo için Aegis Action'ının erişilebilir bir public dağıtımı gerekir. GitHub-hosted runner'da ayrıca Ollama yoktur; `AEGIS_OLLAMA_HOST` secret'ı erişilebilir bir Ollama sunucusuna ayarlanmadıkça canlı LLM gösterimi sunum makinesindeki yerel Ollama'da yapılmalıdır. Bu PR'larda Aegis analizi henüz doğrulanmış değildir.
 
 **Hazırlık gereklilikleri:**
 - [ ] Demo PR'ları hazır ve en az 2 kez prova edilmiş
