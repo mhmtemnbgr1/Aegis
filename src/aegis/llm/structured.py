@@ -26,9 +26,13 @@ log = logging.getLogger(__name__)
 _FENCE = re.compile(r"^\s*```(?:json)?\s*(.*?)\s*```\s*$", re.DOTALL)
 
 REPAIR_INSTRUCTION = (
-    "Önceki yanıtın şemaya uymadı. Hata:\n{error}\n\n"
-    "Önceki yanıt:\n{previous}\n\n"
-    "Aynı içeriği yalnızca şemaya uyan geçerli JSON olarak yeniden yaz. Açıklama ekleme."
+    "Your previous JSON failed schema validation: {error}\n\n"
+    "Previous response:\n{previous}\n\n"
+    "Regenerate the complete response as valid JSON. Keep the same supported findings, "
+    "but correct every invalid value. `confidence` is a probability: use a JSON number "
+    "from 0.0 through 1.0 inclusive (for example, 0.85). Never express it as a percentage "
+    "and never return a value above 1.0. If you cannot provide a valid confidence, omit "
+    "that finding. Return JSON only, with no explanation outside it."
 )
 
 
