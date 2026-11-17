@@ -94,6 +94,8 @@ aegis publish-state . --out s.tar.gz   # yalnızca yerel arşiv
 
 Action, arşivi önce `actions/cache`'ten, yoksa Release'ten alır (`aegis fetch-state`). Arşiv yoksa sezgisel kuralla ve hafızasız çalışır.
 
+Bu repoda `.github/workflows/main-state.yml`, `main`'e push sonrası yeni commit'leri artımlı işler, hata kartlarını günceller ve durum Release/cache'ini yazar. `.github/workflows/weekly-train.yml` her pazartesi sürümlenmiş D1 üzerinden genel modeli yeniden eğitip Release asset'ini günceller. İkisi de `contents: write` izni kullanır.
+
 ### GitHub Action
 
 `.github/workflows/aegis.yml`:
