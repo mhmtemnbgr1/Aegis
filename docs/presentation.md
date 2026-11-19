@@ -235,12 +235,39 @@ API ücreti yok: tüm modeller yerelde (Ollama ve yerel embedding) çalışıyor
 
 ## 10. Kaynakça
 
-> Başlangıç listesidir; künyeler doğrulanmalı.
+> Künyeler Kasım 2026'da yayıncı sayfaları ve dizinlerle doğrulandı. Parantez içi: projede nerede kullanıldığı.
 
-- Śliwerski, Zimmermann, Zeller — *When do changes induce fixes?* (MSR 2005)
-- Kamei vd. — *A Large-Scale Empirical Study of Just-in-Time Quality Assurance* (IEEE TSE 2013)
-- Spadini, Aniche, Bacchelli — *PyDriller: Python Framework for Mining Software Repositories* (ESEC/FSE 2018)
-- Hoang vd. — *DeepJIT: An End-to-End Deep Learning Framework for Just-in-Time Defect Prediction* (MSR 2019)
-- Pornprasit, Tantithamthavorn — *JITLine: A Simpler, Better, Faster, Finer-grained Just-In-Time Defect Prediction* (MSR 2021)
-- Widyasari vd. — *BugsInPy: A Database of Existing Bugs in Python Programs* (ESEC/FSE 2020)
-- Lewis vd. — *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks* (NeurIPS 2020)
+**Hata getiren değişiklikler ve JIT hata tahmini**
+
+- J. Śliwerski, T. Zimmermann, A. Zeller. *When do changes induce fixes?* Proc. 2nd Int. Workshop on Mining Software Repositories (MSR 2005), s. 24–28. (SZZ'nin temeli; `aegis.mining.szz`)
+- D. A. da Costa, S. McIntosh, W. Shang, U. Kulesza, R. Coelho, A. E. Hassan. *A Framework for Evaluating the Results of the SZZ Approach for Identifying Bug-Introducing Changes.* IEEE TSE 43(7):641–657, 2017. doi:10.1109/TSE.2016.2616306 (MA-SZZ varyantı)
+- Y. Kamei, E. Shihab, B. Adams, A. E. Hassan, A. Mockus, A. Sinha, N. Ubayashi. *A Large-Scale Empirical Study of Just-in-Time Quality Assurance.* IEEE TSE 39(6):757–773, 2013. doi:10.1109/TSE.2012.70 (14 Kamei metriği, K1)
+- T. Hoang, H. K. Dam, Y. Kamei, D. Lo, N. Ubayashi. *DeepJIT: An End-to-End Deep Learning Framework for Just-in-Time Defect Prediction.* MSR 2019, s. 34–45. doi:10.1109/MSR.2019.00016 (ilgili çalışma)
+- C. Pornprasit, C. Tantithamthavorn. *JITLine: A Simpler, Better, Faster, Finer-grained Just-In-Time Defect Prediction.* MSR 2021, s. 369–379. doi:10.1109/MSR52588.2021.00049 (ilgili çalışma; basit modellerin derin modellerle yarışabildiği)
+
+**Veri ve araçlar**
+
+- D. Spadini, M. Aniche, A. Bacchelli. *PyDriller: Python Framework for Mining Software Repositories.* ESEC/FSE 2018, s. 908–911. doi:10.1145/3236024.3264598 (madencilik)
+- R. Widyasari vd. *BugsInPy: A Database of Existing Bugs in Python Programs to Enable Controlled Testing and Debugging Studies.* ESEC/FSE 2020, s. 1556–1560. doi:10.1145/3368089.3417943 (D1 repo seçim kriteri)
+- B. Hui vd. *Qwen2.5-Coder Technical Report.* arXiv:2409.12186, 2024. (yerel LLM)
+
+**Modeller, kalibrasyon ve açıklama**
+
+- F. Pedregosa vd. *Scikit-learn: Machine Learning in Python.* JMLR 12:2825–2830, 2011. (LR, RF)
+- G. Ke vd. *LightGBM: A Highly Efficient Gradient Boosting Decision Tree.* NeurIPS 2017 (NIPS 30), s. 3146–3154. (LightGBM)
+- J. C. Platt. *Probabilistic Outputs for Support Vector Machines and Comparisons to Regularized Likelihood Methods.* Advances in Large Margin Classifiers, MIT Press, 1999. (sigmoid kalibrasyon)
+- S. M. Lundberg, S.-I. Lee. *A Unified Approach to Interpreting Model Predictions.* NeurIPS 2017 (NIPS 30), s. 4765–4774. (SHAP açıklamaları)
+
+**Hafıza ve getirme**
+
+- P. Lewis vd. *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks.* NeurIPS 2020 (NeurIPS 33). (K2'nin dayandığı fikir)
+- S. Deerwester, S. T. Dumais, G. W. Furnas, T. K. Landauer, R. Harshman. *Indexing by Latent Semantic Analysis.* JASIS 41(6):391–407, 1990. (LSA vektör arama)
+- S. Robertson, H. Zaragoza. *The Probabilistic Relevance Framework: BM25 and Beyond.* Foundations and Trends in Information Retrieval 3(4):333–389, 2009. doi:10.1561/1500000019 (BM25)
+- G. V. Cormack, C. L. A. Clarke, S. Büttcher. *Reciprocal Rank Fusion Outperforms Condorcet and Individual Rank Learning Methods.* SIGIR 2009, s. 758–759. doi:10.1145/1571941.1572114 (hibrit arama, RRF)
+
+**İstatistik**
+
+- F. Wilcoxon. *Individual Comparisons by Ranking Methods.* Biometrics Bulletin 1(6):80–83, 1945. (eşleştirilmiş karşılaştırmalar)
+- Q. McNemar. *Note on the Sampling Error of the Difference Between Correlated Proportions or Percentages.* Psychometrika 12(2):153–157, 1947. doi:10.1007/BF02295996 (RQ2 eşleştirilmiş ikili sonuçlar)
+- J. Cohen. *A Coefficient of Agreement for Nominal Scales.* Educational and Psychological Measurement 20(1):37–46, 1960. doi:10.1177/001316446002000104 (etiket uyumu, κ)
+- S. Holm. *A Simple Sequentially Rejective Multiple Test Procedure.* Scandinavian Journal of Statistics 6(2):65–70, 1979. (çoklu karşılaştırma düzeltmesi)
