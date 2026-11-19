@@ -123,6 +123,16 @@ def cmd_summary(args: argparse.Namespace) -> None:
         "Tüm örnekler": None,
         "Bilgi kesiminden sonraki commit'ler (#55)": lambda s: s.after_cutoff,
     }
+    manual = Path("eval/labels/d2-kontrol.csv")  # elle doğrulanmış alt küme (#69)
+    if manual.is_file():
+        import csv
+
+        confirmed = {
+            r["sha"]
+            for r in csv.DictReader(manual.open(encoding="utf-8-sig"))
+            if (r["label"], r["answer"]) in (("buggy", "dogru"), ("clean", "temiz"))
+        }
+        subsets["Elle doğrulanmış alt küme (#69)"] = lambda s: s.sha in confirmed
     for title, only in subsets.items():
         scores, detect, alarm = summarize(samples, results, tol=args.tol, only=only)
         if not scores or not scores[0].samples:
