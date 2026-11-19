@@ -10,6 +10,7 @@ eval/
 │   ├── d2.jsonl, d2.json     # D2: hatalı + temiz commit'ler, diff'ler, beklenen satırlar (RQ2)
 │   ├── d2-memory.jsonl       # D2 örneği × hafıza varyantı → kart kimlikleri (eval/rq2.py hazirla)
 │   ├── d2-cards.jsonl        # bu kartların prompt'a giren alanları
+│   ├── d2-szz*.jsonl         # ikinci RQ2 seti: SZZ'li hatalı örnekler ve hafızaları (gerçekçilik kontrolü)
 │   └── rq1-triage.jsonl      # RQ1 triage örneklemi: PR diff'leri, LR ve sezgisel skorlar
 ├── results/                  # LLM deneylerinin ham sonuçları ve özetleri (git'e girer)
 ├── labels/                   # elle etiketleme örneklemleri ve sonuçları (#8, #9)
@@ -26,7 +27,7 @@ Altı repodaki tüm commit'ler; Kamei, riskli yol, test oranı ve hafıza özell
 Her D1 reposundan 50 hatalı ve 50 temiz commit (toplam 600). Üretim: `aegis dataset --level d2` (varsayılan tohum 0).
 
 - **Hatalı (tersine çevrilmiş düzeltme):** başlığında düzeltme anahtar kelimesi geçen gerçek bir fix tersine çevrilir; diff, düzeltilmiş koddan hatalı koda gider (`revert: true`, `sha` = fix, `parent` = fix'in ebeveyni). `expected`, fix'in sildiği ve diff'te yeniden eklenen satırlar (yorum, import, docstring hariç). SZZ eşlemesi kullanılmaz: etiket doğruluğu yalnızca fix tespitine bağlıdır (başlık kuralıyla %96). Medyan 2 satırlık küçük değişiklikler.
-- **Neden SZZ değil:** SZZ eşlemelerinin elle kontrolde yalnızca %19–31'i hatayı gerçekten getiriyordu. İlk sürümdeki SZZ hatalıları `aegis dataset --level d2 --buggy szz` ile yeniden üretilebilir.
+- **Neden SZZ değil:** SZZ eşlemelerinin elle kontrolde yalnızca %19–31'i hatayı gerçekten getiriyordu. SZZ'li hatalı örnekler gerçekçilik kontrolü için ikinci set olarak tutulur (`d2-szz.jsonl`, `aegis dataset --level d2 --buggy szz`; `eval/rq2.py --set szz`).
 - **Temiz:** SZZ'nin hiç suçlamadığı ve en yeni commit'ten en az 365 gün eski commit. Her bulgu yanlış alarmdır.
 - **Tabakalama:** her sınıf kendi boyut dağılımının üçte birlik dilimlerinden eşit sayıda örneklenir. Temiz commit'ler 3–300 satır ekler (medyan 19), tersine çevrilmiş düzeltmeler çok daha küçüktür. Bu yüzden hatalı ve temiz örneklerin mutlak oranları birbiriyle karşılaştırılmaz; RQ2 varyantları her sınıf içinde eşleştirilerek karşılaştırılır.
 - **Bilinen etki:** tersine çevrilmiş diff'te silinen satırlar düzeltilmiş kodun kendisidir; bu, tespiti kolaylaştırabilir. Tüm hafıza varyantları aynı diff'i gördüğü için hafızanın etkisi ölçümü bundan etkilenmez.

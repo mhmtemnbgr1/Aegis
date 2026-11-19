@@ -1,6 +1,6 @@
-# Aegis — Sunum ve Tez Gereklilikleri
+# Aegis — Proje Özeti ve Değerlendirme
 
-Bu dosya jüri sunumu ve tez için gereken her şeyi toplar: konumlandırma, katkılar, araştırma soruları, değerlendirme planı, demo ve olası sorular. Teknik ayrıntılar için [architecture.md](architecture.md) dosyasına bakın.
+Bu dosya projenin konumlandırmasını, katkılarını, araştırma sorularını, değerlendirme planını, demosunu ve sık sorulan soruları toplar. Teknik ayrıntılar için [architecture.md](architecture.md) dosyasına bakın.
 
 ## İçindekiler
 
@@ -11,7 +11,7 @@ Bu dosya jüri sunumu ve tez için gereken her şeyi toplar: konumlandırma, kat
 5. [Değerlendirme Planı](#5-değerlendirme-planı)
 6. [Geçerlilik Tehditleri](#6-geçerlilik-tehditleri)
 7. [Demo Senaryosu](#7-demo-senaryosu)
-8. [Olası Jüri Soruları](#8-olası-jüri-soruları)
+8. [Sık Sorulan Sorular](#8-sık-sorulan-sorular)
 9. [Ek Katkılar: Veri Seti ve Bildiri (opsiyonel)](#9-ek-katkılar-veri-seti-ve-bildiri-opsiyonel)
 10. [Kaynakça](#10-kaynakça)
 
@@ -38,14 +38,14 @@ Hem yazılım madenciliği (MSR) literatürüne sadık kalan hem de güncel LLM 
 
 **Konumlandırma:** JIT tahminini **kapı**, bug-fix geçmişini **bağlam** olarak kullanan ve ikisini PR iş akışında, yerel bir LLM ile birleştiren açık kaynak bir araç. APR'yi **aksiyon** olarak eklemek (otomatik düzeltme) bu sürümün kapsamı dışındadır ve gelecek çalışmadır.
 
-> Bu tablo tez yazımında güncel literatür taramasıyla doğrulanmalı.
+> Bu tablo güncel literatürle doğrulanmalı.
 
 ---
 
 ## 3. Katkılar
 
 **K1 — Gatekeeper ile maliyet optimizasyonu.**
-Klasik bir ML modeli, PR'ları LLM'e gitmeden önce eler. Böylece maliyet/performans dengesi ölçülebilir ve ayarlanabilir hale gelir. Jüriye maliyet mühendisliği düşündüğümüzü gösterir.
+Klasik bir ML modeli, PR'ları LLM'e gitmeden önce eler. Böylece maliyet/performans dengesi ölçülebilir ve ayarlanabilir hale gelir. Maliyet, tasarımın ilk sınıf bir parçasıdır.
 
 **K2 — Repo'ya özgü bug-fix hafızası.**
 Genel LLM'ler reponun yazılı olmayan kurallarını ve geçmiş hatalarını bilmez. Fix commit'leri, SZZ eşlemeleri ve issue'lar hata kartları olarak saklanır. LLM'e "bu fonksiyon 4 ay önce değiştiğinde #89 numaralı sızıntı oluştu, şöyle çözülmüştü" bağlamı verilir.
@@ -53,7 +53,7 @@ Genel LLM'ler reponun yazılı olmayan kurallarını ve geçmiş hatalarını bi
 **Kapsam dışı — K3: Tahminden aksiyona (gelecek çalışma).**
 Düzeltme ve test ajanları ile Docker sandbox'ında çalışan bir doğrulayıcının, testle doğrulanmış suggestion blokları üretmesi planlanmıştı. Aralık 2026 teslimine sığmadığı ve ayrı bir araştırma problemi (APR) olduğu için v1'den çıkarıldı (Ekim 2026 kapsam revizyonu). Mimari buna hazırdır: bulgular zaten dosya, satır ve kanıtla doğrulanmış olarak üretilir.
 
-**Tezin katkıları K1 ve K2'dir.** Takvim ve kesme çizgileri: [TODO.md](../TODO.md).
+**Projenin katkıları K1 ve K2'dir.** Takvim ve kesme çizgileri: [TODO.md](../TODO.md).
 
 ---
 
@@ -168,7 +168,7 @@ Demo PR'ları [public HTTPie fork'unda](https://github.com/muratEfeErgin/cli) a�
 
 ---
 
-## 8. Olası Jüri Soruları
+## 8. Sık Sorulan Sorular
 
 ### "CodeRabbit veya Copilot code review zaten var. Farkınız ne?"
 Üç fark var: Her PR'a LLM çağırmıyoruz (K1); LLM'e reponun kendi geçmiş hatalarını veriyoruz (K2); her şey yerelde çalışıyor, kod dışarı çıkmıyor ve API ücreti yok. K1 ve K2'nin etkisini ablation deneyleriyle (RQ1, RQ2) sayıyla gösteriyoruz.
@@ -207,7 +207,7 @@ Hayır. İlk madencilik ve indeksleme yerelde bir kez yapılıyor ve GitHub Rele
 Bilinçli bir kapsam kararı. Testle doğrulanmış patch üretimi ayrı bir araştırma problemi (APR) ve güvenilir yapılması için sandbox ile büyük bir benchmark gerekiyor. v1'de katkıyı ölçülebilir iki parçaya (K1, K2) yoğunlaştırdık; patch hattı gelecek çalışma. Mimari buna hazır: bulgular zaten satır ve kanıtla doğrulanmış biçimde üretiliyor.
 
 ### "Kullanıcılar bu yorumları gerçekten faydalı buluyor mu?"
-Bunu ölçmek için 6–10 geliştiriciyle kör bir kullanıcı çalışması tasarladık (RQ5, isteğe bağlı): Aegis ve PR-Agent yorumları kaynak gizlenerek puanlatılıyor. Zaman kalırsa yapılacak; yapılmazsa tezde gelecek çalışma olarak geçecek.
+Bunu ölçmek için 6–10 geliştiriciyle kör bir kullanıcı çalışması tasarladık (RQ5, isteğe bağlı): Aegis ve PR-Agent yorumları kaynak gizlenerek puanlatılıyor. Zaman kalırsa yapılacak; yapılmazsa gelecek çalışma olarak kalacak.
 
 ### "Geçmişi olmayan yeni bir repoda ne olacak?"
 Repolar arası genel model kullanılıyor: yalnızca diğer 5 repoyla eğitilen model, repo içi modelle aynı başarıda (ROC-AUC 0,805'e karşı 0,797). Hafıza boşsa analiz hafızasız yapılıyor.
@@ -235,7 +235,7 @@ API ücreti yok: tüm modeller yerelde (Ollama ve yerel embedding) çalışıyor
 
 ## 10. Kaynakça
 
-> Başlangıç listesidir; künyeler tez yazımında doğrulanmalı.
+> Başlangıç listesidir; künyeler doğrulanmalı.
 
 - Śliwerski, Zimmermann, Zeller — *When do changes induce fixes?* (MSR 2005)
 - Kamei vd. — *A Large-Scale Empirical Study of Just-in-Time Quality Assurance* (IEEE TSE 2013)

@@ -144,7 +144,7 @@ Course material
 2. Lucidchart, *UML Use Case Diagram*, *How to Draw a Use Case Diagram in UML*, *UML Class Diagram*, *UML Sequence Diagram* and *UML Activity Diagram*. (Documents shared by the course lecturer.)
 3. ISO/IEC/IEEE 29148:2018, *Systems and software engineering, Life cycle processes, Requirements engineering*.
 
-Scientific literature (to be verified while the thesis is written)
+Scientific literature (to be verified)
 
 4. J. Śliwerski, T. Zimmermann and A. Zeller, "When do changes induce fixes?", MSR 2005.
 5. Y. Kamei et al., "A Large-Scale Empirical Study of Just-in-Time Quality Assurance", IEEE Transactions on Software Engineering, 2013.
@@ -262,7 +262,7 @@ From Phase 1 onward there is always a working system that can be demonstrated. L
 | 4 | Bug-fix memory |
 | 5 | Patch generation and verification |
 | 6 | Evaluation |
-| 7 | Presentation and thesis |
+| 7 | Presentation and documentation |
 | Planned | Dashboard GUI, developed from Phase 3 onward once its data sources exist |
 
 ### 3.2 Functional requirements

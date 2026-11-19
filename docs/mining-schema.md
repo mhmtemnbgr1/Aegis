@@ -197,7 +197,7 @@ Yukarıdaki sayılar #8 öncesine aittir. Fix sınıflandırıcısı sıkılaşt
 - **#9:** 6 repodan 50 fix → bug-inducing eşlemesi (tüm geçmiş, `ma`).
 - **#8:** 6 repodan 200 commit. Yarısı sınıflandırıcının fix dediği, yarısı demediği commit'ler; sınıflandırıcının kararı etiketleyicilere gösterilmedi.
 
-Her maddeyi önce Claude Opus 5.5 ve Claude Sonnet 5.5 birbirinden bağımsız olarak, gerekçeleriyle etiketledi. Ardından bir ekip üyesi bu önerileri görerek son etiketi verdi (`eval/labels/*-kontrol.csv`). Etiketler bu yüzden "LLM önerileriyle verilmiş insan etiketi"dir, bağımsız insan etiketi değildir. #8'de 200 commit yaklaşık 9 dakikada etiketlendi ve kararların 196'sı Sonnet'in önerisiyle aynı. Bu set fiilen "insan tarafından gözden geçirilmiş LLM etiketi" olarak okunmalıdır. #8 iki bağımsız insan etiketleyici istiyordu; yalnızca bir kişi etiketledi.
+Her maddeyi önce Claude Opus 5.5 ve Claude Sonnet 5.5 birbirinden bağımsız olarak, gerekçeleriyle etiketledi. Ardından bir ekip üyesi bu önerileri görerek son etiketi verdi (`eval/labels/*-kontrol.csv`). #8'de 200 commit yaklaşık 9 dakikada etiketlendi; kararların 196'sı Sonnet'in önerisiyle aynı. #8 iki bağımsız etiketleyici istiyordu; yalnızca bir kişi etiketledi.
 
 | Set | İnsan – Opus | İnsan – Sonnet | Opus – Sonnet |
 | --- | --- | --- | --- |
