@@ -19,7 +19,7 @@ from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, T
 from rich.table import Table
 
 from aegis import __version__
-from aegis.config import AegisConfig, load_config
+from aegis.config import AegisConfig, MiningConfig, load_config
 from aegis.diff import filter_diff, git_commit_messages, git_diff, load_ignore_spec, parse_diff
 from aegis.features import compute_kamei
 from aegis.gatekeeper import HeuristicGatekeeper, RiskBand
@@ -699,12 +699,25 @@ def dataset(
     level: str = typer.Option(
         "commit",
         "--level",
-        help="commit: D1; pr: PR düzeyinde D1 (d1-pr.parquet; önce commit düzeyi gerekir).",
+        help=(
+            "commit: D1; pr: PR düzeyinde D1 (d1-pr.parquet); d2: LLM incelemesi için hatalı ve "
+            "temiz commit örneklemi (d2.jsonl). pr ve d2 önce commit düzeyini gerektirir."
+        ),
     ),
     min_positives: int = typer.Option(
         200,
         "--min-positives",
         help="Bundan az bug-inducing commit'i olan repolar D1'e alınmaz (0: hepsi).",
+    ),
+    per_label: int = typer.Option(
+        50, "--per-label", help="d2: repo başına hatalı ve temiz commit sayısı (her biri)."
+    ),
+    seed: int = typer.Option(0, "--seed", help="d2: örnekleme tohumu."),
+    llm_cutoff: datetime | None = typer.Option(
+        None,
+        "--llm-cutoff",
+        formats=["%Y-%m-%d"],
+        help="d2: LLM'in bilgi kesim tarihi; sonraki commit'ler after_cutoff (#55).",
     ),
     config_path: Path | None = typer.Option(None, "--config", help="Yapılandırma dosyası."),
 ) -> None:
@@ -717,8 +730,19 @@ def dataset(
     if level == "pr":
         _dataset_pr(root, Path(config.clone_dir), out or root / "d1-pr.parquet")
         return
+    if level == "d2":
+        _dataset_d2(
+            root,
+            Path(config.clone_dir),
+            out or root / "d2.jsonl",
+            per_label=per_label,
+            seed=seed,
+            llm_cutoff=llm_cutoff,
+            config=config,
+        )
+        return
     if level != "commit":
-        console.print("[red]--level commit|pr[/red]")
+        console.print("[red]--level commit|pr|d2[/red]")
         raise typer.Exit(2)
     target = out or root / "d1.parquet"
     stats = build_d1(root, target, min_positives)
@@ -737,6 +761,39 @@ def dataset(
         )
     console.print(table)
     console.print(f"[dim]Çıktı: {target} (+ {target.with_suffix('.json').name})[/dim]")
+
+
+def _dataset_d2(
+    root: Path,
+    clone_root: Path,
+    target: Path,
+    *,
+    per_label: int,
+    seed: int,
+    llm_cutoff: datetime | None,
+    config: MiningConfig,
+) -> None:
+    from aegis.mining.d2 import DEFAULT_LLM_CUTOFF, build_d2
+
+    if not (root / "d1.parquet").is_file():
+        console.print(f"[red]{root / 'd1.parquet'} yok; önce aegis dataset.[/red]")
+        raise typer.Exit(2)
+    manifest = build_d2(
+        root,
+        clone_root,
+        target,
+        per_label=per_label,
+        seed=seed,
+        llm_cutoff=llm_cutoff.date() if llm_cutoff else DEFAULT_LLM_CUTOFF,
+        config=config,
+    )
+    table = Table("Repo", "Hatalı", "Temiz", "Kesimden sonra")
+    for repo, c in manifest["repos"].items():
+        table.add_row(repo, str(c["buggy"]), str(c["clean"]), str(c["after_cutoff"]))
+    console.print(table)
+    console.print(
+        f"{manifest['samples']} örnek · {manifest['expected_lines']} beklenen satır → {target}"
+    )
 
 
 def _dataset_pr(root: Path, clone_root: Path, target: Path) -> None:
