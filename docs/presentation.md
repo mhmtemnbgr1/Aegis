@@ -93,10 +93,10 @@ Böylece model ne kadar iyi çıkarsa çıksın sonuç savunulabilir olur; ekip 
 | ID | Veri seti | Kaynak | Hedef boyut | RQ |
 | --- | --- | --- | --- | --- |
 | D1 | SZZ ile etiketlenmiş commit ve PR'lar | 6 hedef repo ([target-repos.md](target-repos.md)), tüm geçmiş | Tüm commit'ler (repo başına ≥ 200 pozitif) | RQ1 |
-| D2 | Bug-inducing commit'ler (sonradan düzeltilen satırlar = beklenen bulgu) ve temiz commit'ler | D1'den tabakalı örnekleme | ~300 hatalı + ~300 temiz; ~100'ü elle etiketli | RQ2, RQ4, RQ5 |
+| D2 | Tersine çevrilmiş gerçek düzeltmeler (düzeltmenin sildiği satırlar = beklenen bulgu) ve temiz commit'ler | D1 repolarından tabakalı örnekleme | 300 hatalı + 300 temiz; ~100'ü iki etiket setiyle kontrol edildi | RQ2, RQ4, RQ5 |
 | D4 | Demo ve dogfooding PR'ları | Ekip | ≥ 30 PR | Maliyet, süre |
 
-> D2'de SZZ satırları gürültülü olabilir. Bu yüzden ~100 örnek iki kişi tarafından elle etiketlenir ve sonuçlar hem otomatik hem elle etiketli alt küme için raporlanır. Eşleştirilmiş McNemar testinde birkaç yüz örnek, orta büyüklükteki farkları yakalamak için yeterlidir.
+> SZZ satırları gürültülü olduğu için (elle kontrolde %19–31 doğru) D2'nin hatalı örnekleri SZZ ile değil, gerçek düzeltmelerin tersine çevrilmesiyle kurulur: hatalı satırların yeri kesin bilinir. Temiz örneklerden ~100'ü iki etiket setiyle kontrol edildi ve doğrulanmış alt küme ayrıca raporlanır. Eşleştirilmiş McNemar testinde birkaç yüz örnek, orta büyüklükteki farkları yakalamak için yeterlidir.
 
 ### 5.1.1 Kullanıcı Çalışması (RQ5, opsiyonel)
 
@@ -183,7 +183,7 @@ Bunu iki yerde plaseboyla sınıyoruz. LLM'siz ölçümde hafıza sinyali risk m
 Bu modeller tek başına bir olasılık üretip bırakıyor. Biz bu olasılığı LLM için bir maliyet kapısı olarak, SZZ eşlemelerini de LLM'e bağlam olarak kullanıyoruz. Tahmin, açıklamalı ve somut bir inceleme yorumuna dönüşüyor.
 
 ### "SZZ etiketleri gürültülü değil mi?"
-Evet, ve bunu ölçtük. Elle kontrol edilen 50 eşlemenin %31'i doğru [%95 GA: 19–44]; fix tespitinin kesinliği ise kurallarla %71'den %86'ya çıktı. Literatürdeki üç standart iyileştirmeyi denedik (hata etiketli issue şartı, taşınan satırları izleme, tarih kontrolü): doğruluğu artırmadılar ya da veriyi yok ettiler (issue şartıyla tornado'da hiç hatalı commit kalmıyor). Bu yüzden: (1) sonuçları ölçülmüş bir sınırlama olarak raporluyoruz; (2) gürültü sonuçları bizim aleyhimize çalışır, buna rağmen model sezgisel kuraldan anlamlı derecede iyi; (3) RQ2'yi iki kişinin bağımsız etiketlediği 102 örneklik alt kümede de raporluyoruz (#69).
+Evet, ve bunu ölçtük. Elle kontrol edilen 50 eşlemenin %31'i doğru [%95 GA: 19–44]; fix tespitinin kesinliği ise kurallarla %71'den %86'ya çıktı. Literatürdeki üç standart iyileştirmeyi denedik (hata etiketli issue şartı, taşınan satırları izleme, tarih kontrolü): doğruluğu artırmadılar ya da veriyi yok ettiler (issue şartıyla tornado'da hiç hatalı commit kalmıyor). Bu yüzden: (1) sonuçları ölçülmüş bir sınırlama olarak raporluyoruz; (2) gürültü sonuçları bizim aleyhimize çalışır, buna rağmen model sezgisel kuraldan anlamlı derecede iyi; (3) RQ2'nin hatalı örneklerinde SZZ'yi hiç kullanmıyoruz: gerçek düzeltmeleri tersine çeviriyoruz, böylece hatalı satırların yeri kesin biliniyor (etiket doğruluğu fix tespitine bağlı, %96). Temiz örnekler iki etiket setiyle kontrol edildi (#69).
 
 ### "Gatekeeper hatalı bir PR'ı geçirirse?"
 Eşik bütçe–recall eğrisinden bilinçli olarak seçiliyor. Maliyet odaklı noktada PR'ların %58'i elenirken hatalı PR'ların %82'si yine yakalanıyor; güvenlik odaklı noktada hedef %90 recall'ı tutturamadık (%83), çünkü eşik bir önceki pencereden seçiliyor ve dağılım kayıyor. Düşük bantta da risk skoru yorum olarak yazılıyor ve `aegis:force` etiketiyle tam inceleme zorlanabiliyor. Aegis insan incelemesinin yerini almıyor, önceliklendiriyor.

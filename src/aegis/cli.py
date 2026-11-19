@@ -713,6 +713,11 @@ def dataset(
         50, "--per-label", help="d2: repo başına hatalı ve temiz commit sayısı (her biri)."
     ),
     seed: int = typer.Option(0, "--seed", help="d2: örnekleme tohumu."),
+    buggy: str = typer.Option(
+        "revert",
+        "--buggy",
+        help="d2: hatalı örnekler; revert (tersine çevrilmiş düzeltmeler) ya da szz.",
+    ),
     llm_cutoff: datetime | None = typer.Option(
         None,
         "--llm-cutoff",
@@ -738,6 +743,7 @@ def dataset(
             per_label=per_label,
             seed=seed,
             llm_cutoff=llm_cutoff,
+            buggy=buggy,
             config=config,
         )
         return
@@ -771,6 +777,7 @@ def _dataset_d2(
     per_label: int,
     seed: int,
     llm_cutoff: datetime | None,
+    buggy: str,
     config: MiningConfig,
 ) -> None:
     from aegis.mining.d2 import DEFAULT_LLM_CUTOFF, build_d2
@@ -785,6 +792,7 @@ def _dataset_d2(
         per_label=per_label,
         seed=seed,
         llm_cutoff=llm_cutoff.date() if llm_cutoff else DEFAULT_LLM_CUTOFF,
+        buggy=buggy,
         config=config,
     )
     table = Table("Repo", "Hatalı", "Temiz", "Kesimden sonra")

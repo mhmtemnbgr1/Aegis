@@ -68,7 +68,7 @@ def prepare_memory(
     seed: int = 0,
 ) -> dict[str, int]:
     """Her örnek için varyant → kart kimlikleri; kullanılan kartlar ayrı dosyaya."""
-    from aegis.memory.retrieve import Retriever, query_from_range
+    from aegis.memory.retrieve import Retriever, query_from_diff, query_from_range
     from aegis.mining.gitfiles import git
 
     config = config or AegisConfig()
@@ -84,10 +84,17 @@ def prepare_memory(
         retriever = retrievers[s.repo]
         repo = clone_root / s.repo
         when = datetime.fromisoformat(git(repo, "log", "-1", "--format=%cI", s.sha).strip())
-        query = query_from_range(repo, s.parent, s.sha, config, before=when)
+        if s.revert:
+            # Tersine çevrilmiş düzeltme: sorgu fix → ebeveyn diff'inden. Fix'in kendi kartı tarih
+            # filtresiyle zaten dışarıda (kart tarihi = fix'in commit tarihi); ayrıca açıkça atılır.
+            query = query_from_diff(repo, s.sha, s.parent, config, before=when)
+        else:
+            query = query_from_range(repo, s.parent, s.sha, config, before=when)
+        own = {c.id for c in retriever.cards if c.fix_sha == s.sha}
         modes: dict[str, list[str]] = {"none": []}
         for mode in ("structural", "vector", "hybrid"):
-            modes[mode] = [h.card_id for h in retriever.search(query, k=k, mode=mode)]
+            hits = retriever.search(query, k=k + len(own), mode=mode)
+            modes[mode] = [h.card_id for h in hits if h.card_id not in own][:k]
         modes["placebo"] = placebo_ids(s, retriever.cards, len(modes["hybrid"]) or k, when, seed)
         for ids in modes.values():
             for card_id in ids:

@@ -2,14 +2,17 @@
 
 D1'e alınan her repodan tabakalı örnekleme yapılır (`docs/presentation.md` §5.1):
 
-- **Hatalı commit:** SZZ'nin bug-inducing dediği commit. Beklenen bulgular, bu hatayı sonradan
-  düzelten fix'in sildiği satırların hatalı commit'teki yerleri (`blame_origins`); SZZ ile aynı
-  süzgeçler (boşluk, yorum, import, docstring) uygulanır.
+- **Hatalı örnek (varsayılan, `revert`):** tersine çevrilmiş gerçek bir düzeltme; diff düzeltilmiş
+  koddan hatalı koda gider. Beklenen bulgular, fix'in sildiği (diff'te yeniden eklenen) satırlar.
+  Yalnızca başlığında düzeltme anahtar kelimesi geçen fix'ler alınır (`sample_reverts`). SZZ
+  eşlemesine dayanmadığı için etiket doğruluğu yalnızca fix tespitinin kesinliğine bağlıdır.
+- **Hatalı örnek (`szz`):** SZZ'nin bug-inducing dediği commit. Beklenen bulgular, bu hatayı
+  sonradan düzelten fix'in sildiği satırların hatalı commit'teki yerleri (`blame_origins`).
 - **Temiz commit:** SZZ'nin hiç suçlamadığı ve en az `clean_min_age_days` yaşında olan commit
   (hata bulunmak için yeterince zaman geçmiş). Beklenen bulgu yoktur; her bulgu yanlış alarmdır.
 
-İki sınıf, kaynak koduna eklenen satır sayısına göre aynı boyut dilimlerinden örneklenir; böylece
-temiz commit'ler "küçük oldukları için temiz" olmaz. Her örnek, LLM'e verilecek diff'i de taşır:
+Temiz commit'ler, SZZ hatalılarının boyut dilimlerinden örneklenir (iki kaynakta da aynı temiz
+örnekler seçilir). Her örnek, LLM'e verilecek diff'i de taşır:
 deneyleri koşturmak için repo klonu ya da madencilik çıktısı gerekmez.
 
 `after_cutoff`: commit tarihi, kullanılan LLM'in bilgi kesim tarihinden sonra mı (eğitim verisi
@@ -49,6 +52,8 @@ class D2Sample:
     expected: list[dict[str, Any]] = field(default_factory=list)  # [{"path", "line"}]
     fix_shas: list[str] = field(default_factory=list)
     after_cutoff: bool = False
+    revert: bool = False
+    """Hatalı örnek, bir düzeltmenin tersine çevrilmesiyle mi kuruldu (`sha` = fix)."""
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -60,6 +65,26 @@ def _git(repo: Path, *args: str) -> str:
         encoding="utf-8",
         errors="replace",
     ).stdout
+
+
+def added_lines(diff: str) -> set[tuple[str, int]]:
+    """Diff'te eklenen satırlar: (yeni yol, yeni satır numarası)."""
+    out: set[tuple[str, int]] = set()
+    path: str | None = None
+    n = 0
+    for line in diff.splitlines():
+        if line.startswith("+++ "):
+            path = line[6:] if line.startswith("+++ b/") else None
+        elif m := re.match(r"@@ -\d+(?:,\d+)? \+(\d+)", line):
+            n = int(m.group(1))
+        elif line.startswith("\\"):
+            continue
+        elif line.startswith("+") and path is not None:
+            out.add((path, n))
+            n += 1
+        elif line.startswith(" "):
+            n += 1
+    return out
 
 
 def expected_lines(
@@ -208,6 +233,109 @@ def sample_repo(
     return samples
 
 
+def sample_reverts(
+    repo: Path,
+    data_dir: Path,
+    d1: pl.DataFrame,
+    *,
+    per_label: int,
+    bins: int = 3,
+    max_added: int = 300,
+    llm_cutoff: date = DEFAULT_LLM_CUTOFF,
+    seed: int = 0,
+    config: MiningConfig | None = None,
+) -> list[D2Sample]:
+    """Tersine çevrilmiş gerçek düzeltmeler: düzeltilmiş koddan hatalı koda giden değişiklik.
+
+    Yalnızca başlığında düzeltme anahtar kelimesi geçen fix'ler alınır (`fix_subject_only`;
+    elle kontrolde kesinlik %96, `docs/mining-schema.md`). Diff `fix → ebeveyn` yönündedir ve
+    yalnızca değiştirilmiş (eklenmemiş, silinmemiş) kaynak dosyaları kapsar. Beklenen satırlar,
+    fix'in sildiği satırların ebeveyndeki yerleri; SZZ ile aynı süzgeçler uygulanır.
+    """
+    from aegis.mining.fixes import FixClassifier
+
+    config = config or MiningConfig()
+    strict = FixClassifier(config.model_copy(update={"fix_subject_only": True}))
+    rng = random.Random(f"{seed}:{data_dir.name}:revert")
+    commits = pl.read_parquet(data_dir / "commits.parquet").filter(
+        pl.col("sha").is_in(d1.filter(pl.col("fix") > 0)["sha"].implode())
+        & ~pl.col("is_merge")
+        & (pl.col("parents").list.len() == 1)
+    )
+    tests = [re.compile(p) for p in config.test_path_patterns]
+    extensions = tuple(config.source_extensions)
+    modified: dict[str, list[tuple[str, int]]] = {}
+    for sha, path, deleted, kind in (
+        pl.read_parquet(data_dir / "files.parquet")
+        .select("sha", "new_path", "lines_deleted", "change_type")
+        .iter_rows()
+    ):
+        if (
+            kind == "MODIFY"
+            and path
+            and path.endswith(extensions)
+            and not any(t.search(path) for t in tests)
+        ):
+            modified.setdefault(sha, []).append((path, deleted))
+    pool = []
+    for row in commits.sort("sha").iter_rows(named=True):
+        changes = modified.get(row["sha"])
+        if not changes or not strict.classify(row["message"]).is_fix:
+            continue
+        removed = sum(n for _, n in changes)
+        if 1 <= removed <= max_added:
+            pool.append((row, sorted(p for p, _ in changes), removed))
+    if not pool:
+        return []
+    sizes = sorted(n for _, _, n in pool)
+    edges = [sizes[min(len(sizes) - 1, len(sizes) * i // bins)] for i in range(1, bins)]
+    quota = [per_label // bins + (1 if i < per_label % bins else 0) for i in range(bins)]
+    by_bin: dict[int, list[tuple[dict[str, Any], list[str], int]]] = {}
+    for item in pool:
+        by_bin.setdefault(sum(item[2] > e for e in edges), []).append(item)
+    samples: list[D2Sample] = []
+    for b in range(bins):
+        items = by_bin.get(b, [])
+        rng.shuffle(items)
+        taken = 0
+        for row, paths, removed in items:
+            if taken >= quota[b]:
+                break
+            fix, parent = row["sha"], row["parents"][0]
+            lines = deleted_lines(
+                repo, parent, fix, paths, ignore_whitespace=True, skip_useless=True
+            )
+            diff = _git(repo, "diff", "-U3", "--no-color", fix, parent, "--", *paths)
+            # Yalnız diff'te eklenen satır olarak görünenler (boşluk yok sayan hizalama farkları
+            # yüzünden ~%2'si görünmez; LLM'in göremediği satır beklenen bulgu olamaz).
+            visible = added_lines(diff)
+            expected = [
+                {"path": p, "line": n} for p in sorted(lines) for n in lines[p] if (p, n) in visible
+            ]
+            if not expected:  # yalnız boşluk, yorum, import ya da docstring silinmiş
+                continue
+            when: datetime = row["committer_date"]
+            samples.append(
+                D2Sample(
+                    repo=data_dir.name,
+                    sha=fix,
+                    parent=parent,
+                    label="buggy",
+                    date=when.astimezone(UTC).isoformat(),
+                    size_bin=b,
+                    src_added=removed,
+                    files=paths,
+                    diff=diff,
+                    expected=expected,
+                    fix_shas=[fix],
+                    after_cutoff=when.date() > llm_cutoff,
+                    revert=True,
+                )
+            )
+            taken += 1
+    return samples
+
+
 def build_d2(
     data_root: Path,
     clone_root: Path,
@@ -220,18 +348,27 @@ def build_d2(
     min_added: int = 3,
     max_added: int = 300,
     clean_min_age_days: int = 365,
+    buggy: str = "revert",
     config: MiningConfig | None = None,
 ) -> dict[str, Any]:
-    """D1'e alınan her repodan D2 örnekleri; `out` (JSONL) ve yanına manifest (`.json`)."""
+    """D1'e alınan her repodan D2 örnekleri; `out` (JSONL) ve yanına manifest (`.json`).
+
+    `buggy`: hatalı örneklerin kaynağı. `revert` (varsayılan): tersine çevrilmiş gerçek
+    düzeltmeler (`sample_reverts`). `szz`: SZZ'nin bug-inducing dediği commit'ler. Temiz örnekler
+    iki durumda da aynıdır.
+    """
+    if buggy not in ("revert", "szz"):
+        raise ValueError("buggy: revert ya da szz")
     manifest_d1 = json.loads((data_root / "d1.json").read_text("utf-8"))
     d1 = pl.read_parquet(data_root / "d1.parquet")
     included = [r["repo"] for r in manifest_d1["repos"] if r.get("included", True)]
     samples: list[D2Sample] = []
     for slug in included:
-        samples += sample_repo(
+        repo_d1 = d1.filter(pl.col("repo") == slug)
+        drawn = sample_repo(
             clone_root / slug,
             data_root / slug,
-            d1.filter(pl.col("repo") == slug),
+            repo_d1,
             per_label=per_label,
             bins=bins,
             min_added=min_added,
@@ -241,6 +378,19 @@ def build_d2(
             llm_cutoff=llm_cutoff,
             config=config,
         )
+        if buggy == "revert":
+            drawn = [s for s in drawn if s.label == "clean"] + sample_reverts(
+                clone_root / slug,
+                data_root / slug,
+                repo_d1,
+                per_label=per_label,
+                bins=bins,
+                max_added=max_added,
+                llm_cutoff=llm_cutoff,
+                seed=seed,
+                config=config,
+            )
+        samples += drawn
     out.parent.mkdir(parents=True, exist_ok=True)
     with out.open("w", encoding="utf-8", newline="\n") as fh:
         for s in samples:
@@ -255,6 +405,7 @@ def build_d2(
         "built_at": datetime.now(UTC).isoformat(),
         "seed": seed,
         "per_label": per_label,
+        "buggy": buggy,
         "bins": bins,
         "added_lines": [min_added, max_added],
         "clean_min_age_days": clean_min_age_days,

@@ -56,12 +56,40 @@ def query_from_range(
     before: datetime | None = None,
 ) -> MemoryQuery:
     """`base..head` aralığından sorgu: değişen kaynak dosyaları, fonksiyonlar, kod ve diff."""
+    return _query(repo, base, head, config, before, use_merge_base=True)
+
+
+def query_from_diff(
+    repo: Path,
+    old: str,
+    new: str,
+    config: AegisConfig | None = None,
+    before: datetime | None = None,
+) -> MemoryQuery:
+    """`old` → `new` değişikliğinden sorgu; ortak ata aranmaz.
+
+    D2'deki tersine çevrilmiş düzeltmeler için (`old` = fix, `new` = fix'in ebeveyni): diff,
+    düzeltilmiş koddan hatalı koda giden değişikliktir.
+    """
+    return _query(repo, old, new, config, before, use_merge_base=False)
+
+
+def _query(
+    repo: Path,
+    base: str,
+    head: str,
+    config: AegisConfig | None,
+    before: datetime | None,
+    *,
+    use_merge_base: bool,
+) -> MemoryQuery:
+    """`base..head` aralığından sorgu: değişen kaynak dosyaları, fonksiyonlar, kod ve diff."""
     import re
 
     config = config or AegisConfig()
     mining, mem = config.mining, config.memory
     tests = [re.compile(p) for p in mining.test_path_patterns]
-    merge_base = git(repo, "merge-base", base, head).strip()
+    merge_base = git(repo, "merge-base", base, head).strip() if use_merge_base else base
     paths = [
         f.path
         for f in tree_changes(repo, merge_base, head)
