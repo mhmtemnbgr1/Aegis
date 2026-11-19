@@ -102,6 +102,20 @@ class GitHubClient:
             raise
         return [str(label["name"]) for label in issue.get("labels", [])]
 
+    def get_issue(self, number: int) -> dict[str, Any] | None:
+        """Issue veya PR'ın etiketleri, açılış zamanı ve PR olup olmadığı; bulunamazsa None."""
+        try:
+            issue = self._request("GET", f"/issues/{number}")
+        except GitHubError as exc:
+            if exc.status_code in (404, 410):
+                return None
+            raise
+        return {
+            "labels": [str(label["name"]) for label in issue.get("labels", [])],
+            "created_at": issue.get("created_at"),
+            "pull": "pull_request" in issue,
+        }
+
     def get_issue_title(self, number: int) -> str | None:
         """Issue veya PR'ın başlığı; bulunamazsa (404/410) None (hata kartları, #22)."""
         try:

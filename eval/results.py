@@ -358,7 +358,9 @@ def main() -> None:
         "## 6. Geçerlilik notları",
         "",
         "- Etiketler SZZ'ye dayanır; elle kontrolde SZZ eşlemelerinin yalnızca ~%31'i doğru çıktı. "
-        "Tüm RQ1 ve RQ2 sayıları bu gürültülü etiketlere göredir.",
+        "Tüm RQ1 ve RQ2 sayıları bu gürültülü etiketlere göredir. Issue etiketi, taşınan satır ve "
+        "tarih süzgeçleri bu veride doğruluğu artırmadı ya da veriyi yok etti "
+        "(`docs/mining-schema.md`, SZZ süzgeçleri).",
         "- Etiket kalitesi setleri LLM önerileri görülerek tek kişi tarafından etiketlendi; fix seti "
         "fiilen insan tarafından gözden geçirilmiş LLM etiketidir.",
         "- Hafızanın vektör kolu nöral değil LSA'dır (yerel LLM kurulmadı).",

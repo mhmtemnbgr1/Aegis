@@ -162,11 +162,18 @@ def blame_lines(
     *,
     ignore_whitespace: bool,
     ignore_revs_file: Path | None = None,
+    detect_moves: bool = False,
 ) -> Counter[str]:
-    """`rev`'deki `path`'in verilen satırlarını son değiştiren commit'ler → satır sayısı."""
+    """`rev`'deki `path`'in verilen satırlarını son değiştiren commit'ler → satır sayısı.
+
+    `detect_moves`: dosya içinde ve dosyalar arasında taşınan/kopyalanan satırlar (`-M -C`) asıl
+    yazıldıkları commit'e izlenir; taşıma commit'i suçlanmaz.
+    """
     args = ["blame", "--porcelain"]
     if ignore_whitespace:
         args.append("-w")
+    if detect_moves:
+        args += ["-M", "-C"]
     if ignore_revs_file is not None:
         args += ["--ignore-revs-file", str(ignore_revs_file)]
     for start, end in _ranges(lines):
