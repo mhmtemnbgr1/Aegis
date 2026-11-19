@@ -9,7 +9,7 @@ Proje iki katkıda derinleşir:
 - **K1 — ML gatekeeper:** Reponun kendi geçmişinden (SZZ) öğrenilen risk modeli; düşük riskli PR'larda LLM hiç çalışmaz.
 - **K2 — Bug-fix hafızası:** Geçmiş hata düzeltmeleri, riskli PR'ı inceleyen yerel LLM'e bağlam olarak verilir.
 
-Kapsam dışı (tezde "gelecek çalışma"): patch ve test üretimi, Docker sandbox, BugsInPy ve RQ3 (eski Faz 5), dashboard, bulut LLM sağlayıcıları. Yalnızca yerel model (Ollama) kullanılır.
+Kapsam dışı (gelecek çalışma): patch ve test üretimi, Docker sandbox, BugsInPy ve RQ3 (eski Faz 5), dashboard, bulut LLM sağlayıcıları. Yalnızca yerel model (Ollama) kullanılır.
 
 GitHub'da `opsiyonel` etiketli işler zaman kalırsa yapılır; `v2` etiketli işler kapatıldı.
 
@@ -24,7 +24,7 @@ GitHub'da `opsiyonel` etiketli işler zaman kalırsa yapılır; `v2` etiketli i�
 | 5 | 24 – 30 Kas | Gerçek Ollama koşuları, RQ1 deneyi |
 | 6 | 1 – 7 Ara | RQ2 deneyi (hafızasız / plasebo / vektör / hibrit), istatistik |
 | 7 | 8 – 14 Ara | Demo reposu, dogfooding verisi; zaman kalırsa RQ4 |
-| 8 | 15 – 21 Ara | Tez metni, sunum provası, yedek video |
+| 8 | 15 – 21 Ara | Belgeler, sunum provası, yedek video |
 
 ## Kesme Çizgileri
 
@@ -110,7 +110,7 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 
 ## ~~Faz 5 — Patch Üretimi ve Doğrulama~~ (v2, kapsam dışı)
 
-Düzeltme ve test ajanları, Docker sandbox, doğrulayıcı, BugsInPy ve suggestion blokları Aralık teslimi için kapsam dışı bırakıldı. Tezde "gelecek çalışma" olarak anılır; ilgili issue'lar `v2` etiketiyle kapatıldı.
+Düzeltme ve test ajanları, Docker sandbox, doğrulayıcı, BugsInPy ve suggestion blokları kapsam dışı bırakıldı; "gelecek çalışma" olarak kalır; ilgili issue'lar `v2` etiketiyle kapatıldı.
 
 ## Faz 6 — Değerlendirme · 6 Ara
 
@@ -124,14 +124,13 @@ Düzeltme ve test ajanları, Docker sandbox, doğrulayıcı, BugsInPy ve suggest
 - [ ] *(opsiyonel)* RQ5: kör kullanıcı çalışması (6–10 geliştirici)
 - [ ] *(opsiyonel)* LLM eğitim verisi kirliliği alt kümesi — tanımlandı (`after_cutoff`), D2'de yalnızca 17 örnek
 
-## Faz 7 — Sunum ve Tez · 21 Ara
+## Faz 7 — Sunum ve Belgeler · 21 Ara
 
 Gereklilikler: [docs/presentation.md](docs/presentation.md)
 
-- [ ] Tez metni
 - [ ] Kaynakçanın doğrulanması
 - [x] Demo reposu ve demo PR'ları — fork'ta canlı çalışıyor (LLM'siz yorumlar); LLM bulguları yerel çalıştırmada (#98)
 - [ ] Canlı demo provası ve yedek video
-- [ ] Jüri sorularının sonuç rakamlarıyla güncellenmesi — LLM'siz rakamlar eklendi; LLM deneyleri bekliyor
+- [ ] Sık sorulan soruların sonuç rakamlarıyla güncellenmesi — LLM'siz rakamlar eklendi; LLM deneyleri bekliyor
 - [ ] *(opsiyonel)* Veri setinin açık lisansla yayınlanması
 - [ ] *(opsiyonel)* Bildiri (UYMS veya benzeri)

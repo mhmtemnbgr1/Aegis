@@ -27,6 +27,14 @@ uv run python eval/rq2.py kos --model qwen2.5-coder:7b
 uv run python eval/rq2.py ozet --model qwen2.5-coder:7b
 ```
 
+- **İki test seti:** Varsayılan set (`--set revert`) hatalı örnek olarak tersine çevrilmiş gerçek düzeltmeleri kullanır; hatalı satırların yeri kesin bilinir. Gerçekçilik kontrolü için ikinci set (`--set szz`), SZZ'nin hatalı dediği gerçek commit'leri kullanır (etiketleri gürültülü). Temiz örnekler iki sette aynıdır; `szz` seti yalnızca 300 hatalı örneği koşturur (1.200 inceleme):
+
+  ```bash
+  uv run python eval/rq2.py kos --set szz --model qwen2.5-coder:7b
+  uv run python eval/rq2.py ozet --set szz --model qwen2.5-coder:7b
+  ```
+
+  Önce ana seti bitirin; `szz` özeti temiz örneklerin sonuçlarını ana setten alır. Hafıza iki sette de aynı yönde fayda sağlıyorsa sonuç hem güvenilir hem gerçekçidir.
 - **Varyantlar:** `none` hafızasız; `placebo` aynı sayıda ilgisiz kart (aynı repodan, commit'in dosyalarına dokunmayan); `vector` yalnızca LSA vektör araması; `hybrid` yapısal + BM25 + vektör (varsayılan). `--variants none,hybrid` ile seçilebilir; `structural` de vardır.
 - **Risk sabit:** Her commit'e "orta" risk verilir; RQ2 gatekeeper'ı değil yalnızca hafızanın etkisini ölçer.
 - **Süre tahmini:** 8 GB'lık bir NVIDIA ekran kartında çağrı başına ~10–20 sn; tamamı ~7–13 saat. İlerleme satırı ortalama süreyi gösterir. İkinci model (#36 "en az 2 LLM") için aynı komutlar `--model` değiştirilerek tekrarlanır.

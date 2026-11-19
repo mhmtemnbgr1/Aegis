@@ -47,9 +47,9 @@ PR'da çıkan sonuç şöyle görünür:
 | 2 | Repo madenciliği | PyDriller, fix-commit tespiti, SZZ, JIT metrikleri |
 | 3 | ML Gatekeeper | Sezgisel kuralın yerine eğitilmiş, açıklanabilir risk modeli gelir |
 | 4 | Bug-fix hafızası | Hata kartları, hibrit arama, analiz ajanına bağlam |
-| ~~5~~ | ~~Patch ve doğrulama~~ | Kapsam dışı (v2): tezde gelecek çalışma |
+| ~~5~~ | ~~Patch ve doğrulama~~ | Kapsam dışı (v2): gelecek çalışma |
 | 6 | Değerlendirme | RQ1 (gatekeeper) ve RQ2 (hafıza) ablation deneyleri |
-| 7 | Sunum ve tez | [docs/presentation.md](docs/presentation.md) |
+| 7 | Sunum ve belgeler | [docs/presentation.md](docs/presentation.md) |
 
 Her faz bir önceki fazın çalışan sistemini derinleştirir. Teslim Aralık 2026 sonu; haftalık takvim ve kesme çizgileri [TODO.md](TODO.md) içinde. Ayrıntılı görevler [TODO.md](TODO.md) dosyasında ve [GitHub Issues](https://github.com/mhmtemnbgr1/Aegis/issues) altında.
 
@@ -136,7 +136,7 @@ Tüm seçenekler: [`action.yml`](action.yml) · [`.aegis.toml.example`](.aegis.t
 | [docs/rad.md](docs/rad.md) | Gereksinim Analiz Dokümanı (RAD): kapsam, hedefler, FR/NFR, senaryolar, UML modelleri, arayüz taslakları |
 | [docs/setup.md](docs/setup.md) | Geliştirme ortamı: uv, Ollama |
 | [docs/architecture.md](docs/architecture.md) | Gereksinimler, katman ayrıntıları, şemalar, modüller, teknoloji yığını, güvenlik |
-| [docs/presentation.md](docs/presentation.md) | Sunum ve tez: katkılar, araştırma soruları, değerlendirme planı, demo, jüri soruları |
+| [docs/presentation.md](docs/presentation.md) | Proje özeti: katkılar, araştırma soruları, değerlendirme planı, demo, sık sorulan sorular |
 | [docs/target-repos.md](docs/target-repos.md) | Eğitim ve değerlendirmede kullanılan repolar |
 | [docs/ideas.md](docs/ideas.md) | Kapsam dışı fikirler |
 

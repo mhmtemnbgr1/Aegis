@@ -1,4 +1,4 @@
-"""Tez sonuç belgesi: tüm LLM'siz sonuçları tek yerde toplar (#53) → `docs/results.md`.
+"""Sonuç belgesi: tüm LLM'siz sonuçları tek yerde toplar (#53) → `docs/results.md`.
 
 Girdiler (önce üretilmiş olmalı):
 - `.aegis/data/d1.json`, `d1.parquet`, `d1-pr.parquet` (veri),

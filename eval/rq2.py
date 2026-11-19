@@ -14,7 +14,15 @@ Adımlar:
     uv run python eval/rq2.py ozet --model qwen2.5-coder:7b
 
 Sonuçlar `eval/results/rq2/<model>/results.jsonl` dosyasına eklenir (git'e girer); özet aynı
-klasörde `summary.md`. Ollama sunucusu başka bir makinedeyse `OLLAMA_HOST` ortam değişkeni.
+klasörde `summary.md`.
+
+İki test seti vardır (`--set`): `revert` (varsayılan; hatalı örnekler tersine çevrilmiş gerçek
+düzeltmeler, etiketleri güvenilir) ve `szz` (hatalı örnekler SZZ'nin bug-inducing dediği gerçek
+commit'ler; gerçekçi ama etiketleri gürültülü). İki sette temiz örnekler aynıdır: `szz` seti
+yalnız hatalı örnekleri koşturur, özette temiz örneklerin sonuçlarını `revert` setinden alır.
+Sonuçlar `eval/results/rq2-szz/<model>/` altında.
+
+Ollama sunucusu başka bir makinedeyse `OLLAMA_HOST` ortam değişkeni.
 `--limit`, repolar ve sınıflar arasında sırayla seçilen ilk N örneği koşturur; kuru koşu tam
 koşunun bir alt kümesi olduğundan sonuçlar tekrar kullanılır.
 """
@@ -39,8 +47,20 @@ from aegis.experiments.rq2 import (
 from aegis.mining.d2 import D2Sample, read_d2
 
 DATASETS = Path("eval/datasets")
-D2, MEMORY, CARDS = DATASETS / "d2.jsonl", DATASETS / "d2-memory.jsonl", DATASETS / "d2-cards.jsonl"
-RESULTS = Path("eval/results/rq2")
+SETS = {
+    "revert": ("d2.jsonl", "d2-memory.jsonl", "d2-cards.jsonl", Path("eval/results/rq2")),
+    "szz": (
+        "d2-szz.jsonl",
+        "d2-szz-memory.jsonl",
+        "d2-szz-cards.jsonl",
+        Path("eval/results/rq2-szz"),
+    ),
+}
+
+
+def paths(name: str) -> tuple[Path, Path, Path, Path]:
+    d2, memory, cards, results = SETS[name]
+    return DATASETS / d2, DATASETS / memory, DATASETS / cards, results
 
 
 def interleaved(samples: list[D2Sample]) -> list[D2Sample]:
@@ -55,28 +75,30 @@ def interleaved(samples: list[D2Sample]) -> list[D2Sample]:
     return out
 
 
-def model_dir(model: str) -> Path:
-    return RESULTS / model.replace(":", "_").replace("/", "_")
+def model_dir(model: str, name: str = "revert") -> Path:
+    return paths(name)[3] / model.replace(":", "_").replace("/", "_")
 
 
 def cmd_prepare(args: argparse.Namespace) -> None:
     config = AegisConfig()
+    d2, memory, cards, _ = paths(args.set)
     stats = prepare_memory(
-        read_d2(D2),
+        read_d2(d2),
         Path(config.mining.data_dir),
         Path(config.mining.clone_dir),
         Path(config.memory.index_path),
-        MEMORY,
-        CARDS,
+        memory,
+        cards,
         config=config,
         seed=args.seed,
     )
-    print(f"{MEMORY}, {CARDS}: {stats}")
+    print(f"{memory}, {cards}: {stats}")
 
 
 def cmd_run(args: argparse.Namespace) -> None:
     config = AegisConfig(agents={"analyst": AgentConfig(model=args.model, timeout_seconds=600)})
-    samples = interleaved(read_d2(D2))
+    d2, memory, cards, _ = paths(args.set)
+    samples = interleaved(read_d2(d2))
     if args.repo:
         samples = [s for s in samples if s.repo == args.repo]
     if args.limit:
@@ -85,7 +107,7 @@ def cmd_run(args: argparse.Namespace) -> None:
     unknown = set(variants) - set(VARIANTS)
     if unknown:
         raise SystemExit(f"bilinmeyen varyant: {', '.join(sorted(unknown))}")
-    out = model_dir(args.model) / "results.jsonl"
+    out = model_dir(args.model, args.set) / "results.jsonl"
     total = len(samples) * len(variants)
     started = time.perf_counter()
     seen = [0]
@@ -100,7 +122,7 @@ def cmd_run(args: argparse.Namespace) -> None:
             file=sys.stderr,
         )
 
-    n = run(samples, read_memory(MEMORY, CARDS), out, config, variants=variants, on_result=progress)
+    n = run(samples, read_memory(memory, cards), out, config, variants=variants, on_result=progress)
     print(f"{n} yeni koşu ({total} hedef) → {out}")
 
 
@@ -109,11 +131,20 @@ def _pct(x: float) -> str:
 
 
 def cmd_summary(args: argparse.Namespace) -> None:
-    samples = read_d2(D2)
-    folder = model_dir(args.model)
+    d2 = paths(args.set)[0]
+    samples = read_d2(d2)
+    folder = model_dir(args.model, args.set)
     results = load_results(folder / "results.jsonl")
+    if args.set != "revert":
+        # Temiz örnekler iki sette aynı: sonuçları ana setten.
+        main = read_d2(paths("revert")[0])
+        clean = {s.sha for s in main if s.label == "clean"}
+        samples += [s for s in main if s.label == "clean"]
+        main_results = model_dir(args.model) / "results.jsonl"
+        if main_results.is_file():
+            results |= {k: v for k, v in load_results(main_results).items() if k[0] in clean}
     lines = [
-        f"# RQ2 sonuçları — {args.model}",
+        f"# RQ2 sonuçları ({args.set} seti) — {args.model}",
         "",
         f"`eval/rq2.py ozet` ile üretilir. Satır eşleşme toleransı ±{args.tol}. Yalnız tüm "
         "varyantlarda başarılı sonucu olan örnekler sayılır (eşleştirilmiş tasarım).",
@@ -174,15 +205,18 @@ def main() -> None:
     sub = parser.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("hazirla", help="hafıza getirme sonuçlarını hazırla (LLM'siz)")
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--set", choices=sorted(SETS), default="revert")
     p.set_defaults(func=cmd_prepare)
     p = sub.add_parser("kos", help="LLM incelemelerini koştur (Ollama)")
     p.add_argument("--model", default="qwen2.5-coder:7b")
+    p.add_argument("--set", choices=sorted(SETS), default="revert")
     p.add_argument("--variants", default=",".join(DEFAULT_VARIANTS))
     p.add_argument("--limit", type=int, default=0, help="yalnız ilk N örnek (kuru koşu)")
     p.add_argument("--repo", default="", help="yalnız bu repo (ör. tqdm__tqdm)")
     p.set_defaults(func=cmd_run)
     p = sub.add_parser("ozet", help="tablolar ve McNemar testleri")
     p.add_argument("--model", default="qwen2.5-coder:7b")
+    p.add_argument("--set", choices=sorted(SETS), default="revert")
     p.add_argument("--tol", type=int, default=LINE_TOLERANCE)
     p.set_defaults(func=cmd_summary)
     args = parser.parse_args()
