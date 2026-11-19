@@ -22,7 +22,7 @@ import subprocess
 import sys
 from collections import Counter
 from pathlib import Path
-from statistics import mean
+from statistics import mean, median
 
 import numpy as np
 import polars as pl
@@ -343,6 +343,54 @@ def section_rq2() -> list[str]:
     return out
 
 
+def section_d4() -> list[str]:
+    """Gerçek PR'lardaki çalıştırmalar (Action telemetrisi, `eval/d4.py topla`)."""
+    path = Path("eval/datasets/d4.jsonl")
+    if not path.is_file():
+        return []
+    rows = [json.loads(line) for line in path.read_text("utf-8").splitlines() if line.strip()]
+    prs = {(r["repo"], r["pr"]) for r in rows}
+    durations = sorted(r["duration_seconds"] for r in rows)
+    p95 = durations[min(len(durations) - 1, math.ceil(0.95 * len(durations)) - 1)]
+    status = Counter(r["status"] for r in rows)
+    band = Counter(r["risk_band"] for r in rows)
+    repos = Counter(r["repo"] for r in rows)
+    with_findings = sum(1 for r in rows if r["findings"])
+    up = sum(r["thumbs_up"] for r in {(r["repo"], r["pr"]): r for r in rows}.values())
+    down = sum(r["thumbs_down"] for r in {(r["repo"], r["pr"]): r for r in rows}.values())
+    labels = {
+        "skipped-low-risk": "düşük risk, LLM'e gönderilmedi",
+        "skipped-no-llm": "LLM kapalı (runner'da Ollama yok)",
+        "llm-error": "LLM'e ulaşılamadı (fail-open)",
+        "ok": "LLM incelemesi tamamlandı",
+    }
+    return [
+        "## 6. Gerçek PR'larda çalıştırma (D4)",
+        "",
+        f"{len(rows)} Action çalıştırması, {len(prs)} PR ("
+        + ", ".join(f"{repo}: {n}" for repo, n in sorted(repos.items()))
+        + "). Kaynak: Action'ın yüklediği `runs.jsonl` kayıtları (`eval/d4.py`, artifact'lar 90 gün "
+        "saklanır). GitHub runner'larında Ollama olmadığı için LLM incelemesi bu çalıştırmalarda "
+        "yoktur; süreler gatekeeper, hafıza ve deterministik denetimleri kapsar.",
+        "",
+        "| Ölçü | Değer |",
+        "| --- | --- |",
+        *(f"| {labels.get(k, k)} | {n} |" for k, n in status.most_common()),
+        f"| Risk bandı (düşük / orta / yüksek) | {band['low']} / {band['medium']} / {band['high']} |",
+        f"| Süre: medyan / p95 / en uzun | {num(median(durations), 2)} / {num(p95, 2)} / "
+        f"{num(durations[-1], 2)} sn |",
+        f"| Bulgu üreten çalıştırma (deterministik denetimler) | {with_findings} |",
+        f"| Özet yorumuna tepki (👍 / 👎) | {up} / {down} |",
+        "",
+        "Hiçbir çalıştırma PR'ı engellemedi"
+        + (
+            f"; LLM'e ulaşılamayan {status['llm-error']} çalıştırma da uyarıyla tamamlandı."
+            if status["llm-error"]
+            else "."
+        ),
+    ]
+
+
 def main() -> None:
     parts = [
         "# Sonuçlar (LLM'siz)",
@@ -352,17 +400,24 @@ def main() -> None:
         "`docs/architecture.md` ve `docs/mining-schema.md` içinde.",
         "",
     ]
-    for section in (section_data, section_labels, section_models, section_rq1, section_rq2):
+    for section in (
+        section_data,
+        section_labels,
+        section_models,
+        section_rq1,
+        section_rq2,
+        section_d4,
+    ):
         parts += section() + [""]
     parts += [
-        "## 6. Geçerlilik notları",
+        "## 7. Geçerlilik notları",
         "",
         "- Etiketler SZZ'ye dayanır; elle kontrolde SZZ eşlemelerinin yalnızca ~%31'i doğru çıktı. "
         "Tüm RQ1 ve RQ2 sayıları bu gürültülü etiketlere göredir. Issue etiketi, taşınan satır ve "
         "tarih süzgeçleri bu veride doğruluğu artırmadı ya da veriyi yok etti "
         "(`docs/mining-schema.md`, SZZ süzgeçleri).",
-        "- Etiket kalitesi setleri LLM önerileri görülerek tek kişi tarafından etiketlendi; fix seti "
-        "fiilen insan tarafından gözden geçirilmiş LLM etiketidir.",
+        "- Etiket kalitesi setlerini (#8, #9) tek kişi, iki öneri setini görerek etiketledi; "
+        "kararların büyük çoğunluğu önerilerle aynı (`docs/mining-schema.md`).",
         "- Hafızanın vektör kolu nöral değil LSA'dır (yerel LLM kurulmadı).",
         "- Fix sınıflandırıcısı aynı 200 commit üzerinde ayarlandı; precision/recall iyimserdir.",
     ]

@@ -134,9 +134,25 @@ Ortalama 6 repo üzerinden. Repolar arası genel model repo içi modelden geri k
 | hibrit − yapısal | +0,051 | < 0,001 | 0,47 |
 | hibrit − rastgele | +0,460 | < 0,001 | 0,94 |
 
-## 6. Geçerlilik notları
+## 6. Gerçek PR'larda çalıştırma (D4)
+
+54 Action çalıştırması, 28 PR (mhmtemnbgr1/Aegis: 50, mhmtemnbgr1/cli: 4). Kaynak: Action'ın yüklediği `runs.jsonl` kayıtları (`eval/d4.py`, artifact'lar 90 gün saklanır). GitHub runner'larında Ollama olmadığı için LLM incelemesi bu çalıştırmalarda yoktur; süreler gatekeeper, hafıza ve deterministik denetimleri kapsar.
+
+| Ölçü | Değer |
+| --- | --- |
+| LLM kapalı (runner'da Ollama yok) | 39 |
+| düşük risk, LLM'e gönderilmedi | 11 |
+| LLM'e ulaşılamadı (fail-open) | 4 |
+| Risk bandı (düşük / orta / yüksek) | 11 / 39 / 4 |
+| Süre: medyan / p95 / en uzun | 0,02 / 4,28 / 4,63 sn |
+| Bulgu üreten çalıştırma (deterministik denetimler) | 12 |
+| Özet yorumuna tepki (👍 / 👎) | 0 / 0 |
+
+Hiçbir çalıştırma PR'ı engellemedi; LLM'e ulaşılamayan 4 çalıştırma da uyarıyla tamamlandı.
+
+## 7. Geçerlilik notları
 
 - Etiketler SZZ'ye dayanır; elle kontrolde SZZ eşlemelerinin yalnızca ~%31'i doğru çıktı. Tüm RQ1 ve RQ2 sayıları bu gürültülü etiketlere göredir. Issue etiketi, taşınan satır ve tarih süzgeçleri bu veride doğruluğu artırmadı ya da veriyi yok etti (`docs/mining-schema.md`, SZZ süzgeçleri).
-- Etiket kalitesi setleri LLM önerileri görülerek tek kişi tarafından etiketlendi; fix seti fiilen insan tarafından gözden geçirilmiş LLM etiketidir.
+- Etiket kalitesi setlerini (#8, #9) tek kişi, iki öneri setini görerek etiketledi; kararların büyük çoğunluğu önerilerle aynı (`docs/mining-schema.md`).
 - Hafızanın vektör kolu nöral değil LSA'dır (yerel LLM kurulmadı).
 - Fix sınıflandırıcısı aynı 200 commit üzerinde ayarlandı; precision/recall iyimserdir.
