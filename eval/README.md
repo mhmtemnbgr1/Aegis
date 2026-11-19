@@ -7,7 +7,11 @@ eval/
 ├── datasets/
 │   ├── d1.parquet, d1.json   # D1: SZZ etiketli commit özellikleri ve sürüm kaydı (RQ1)
 │   ├── d1-report.md          # D1 repo seçimi ve sayılar
-│   └── d2.jsonl, d2.json     # D2: hatalı + temiz commit'ler, diff'ler, beklenen satırlar (RQ2)
+│   ├── d2.jsonl, d2.json     # D2: hatalı + temiz commit'ler, diff'ler, beklenen satırlar (RQ2)
+│   ├── d2-memory.jsonl       # D2 örneği × hafıza varyantı → kart kimlikleri (eval/rq2.py hazirla)
+│   ├── d2-cards.jsonl        # bu kartların prompt'a giren alanları
+│   └── rq1-triage.jsonl      # RQ1 triage örneklemi: PR diff'leri, LR ve sezgisel skorlar
+├── results/                  # LLM deneylerinin ham sonuçları ve özetleri (git'e girer)
 ├── labels/                   # elle etiketleme örneklemleri ve sonuçları (#8, #9)
 ├── reports/                  # üretilen raporlar (git'e eklenmez)
 └── *.py                      # deney ve analiz betikleri
@@ -55,5 +59,7 @@ Satır biçimi (`d2.jsonl`, satır başına bir örnek):
 | `results.py` | `docs/results.md` (tüm LLM'siz sonuçlar, güven aralıkları, testler) |
 | `rq1_curve.py` | RQ1 maliyet–recall eğrisi (PR düzeyi, kayan pencere) |
 | `retrieval_eval.py` | RQ2 LLM'siz: hafıza getirme Recall@k ve MRR |
+| `rq2.py` | RQ2 LLM deneyi: hazırlık, koşu, özet (`docs/llm-experiments.md`) |
+| `rq1_triage.py` | RQ1 ucuz LLM triage: hazırlık, koşu, özet |
 | `szz_variants.py` | SZZ süzgeçlerinin etiketli eşlemelerde ve veri miktarında etkisi |
 | `labeling.py`, `agreement.py`, `tune_fix.py` | Etiket kalitesi örneklemleri ve uyum ölçümleri (#8, #9) |
