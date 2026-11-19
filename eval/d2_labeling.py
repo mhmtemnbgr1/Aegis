@@ -6,12 +6,17 @@
     # 2. Tek dosyalık inceleme sayfası (klonlar gerekir; sayfa sonra her yerde açılır):
     uv run python eval/d2_labeling.py sayfa          # → eval/labels/d2-review.html
 
-    # 3. İki kişi bağımsız etiketler, "CSV indir" ile d2-kontrol-<ad>.csv dosyalarını verir:
+    # 3. İki etiket seti, sayfadaki "CSV indir" ile d2-kontrol-<ad>.csv olarak alınır:
     uv run python eval/d2_labeling.py uyum eval/labels/d2-kontrol-a.csv eval/labels/d2-kontrol-b.csv
 
-`uyum`, Cohen κ'yı (hatalı ve temiz için ayrı ayrı) ve anlaşmazlıkları yazar; anlaşmazlıklar
-konuşularak çözülür ve son etiketler `eval/labels/d2-kontrol.csv` dosyasına yazılır. Yönerge:
-`eval/d2-etiketleme.md`.
+`uyum`, Cohen κ'yı (hatalı ve temiz için ayrı ayrı) ve anlaşmazlıkları yazar. `birlestir`, iki
+setin aynı cevabı verdiği örnekleri son etiket olarak `eval/labels/d2-kontrol.csv` dosyasına yazar
+(farklı cevaplı örnekler alt kümeye girmez):
+
+    uv run python eval/d2_labeling.py birlestir \
+        eval/labels/d2-kontrol-1.csv eval/labels/d2-kontrol-2.csv
+
+Yönerge: `eval/d2-etiketleme.md`.
 """
 
 import csv
@@ -125,7 +130,7 @@ def cmd_agreement(first: Path, second: Path) -> None:
 
     a, b = load(first), load(second)
     shared = [sha for sha in a if sha in b and a[sha]["answer"] and b[sha]["answer"]]
-    print(f"Her iki kişinin de yanıtladığı örnek: {len(shared)}")
+    print(f"İki setin de yanıtladığı örnek: {len(shared)}")
     for label in ("buggy", "clean"):
         keys = [s for s in shared if a[s]["label"] == label]
         x, y = [a[s]["answer"] for s in keys], [b[s]["answer"] for s in keys]
@@ -144,6 +149,26 @@ def cmd_agreement(first: Path, second: Path) -> None:
             )
 
 
+def cmd_merge(first: Path, second: Path) -> None:
+    """İki setin aynı cevabı verdiği örnekler → d2-kontrol.csv (labeler: ortak)."""
+
+    def load(p: Path) -> list[dict[str, str]]:
+        return list(csv.DictReader(p.open(encoding="utf-8-sig")))
+
+    b = {r["sha"]: r for r in load(second)}
+    agreed = [
+        r for r in load(first) if r["answer"] and b.get(r["sha"], {}).get("answer") == r["answer"]
+    ]
+    out = LABELS / "d2-kontrol.csv"
+    with out.open("w", encoding="utf-8", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["no", "repo", "sha", "label", "answer", "note", "labeler"])
+        for r in agreed:
+            w.writerow([r["no"], r["repo"], r["sha"], r["label"], r["answer"], "", "ortak"])
+    counts = Counter((r["label"], r["answer"]) for r in agreed)
+    print(f"{len(agreed)} ortak etiket → {out}: {dict(sorted(counts.items()))}")
+
+
 def main() -> None:
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "ornekle":
@@ -152,6 +177,8 @@ def main() -> None:
         cmd_page()
     elif cmd == "uyum" and len(sys.argv) == 4:
         cmd_agreement(Path(sys.argv[2]), Path(sys.argv[3]))
+    elif cmd == "birlestir" and len(sys.argv) == 4:
+        cmd_merge(Path(sys.argv[2]), Path(sys.argv[3]))
     else:
         raise SystemExit(__doc__)
 

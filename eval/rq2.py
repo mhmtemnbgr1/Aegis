@@ -130,7 +130,8 @@ def cmd_summary(args: argparse.Namespace) -> None:
         confirmed = {
             r["sha"]
             for r in csv.DictReader(manual.open(encoding="utf-8-sig"))
-            if (r["label"], r["answer"]) in (("buggy", "dogru"), ("clean", "temiz"))
+            if (r["label"], r["answer"])
+            in (("buggy", "dogru"), ("buggy", "kismen"), ("clean", "temiz"))
         }
         subsets["Elle doğrulanmış alt küme (#69)"] = lambda s: s.sha in confirmed
     for title, only in subsets.items():

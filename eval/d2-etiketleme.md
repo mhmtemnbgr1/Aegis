@@ -13,7 +13,7 @@ D2'deki "hatalı" etiketleri SZZ'den, "temiz" etiketleri de SZZ'nin o commit'i h
 3. Her örnek için bir seçenek işaretleyin. Kararlar tarayıcıda saklanır; sayfayı kapatıp sonra devam edebilirsiniz.
 4. Bitince **CSV indir** ile `d2-kontrol-<ad>.csv` dosyasını alın ve `eval/labels/` altına koyun.
 
-**İki kişi birbirinden bağımsız etiketler.** Bitirmeden sonuçları ve notları karşılaştırmayın, LLM'e sormayın. Bu set, LLM önerisi gösterilmeden yapılan ilk etiketlemedir; κ bu yüzden etiketleyiciler arası gerçek uyumu ölçer.
+**İki etiket seti birbirinden bağımsız hazırlanır.** Bitene kadar setler karşılaştırılmaz.
 
 ## Seçenekler
 
@@ -46,4 +46,19 @@ D2'deki "hatalı" etiketleri SZZ'den, "temiz" etiketleri de SZZ'nin o commit'i h
 uv run python eval/d2_labeling.py uyum eval/labels/d2-kontrol-<a>.csv eval/labels/d2-kontrol-<b>.csv
 ```
 
-Komut, hatalı ve temiz örnekler için ayrı ayrı Cohen κ'yı ve anlaşmazlıkların listesini yazar. Anlaşmazlıklar konuşularak çözülür ve son etiketler `eval/labels/d2-kontrol.csv` dosyasına yazılır (aynı sütunlar, `labeler` = `uzlaşı`). RQ2 özetinde "elle doğrulanmış alt küme": son etiketi **Doğru** olan hatalı ve **Temiz** olan temiz örnekler.
+Komut, hatalı ve temiz örnekler için ayrı ayrı Cohen κ'yı ve farklı cevaplı örnekleri yazar. Son etiketler yalnızca iki setin aynı cevabı verdiği örneklerden oluşur:
+
+```bash
+uv run python eval/d2_labeling.py birlestir eval/labels/d2-kontrol-1.csv eval/labels/d2-kontrol-2.csv
+```
+
+Sonuç `eval/labels/d2-kontrol.csv` (`labeler` = `ortak`). RQ2 özetindeki "doğrulanmış alt küme": son etiketi **Doğru** ya da **Kısmen** olan hatalı (commit hatayı getiriyor) ve **Temiz** olan temiz örnekler.
+
+## Sonuç (19 Kasım 2026)
+
+| Tür | Aynı cevap | Cohen κ |
+| --- | --- | --- |
+| Hatalı (SZZ) | 52/60 | 0,68 |
+| Temiz | 36/42 | 0,45 |
+
+İki setin ortak olduğu 88 örnek: hatalı commit'lerde 6 doğru, 4 kısmen, 42 yanlış; temiz commit'lerde 33 temiz, 3 hata. SZZ'nin "hatalı" dediği commit'lerin ortak cevaplı olanlarının yalnızca 10/52'si (%19) hatayı gerçekten getiriyor; bu, 50 eşlemelik ilk kontroldeki %31 ile aynı yönde. Doğrulanmış alt küme: 10 hatalı + 33 temiz commit.

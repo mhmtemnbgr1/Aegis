@@ -52,6 +52,8 @@ Satır biçimi (`d2.jsonl`, satır başına bir örnek):
 
 `date`, hafıza getirmede zamansal filtre için kullanılır: bu tarihten sonra düzeltilen hatalar hafızada görünmez.
 
+**Doğrulanmış alt küme (#69):** D2'den 102 örnek iki etiket setiyle kontrol edildi (`labels/d2-kontrol-1.csv`, `-2.csv`; uyum κ 0,68 hatalı, 0,45 temiz). İki setin aynı cevabı verdiği 88 örnek `labels/d2-kontrol.csv` dosyasındadır; RQ2 özeti, bunlardan hatayı gerçekten getiren 10 hatalı ve temiz olan 33 commit için ayrı bir tablo verir. Ayrıntı: `d2-etiketleme.md`.
+
 ## Betikler
 
 | Betik | Ne üretir |
