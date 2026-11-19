@@ -93,10 +93,10 @@ Böylece model ne kadar iyi çıkarsa çıksın sonuç savunulabilir olur; ekip 
 | ID | Veri seti | Kaynak | Hedef boyut | RQ |
 | --- | --- | --- | --- | --- |
 | D1 | SZZ ile etiketlenmiş commit ve PR'lar | 6 hedef repo ([target-repos.md](target-repos.md)), tüm geçmiş | Tüm commit'ler (repo başına ≥ 200 pozitif) | RQ1 |
-| D2 | Bug-inducing commit'ler (sonradan düzeltilen satırlar = beklenen bulgu) ve temiz commit'ler | D1'den tabakalı örnekleme | ~300 hatalı + ~300 temiz; ~100'ü elle etiketli | RQ2, RQ4, RQ5 |
+| D2 | Tersine çevrilmiş gerçek düzeltmeler (düzeltmenin sildiği satırlar = beklenen bulgu) ve temiz commit'ler | D1 repolarından tabakalı örnekleme | 300 hatalı + 300 temiz; ~100'ü iki etiket setiyle kontrol edildi | RQ2, RQ4, RQ5 |
 | D4 | Demo ve dogfooding PR'ları | Ekip | ≥ 30 PR | Maliyet, süre |
 
-> D2'de SZZ satırları gürültülü olabilir. Bu yüzden ~100 örnek iki kişi tarafından elle etiketlenir ve sonuçlar hem otomatik hem elle etiketli alt küme için raporlanır. Eşleştirilmiş McNemar testinde birkaç yüz örnek, orta büyüklükteki farkları yakalamak için yeterlidir.
+> SZZ satırları gürültülü olduğu için (elle kontrolde %19–31 doğru) D2'nin hatalı örnekleri SZZ ile değil, gerçek düzeltmelerin tersine çevrilmesiyle kurulur: hatalı satırların yeri kesin bilinir. Temiz örneklerden ~100'ü iki etiket setiyle kontrol edildi ve doğrulanmış alt küme ayrıca raporlanır. Eşleştirilmiş McNemar testinde birkaç yüz örnek, orta büyüklükteki farkları yakalamak için yeterlidir.
 
 ### 5.1.1 Kullanıcı Çalışması (RQ5, opsiyonel)
 
@@ -174,25 +174,25 @@ Demo PR'ları [public HTTPie fork'unda](https://github.com/muratEfeErgin/cli) a�
 Üç fark var: Her PR'a LLM çağırmıyoruz (K1); LLM'e reponun kendi geçmiş hatalarını veriyoruz (K2); her şey yerelde çalışıyor, kod dışarı çıkmıyor ve API ücreti yok. K1 ve K2'nin etkisini ablation deneyleriyle (RQ1, RQ2) sayıyla gösteriyoruz.
 
 ### "Neden XGBoost/LightGBM? Küçük bir LLM de PR'ın riskli olup olmadığına karar veremez mi?"
-Bunu test ettik (RQ1). Klasik model çok daha ucuz, deterministik ve SHAP ile açıklanabilir. Karşılaştırma sonucu da tezde var.
+Bunu ölçüyoruz (RQ1, #67): RQ1 eğrisinin 25 zaman penceresinden alınan 1.250 PR'ı küçük bir yerel LLM'e (Qwen2.5-Coder 1.5B) "riskli mi?" diye soruyor, aynı PR'larda risk modeliyle karşılaştırıyoruz. LLM'siz kısım hazır: risk modeli PR'ların %40'ı LLM'e gidince hatalı PR'ların %82'sini yakalıyor, sezgisel kural %75'ini (fark anlamlı, p = 0,016). Model ayrıca çok daha ucuz (milisaniyeler, GPU yok), deterministik ve her skoru nedenleriyle açıklıyor. LLM triage sonucu deney bitince buraya eklenecek.
 
 ### "Hafızalı versiyonun iyi çıkması sadece prompt uzadığı için olamaz mı?"
-Aynı uzunlukta rastgele kartlar veren bir plasebo varyantıyla karşılaştırdık (RQ2). İyileşme hafızanın içeriğinden geliyor.
+Bunu iki yerde plaseboyla sınıyoruz. LLM'siz ölçümde hafıza sinyali risk modeline eklenince dar bütçede (%10 LLM payı) yakalanan hatalı PR oranı 4 puan artıyor (p = 0,012); aynı dağılımda ama bilgisiz plasebo hiçbir kazanç getirmiyor. LLM'li RQ2'de (#36) hafızalı inceleme, aynı sayıda ilgisiz kart (aynı repodan, commit'in dosyalarına dokunmayan) verilen plasebo varyantıyla karşılaştırılıyor; bu deney koşturulmayı bekliyor.
 
 ### "JIT defect prediction zaten var. Yeni olan ne?"
 Bu modeller tek başına bir olasılık üretip bırakıyor. Biz bu olasılığı LLM için bir maliyet kapısı olarak, SZZ eşlemelerini de LLM'e bağlam olarak kullanıyoruz. Tahmin, açıklamalı ve somut bir inceleme yorumuna dönüşüyor.
 
 ### "SZZ etiketleri gürültülü değil mi?"
-Evet. Filtreler uyguluyor, örneklemi elle kontrol ediyor ve elle etiketli alt kümede de raporluyoruz.
+Evet, ve bunu ölçtük. Elle kontrol edilen 50 eşlemenin %31'i doğru [%95 GA: 19–44]; fix tespitinin kesinliği ise kurallarla %71'den %86'ya çıktı. Literatürdeki üç standart iyileştirmeyi denedik (hata etiketli issue şartı, taşınan satırları izleme, tarih kontrolü): doğruluğu artırmadılar ya da veriyi yok ettiler (issue şartıyla tornado'da hiç hatalı commit kalmıyor). Bu yüzden: (1) sonuçları ölçülmüş bir sınırlama olarak raporluyoruz; (2) gürültü sonuçları bizim aleyhimize çalışır, buna rağmen model sezgisel kuraldan anlamlı derecede iyi; (3) RQ2'nin hatalı örneklerinde SZZ'yi hiç kullanmıyoruz: gerçek düzeltmeleri tersine çeviriyoruz, böylece hatalı satırların yeri kesin biliniyor (etiket doğruluğu fix tespitine bağlı, %96). Temiz örnekler iki etiket setiyle kontrol edildi (#69).
 
 ### "Gatekeeper hatalı bir PR'ı geçirirse?"
-Eşik bütçe–recall eğrisinden bilinçli olarak seçiliyor. Düşük bantta da risk skoru yorum olarak yazılıyor ve `aegis:force` etiketiyle tam inceleme zorlanabiliyor. Aegis insan incelemesinin yerini almıyor, önceliklendiriyor.
+Eşik bütçe–recall eğrisinden bilinçli olarak seçiliyor. Maliyet odaklı noktada PR'ların %58'i elenirken hatalı PR'ların %82'si yine yakalanıyor; güvenlik odaklı noktada hedef %90 recall'ı tutturamadık (%83), çünkü eşik bir önceki pencereden seçiliyor ve dağılım kayıyor. Düşük bantta da risk skoru yorum olarak yazılıyor ve `aegis:force` etiketiyle tam inceleme zorlanabiliyor. Aegis insan incelemesinin yerini almıyor, önceliklendiriyor.
 
 ### "Veri sızıntısı var mı?"
 Hayır. Doğrulama zaman sıralı, hafıza zamansal filtreli ve etiketi henüz oluşmamış son aylar eğitime alınmıyor.
 
 ### "LLM bu repoların hatalarını ezberlemiş olamaz mı?"
-Olabilir. Model bilgi kesim tarihinden sonraki commit'lerle ayrı bir alt küme oluşturup ayrıca raporluyoruz.
+Olabilir; iki önlemimiz var. (1) RQ2 mutlak başarıyı değil hafızanın getirdiği farkı ölçüyor: ezber varsa hafızasız, plasebo ve hafızalı varyantların hepsine aynı ölçüde yarar, fark değişmez. (2) Model bilgi kesiminden (2024-09) sonraki commit'ler ayrı alt kümede raporlanıyor. D2'de bu kapsamda yalnızca 17 commit var; bu yüzden o tablo keşif amaçlı.
 
 ### "Kötü niyetli bir PR, LLM'i kandırıp bulguları gizletebilir mi?"
 PR içeriği prompt'ta veri olarak işaretleniyor ve ajanın hiçbir araç yetkisi yok. Çıktı şeması fazladan alan kabul etmiyor; uydurma kanıtlı bulgular düşüyor. Bilinen saldırı kalıpları da modelden bağımsız, deterministik bir dedektörle güvenlik bulgusu olarak raporlanıyor; model kandırılsa bile bu bulgu bastırılamıyor. 14 saldırı örneğiyle regresyon testlerimiz var; demoda canlı gösteriyoruz.
@@ -201,16 +201,16 @@ PR içeriği prompt'ta veri olarak işaretleniyor ve ajanın hiçbir araç yetki
 Aegis PR kodunu çalıştırmıyor, yalnızca diff'i okuyor. `pull_request_target` kullanmıyoruz ve yapılandırma taban daldan okunuyor; bir PR kendi incelemesini gevşetemiyor.
 
 ### "İlk kurulum ne kadar sürüyor? Her PR'da tüm geçmiş mi taranıyor?"
-Hayır. İlk madencilik ve indeksleme yerelde bir kez yapılıyor ve GitHub Release asset'i olarak yükleniyor. Action bu arşivi indiriyor; her PR'da geçmiş yeniden taranmıyor. Tüm geçmiş üzerinde SZZ, en büyük hedef repoda (scrapy) 4 dakikadan kısa sürüyor.
+Hayır. İlk madencilik ve indeksleme yerelde bir kez yapılıyor ve GitHub Release asset'i olarak yükleniyor. Action bu arşivi indiriyor; her PR'da geçmiş yeniden taranmıyor. Tüm geçmiş üzerinde SZZ, en büyük hedef repoda (scrapy) 4 dakikadan kısa sürüyor. `main`'e her merge'de yalnızca yeni commit'ler işleniyor (tqdm'de tam tarama 2 dk 48 sn, yeni commit yokken 3 sn).
 
 ### "Neden otomatik düzeltme (patch) üretmiyorsunuz?"
 Bilinçli bir kapsam kararı. Testle doğrulanmış patch üretimi ayrı bir araştırma problemi (APR) ve güvenilir yapılması için sandbox ile büyük bir benchmark gerekiyor. v1'de katkıyı ölçülebilir iki parçaya (K1, K2) yoğunlaştırdık; patch hattı gelecek çalışma. Mimari buna hazır: bulgular zaten satır ve kanıtla doğrulanmış biçimde üretiliyor.
 
 ### "Kullanıcılar bu yorumları gerçekten faydalı buluyor mu?"
-Bunu ölçmek için 6–10 geliştiriciyle kör bir kullanıcı çalışması tasarladık (RQ5): Aegis ve PR-Agent yorumları kaynak gizlenerek puanlatılıyor.
+Bunu ölçmek için 6–10 geliştiriciyle kör bir kullanıcı çalışması tasarladık (RQ5, isteğe bağlı): Aegis ve PR-Agent yorumları kaynak gizlenerek puanlatılıyor. Zaman kalırsa yapılacak; yapılmazsa tezde gelecek çalışma olarak geçecek.
 
 ### "Geçmişi olmayan yeni bir repoda ne olacak?"
-Repolar arası genel model kullanılıyor; hafıza boşsa analiz hafızasız yapılıyor.
+Repolar arası genel model kullanılıyor: yalnızca diğer 5 repoyla eğitilen model, repo içi modelle aynı başarıda (ROC-AUC 0,805'e karşı 0,797). Hafıza boşsa analiz hafızasız yapılıyor.
 
 ### "Kodumuz dışarı mı gidiyor?"
 Hayır. Aegis yalnızca yerel modelle (Ollama) ve yerel embedding ile çalışıyor; kod makineden veya runner'dan dışarı çıkmıyor, API anahtarı da gerekmiyor.

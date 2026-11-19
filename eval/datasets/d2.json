@@ -1,8 +1,9 @@
 {
   "aegis_version": "0.0.1",
-  "built_at": "2026-11-19T12:21:41.336182+00:00",
+  "built_at": "2026-11-19T13:46:57.461426+00:00",
   "seed": 0,
   "per_label": 50,
+  "buggy": "revert",
   "bins": 3,
   "added_lines": [
     3,
@@ -11,37 +12,37 @@
   "clean_min_age_days": 365,
   "llm_cutoff": "2024-09-01",
   "samples": 600,
-  "expected_lines": 1343,
+  "expected_lines": 1440,
   "repos": {
     "psf__black": {
       "buggy": 50,
       "clean": 50,
-      "after_cutoff": 6
+      "after_cutoff": 20
     },
     "sanic-org__sanic": {
       "buggy": 50,
       "clean": 50,
-      "after_cutoff": 2
+      "after_cutoff": 1
     },
     "scrapy__scrapy": {
       "buggy": 50,
       "clean": 50,
-      "after_cutoff": 3
+      "after_cutoff": 4
     },
     "spotify__luigi": {
       "buggy": 50,
       "clean": 50,
-      "after_cutoff": 0
+      "after_cutoff": 3
     },
     "tornadoweb__tornado": {
       "buggy": 50,
       "clean": 50,
-      "after_cutoff": 3
+      "after_cutoff": 8
     },
     "tqdm__tqdm": {
       "buggy": 50,
       "clean": 50,
-      "after_cutoff": 3
+      "after_cutoff": 4
     }
   },
   "head_shas": {

@@ -4,7 +4,7 @@ Fazlar mantıksal sıradadır. **Faz 1'den itibaren her zaman çalışan, demo y
 
 ## Kapsam (Ekim 2026 revizyonu)
 
-Teslim: **Aralık 2026 sonu**. Proje iki katkıda derinleşir:
+Proje iki katkıda derinleşir:
 
 - **K1 — ML gatekeeper:** Reponun kendi geçmişinden (SZZ) öğrenilen risk modeli; düşük riskli PR'larda LLM hiç çalışmaz.
 - **K2 — Bug-fix hafızası:** Geçmiş hata düzeltmeleri, riskli PR'ı inceleyen yerel LLM'e bağlam olarak verilir.
@@ -66,7 +66,7 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [x] Özet yorumu (oluştur / güncelle)
 - [x] Bulguların satır yorumu olarak yayınlanması
 - [x] Fail-open ve check run sonucu
-- [ ] Kendi repomuzda dogfooding (merge sonrası)
+- [x] Kendi repomuzda dogfooding (Aegis Action her PR'da çalışıyor)
 
 ## Faz 2 — Repo Madenciliği · 8 Kas
 
@@ -77,8 +77,9 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [x] Kamei JIT metrikleri
 - [x] Zaman kuralı: `as_of` ile sızıntısız özellik hesabı
 - [x] Sentetik git deposu testleri
-- [ ] D1 veri setinin çıkarılması (6 repo, önce tqdm pilotu)
-- [ ] *(opsiyonel)* Artımlı madencilik
+- [x] D1 veri setinin çıkarılması (6 repo; eşik altı fastapi ve httpie yerine luigi ve sanic, #95)
+- [x] SZZ süzgeçleri denendi (issue, taşıma, tarih): bu veride doğruluğu artırmadı ([mining-schema](docs/mining-schema.md))
+- [x] *(opsiyonel)* Artımlı madencilik (#94)
 
 ## Faz 3 — ML Gatekeeper · 15 Kas
 
@@ -105,7 +106,7 @@ Amaç: En basit haliyle bütün hattı çalıştırmak: PR → risk → LLM → 
 - [x] Hata kartlarının analiz prompt'una eklenmesi (`memory_refs`; prompt v2)
 - [x] Hafıza sinyalinin gatekeeper'a özellik olarak eklenmesi (dar bütçede +4–7 puan)
 - [x] Durum arşivinin Release asset olarak yayınlanması (`aegis publish-state`) ve cache — demo için gerekli
-- [ ] *(opsiyonel)* `main` merge'lerinde hafıza ve model güncelleme workflow'u
+- [x] *(opsiyonel)* `main` merge'lerinde hafıza ve model güncelleme workflow'u (#97)
 
 ## ~~Faz 5 — Patch Üretimi ve Doğrulama~~ (v2, kapsam dışı)
 
@@ -113,15 +114,15 @@ Düzeltme ve test ajanları, Docker sandbox, doğrulayıcı, BugsInPy ve suggest
 
 ## Faz 6 — Değerlendirme · 6 Ara
 
-- [ ] D1, D2 ve D4 veri setlerinin tamamlanması (D2: ~300 + ~300, ~100 elle etiketli)
-- [ ] RQ1: ucuz LLM triage taban çizgisi
-- [ ] RQ2: hafızasız / plasebo / vektör / hibrit karşılaştırması
-- [ ] `aegis eval` ile deneyler
+- [ ] D1, D2 ve D4 veri setlerinin tamamlanması — D1 ve D2 (300 + 300) hazır; 102 örneklik elle etiketleme bekliyor ([yönerge](eval/d2-etiketleme.md)); D4 bekliyor
+- [ ] RQ1: ucuz LLM triage taban çizgisi — betik ve 1.250 PR'lık örneklem hazır, Ollama koşusu bekliyor ([kılavuz](docs/llm-experiments.md))
+- [ ] RQ2: hafızasız / plasebo / vektör / hibrit karşılaştırması — betik, D2 ve hafıza hazırlığı hazır, Ollama koşusu bekliyor
+- [ ] Deneylerin tek komutla koşturulması — `eval/rq2.py` ve `eval/rq1_triage.py` (kuru koşu, kaldığı yerden devam)
 - [ ] İstatistiksel testler, tablolar, grafikler — LLM'siz kısım hazır (`docs/results.md`); LLM deneyleri bekliyor
 - [ ] Dogfooding verileri
 - [ ] *(opsiyonel)* RQ4: PR-Agent karşılaştırması (aynı yerel model)
 - [ ] *(opsiyonel)* RQ5: kör kullanıcı çalışması (6–10 geliştirici)
-- [ ] *(opsiyonel)* LLM eğitim verisi kirliliği alt kümesi
+- [ ] *(opsiyonel)* LLM eğitim verisi kirliliği alt kümesi — tanımlandı (`after_cutoff`), D2'de yalnızca 17 örnek
 
 ## Faz 7 — Sunum ve Tez · 21 Ara
 
@@ -129,8 +130,8 @@ Gereklilikler: [docs/presentation.md](docs/presentation.md)
 
 - [ ] Tez metni
 - [ ] Kaynakçanın doğrulanması
-- [ ] Demo reposu ve demo PR'ları — yerelde hazır ve prova edildi (`eval/demo/`); fork'ta canlı çalıştırma bekliyor
+- [x] Demo reposu ve demo PR'ları — fork'ta canlı çalışıyor (LLM'siz yorumlar); LLM bulguları yerel çalıştırmada (#98)
 - [ ] Canlı demo provası ve yedek video
-- [ ] Jüri sorularının sonuç rakamlarıyla güncellenmesi
+- [ ] Jüri sorularının sonuç rakamlarıyla güncellenmesi — LLM'siz rakamlar eklendi; LLM deneyleri bekliyor
 - [ ] *(opsiyonel)* Veri setinin açık lisansla yayınlanması
 - [ ] *(opsiyonel)* Bildiri (UYMS veya benzeri)
