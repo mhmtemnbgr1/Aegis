@@ -156,9 +156,9 @@ flowchart LR
 Tüm geçmişi CI'da taramak büyük repolarda çok uzun sürer. Bu yüzden:
 
 1. **İlk kurulum yerelde yapılır:** `aegis mine` + `aegis index` + `aegis dataset` + `aegis train`. Madencilik verisi (kartlar dahil), çalışma anı modeli (repo modeli ve genel model) ve son işlenen SHA tek bir `tar.gz` arşivinde toplanır ve repo'nun `[state].release_tag` etiketli **GitHub Release**'ine `aegis-state-<repo>.tar.gz` asset'i olarak yüklenir (`aegis publish-state`; `--out` ile yalnızca yerel dosya). Deney model varyantları arşive girmez; LSA indeksi de girmez, çünkü kartlardan birkaç saniyede yeniden kurulur. scrapy için arşiv 3,7 MB (11 dosya). Açma anında, indeksin yeniden kurulması 4,4 saniye sürüyor. Arşiv yalnızca bilinen bölümlere düz dosya yazar; `..`, mutlak yol ve bağlantı içeren girdiler reddedilir (#45).
-2. **Her PR'da** Action, `actions/cache`'te durum varsa onu kullanır; yoksa Release asset'ini indirir (`aegis fetch-state`) ve cache'e kaydeder. Hiçbir durumda tüm geçmişi yeniden taramaz.
-3. **`main`'e her merge'de** yalnızca son SHA'dan sonraki commit'ler işlenir. Güncellenen durum cache'e yazılır.
-4. **Modelin yeniden eğitimi** haftalık zamanlanmış bir workflow'da yapılır ve Release asset'i güncellenir.
+2. **Her PR'da** Action, `actions/cache`'ten taban SHA'sına ait en yeni durumu kullanır; yoksa Release asset'ini indirir (`aegis fetch-state`) ve PR çalıştırmasına özel cache anahtarıyla kaydeder.
+3. **`main`'e her push'ta** `.github/workflows/main-state.yml`, cache'i veya Release asset'ini yükler; `aegis mine` son işlenmiş SHA'dan sonraki commit'leri tarar ve `aegis index` yeni hata kartlarını/indeksi günceller. Durum Release asset'i ile çalıştırma bazlı cache'e kaydedilir.
+4. **Her pazartesi 03:17 UTC'de** `.github/workflows/weekly-train.yml`, sürümlenmiş `eval/datasets/d1.parquet` üzerinden genel LR modelini yeniden eğitir ve güncel model ile hafızayı aynı Release asset'ine ve cache'e yazar.
 5. Asset de cache de yoksa Action sezgisel gatekeeper ile, hafızasız çalışır (fail-open).
 
 ---

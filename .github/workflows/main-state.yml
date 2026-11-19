@@ -1,0 +1,67 @@
+name: Update Aegis state
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aegis-state-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Aegis
+        run: uv sync --locked --no-dev
+
+      - name: Restore Aegis state cache
+        id: state-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            .aegis/data
+            .aegis/models
+            .aegis/memory
+          key: aegis-state-v1-${{ github.repository }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            aegis-state-v1-${{ github.repository }}-${{ github.sha }}-
+            aegis-state-v1-${{ github.repository }}-
+
+      - name: Fetch Aegis state from Release
+        if: steps.state-cache.outputs.cache-hit != 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: uv run aegis fetch-state . --if-missing
+
+      - name: Mine commits since the saved SHA
+        run: uv run aegis mine .
+
+      - name: Update bug-fix memory and index
+        run: uv run aegis index .
+
+      - name: Publish updated Aegis state
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: uv run aegis publish-state .
+
+      - name: Save updated Aegis state cache
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .aegis/data
+            .aegis/models
+            .aegis/memory
+          key: aegis-state-v1-${{ github.repository }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
