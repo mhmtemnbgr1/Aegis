@@ -232,6 +232,36 @@ Fix kuralları sıkılaştırıldıktan sonra fastapi (138) ve httpie (168) 200 
 
 D1 artık 23.245 commit ve 3.599 bug-inducing commit içeriyor; repo başına ayrıntı `eval/datasets/d1-report.md` dosyasında. Etiket kalitesi örneklemleri (#8, #9) eski altı repodan çekildi; luigi ve sanic için elle kontrol yok. D1'de kalan dört repodaki SZZ eşlemelerinde doğruluk, örneklemin tamamıyla benzer (yaklaşık üçte bir).
 
+### SZZ süzgeçleri (19 Kasım 2026)
+
+Literatürdeki üç standart iyileştirme, elle etiketli 48 eşlemede (#9, belirsizler hariç) tek tek ve birlikte denendi (`eval/szz_variants.py`):
+
+- **issue:** fix, hata etiketli bir issue ya da PR'a bağlı olmalı (etiket adında `bug` veya `regression`). Hata düzeltmesi olmayan "fix"leri hedefler.
+- **taşıma:** `git blame -M -C`; taşınan ya da kopyalanan satırlar asıl yazıldıkları commit'e izlenir (`blame_lines(..., detect_moves=True)`).
+- **tarih:** hata getiren commit, bağlı issue'nun (PR değil) açılışından önce olmalı. Bağlı issue yoksa süzgeç uygulanmaz.
+
+| Varyant | Kalan eşleme | Doğru | Doğruluk | Korunan doğru eşleme |
+| --- | --- | --- | --- | --- |
+| temel | 48 | 15 | %31 | 15/15 |
+| issue | 10 | 4 | %40 | 4/15 |
+| taşıma | 40 | 12 | %30 | 12/15 |
+| tarih | 44 | 14 | %32 | 14/15 |
+| issue + tarih | 8 | 4 | %50 | 4/15 |
+| issue + taşıma + tarih | 6 | 3 | %50 | 3/15 |
+
+Taşıma ve tarih süzgeçleri doğruluğu değiştirmiyor. Issue süzgeci doğruluğu biraz artırıyor ama doğru eşlemelerin dörtte üçünü kaybettiriyor; %50'ler 6–8 eşlemeye dayandığı için güvenilir değil. Issue süzgecinin veri miktarına etkisi ise belirleyici:
+
+| Repo | Eşlenen fix | Bağlı issue/PR'ı olan | Hata etiketli | Hata getiren commit (şimdi → issue süzgeciyle) |
+| --- | --- | --- | --- | --- |
+| black | 346 | 333 | 89 | 386 → 114 |
+| sanic | 266 | 157 | 11 | 505 → 13 |
+| scrapy | 686 | 250 | 45 | 1.139 → 72 |
+| luigi | 366 | 143 | 2 | 595 → 3 |
+| tornado | 359 | 152 | 0 | 578 → 0 |
+| tqdm | 249 | 115 | 65 | 396 → 161 |
+
+Bu projelerin çoğu issue'larını hata etiketiyle işaretlemiyor ya da fix'leri issue'ya bağlamıyor; süzgeç hiçbir repoda 200 eşiğini korumuyor, tornado'da hiç veri bırakmıyor. **Karar:** üç süzgeç de varsayılan olarak kapalı kalır; SZZ'nin ~%30 eşleme doğruluğu bu veride ölçülmüş bir sınırlama olarak raporlanır. Issue bilgisi `.aegis/data/<repo>/issues.json` içinde cache'lenir (`github_issue_info`).
+
 ## `cards.jsonl` (`aegis index`)
 
 Bug-fix hafızasının hata kartları; satır başına bir JSON nesnesi, şema `docs/architecture.md` §4 ile aynı (`BugCard`). Kart kimliği `BC-<fix_sha'nın ilk 10 karakteri>`. Fix seçimi D1 ile aynı kurallara uyar (`is_fix`, merge değil, `max_files_per_commit`), ama SZZ penceresi uygulanmaz ve inducing commit'i bulunamayan fix'ler de kart olur (`inducing_shas` boş). Test dosyaları kartın dosya ve fonksiyon listesine girmez.

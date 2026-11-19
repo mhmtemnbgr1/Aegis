@@ -209,6 +209,30 @@ def test_github_label_source_caches(tmp_path: Path) -> None:
     assert json.loads(cache.read_text("utf-8"))["1"] == ["bug"]
 
 
+class _FakeIssueClient:
+    def __init__(self) -> None:
+        self.calls: list[int] = []
+
+    def get_issue(self, number: int) -> dict[str, object] | None:
+        self.calls.append(number)
+        issues = {1: {"labels": ["bug"], "created_at": "2024-01-01T00:00:00Z", "pull": False}}
+        return issues.get(number)
+
+
+def test_github_issue_info_caches(tmp_path: Path) -> None:
+    from aegis.mining.labels import github_issue_info
+
+    client = _FakeIssueClient()
+    cache = tmp_path / "issues.json"
+    source = github_issue_info(client, cache)  # type: ignore[arg-type]
+    first = source([1, 2])
+    assert first[1] == {"labels": ["bug"], "created_at": "2024-01-01T00:00:00Z", "pull": False}
+    assert first[2] is None  # bulunamayan numara
+    assert source([1, 2, 3])[3] is None
+    assert client.calls == [1, 2, 3]  # cache'teki numaralar (bulunamayanlar dahil) tekrar sorulmaz
+    assert json.loads(cache.read_text("utf-8"))["2"] is None
+
+
 def test_build_d1(tmp_path: Path) -> None:
     from aegis.mining.dataset import build_d1
     from aegis.mining.szz import run_szz

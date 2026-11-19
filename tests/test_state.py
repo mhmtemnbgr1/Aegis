@@ -190,3 +190,25 @@ def test_archive_keeps_only_runtime_model_and_can_skip_memory(tmp_path: Path) ->
     assert not any(f.endswith("rf-smote.pkl") for f in manifest["files"])
     assert not any(f.startswith("memory/") for f in manifest["files"])
     assert "models/o__r/lr-none.pkl" in manifest["files"]
+
+
+def test_client_get_issue() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/issues/9"):
+            return httpx.Response(404, json={})
+        return httpx.Response(
+            200,
+            json={
+                "labels": [{"name": "bug"}],
+                "created_at": "2024-01-01T00:00:00Z",
+                "pull_request": {"url": "u"},
+            },
+        )
+
+    client = GitHubClient("t", "o/r", http=httpx.Client(transport=httpx.MockTransport(handler)))
+    assert client.get_issue(5) == {
+        "labels": ["bug"],
+        "created_at": "2024-01-01T00:00:00Z",
+        "pull": True,
+    }
+    assert client.get_issue(9) is None

@@ -191,3 +191,21 @@ def test_import_lines_are_not_blamed() -> None:
     assert _is_useless("import os") and _is_useless("    from . import x")
     assert _is_useless("from pkg.mod import (")
     assert not _is_useless("imports = load()") and not _is_useless("from_cache = True")
+
+
+def test_blame_detect_moves(tmp_path: Path) -> None:
+    """Başka dosyaya taşınan satırlar `detect_moves` ile asıl yazıldıkları commit'e izlenir."""
+    (tmp_path / "mv").mkdir()
+    git = GitRepo(tmp_path / "mv")
+    body = "".join(f"def f{i}(x):\n    return x * {i} + {i * 7}\n\n\n" for i in range(6))
+    wrote = git.commit(
+        "Add helpers", {"a.py": body, "b.py": "X = 1\n"}, date="2024-01-01T10:00:00Z"
+    )
+    moved = git.commit(
+        "Move helpers", {"a.py": "Y = 2\n", "b.py": "X = 1\n" + body}, date="2024-01-02T10:00:00Z"
+    )
+    lines = list(range(2, 2 + body.count("\n")))
+    plain = blame_lines(git.path, "HEAD", "b.py", lines, ignore_whitespace=True)
+    follow = blame_lines(git.path, "HEAD", "b.py", lines, ignore_whitespace=True, detect_moves=True)
+    assert set(plain) == {moved}
+    assert set(follow) == {wrote}
