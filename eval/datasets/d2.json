@@ -1,0 +1,55 @@
+{
+  "aegis_version": "0.0.1",
+  "built_at": "2026-11-19T12:21:41.336182+00:00",
+  "seed": 0,
+  "per_label": 50,
+  "bins": 3,
+  "added_lines": [
+    3,
+    300
+  ],
+  "clean_min_age_days": 365,
+  "llm_cutoff": "2024-09-01",
+  "samples": 600,
+  "expected_lines": 1343,
+  "repos": {
+    "psf__black": {
+      "buggy": 50,
+      "clean": 50,
+      "after_cutoff": 6
+    },
+    "sanic-org__sanic": {
+      "buggy": 50,
+      "clean": 50,
+      "after_cutoff": 2
+    },
+    "scrapy__scrapy": {
+      "buggy": 50,
+      "clean": 50,
+      "after_cutoff": 3
+    },
+    "spotify__luigi": {
+      "buggy": 50,
+      "clean": 50,
+      "after_cutoff": 0
+    },
+    "tornadoweb__tornado": {
+      "buggy": 50,
+      "clean": 50,
+      "after_cutoff": 3
+    },
+    "tqdm__tqdm": {
+      "buggy": 50,
+      "clean": 50,
+      "after_cutoff": 3
+    }
+  },
+  "head_shas": {
+    "psf__black": "cf3e0938971fc5cd0d71e7b696e86a6fb953332a",
+    "sanic-org__sanic": "5ffc7b3710838eaf016d2f9612a86a08626915e5",
+    "scrapy__scrapy": "f1e29c3822468f03f090d22714020f86b3d6e9a2",
+    "spotify__luigi": "f5feb7a4655ad73ef56f0ab04d7903ab43b63e12",
+    "tornadoweb__tornado": "1d790afd3195228e634e59a81df47bf6c707ead2",
+    "tqdm__tqdm": "9cf5a12b1f955468a17f0ba3c59092b23e4258ac"
+  }
+}

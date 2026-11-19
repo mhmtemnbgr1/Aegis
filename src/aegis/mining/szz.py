@@ -185,6 +185,41 @@ def blame_lines(
     return counts
 
 
+_LINE_HEADER = re.compile(r"^([0-9a-f]{40}) (\d+) \d+(?: \d+)?$")
+
+
+def blame_origins(
+    repo: Path,
+    rev: str,
+    path: str,
+    lines: list[int],
+    *,
+    ignore_whitespace: bool,
+    ignore_revs_file: Path | None = None,
+) -> list[tuple[str, str, int]]:
+    """Satırların kaynağı: (son değiştiren commit, o commit'teki dosya yolu, o commit'teki satır).
+
+    D2'nin beklenen bulguları için (#51): bir fix'in sildiği satırların, hatayı getiren commit'te
+    hangi dosyanın hangi satırı olduğu. `blame_lines` ile aynı ayarlar kullanılmalıdır.
+    """
+    args = ["blame", "--line-porcelain"]
+    if ignore_whitespace:
+        args.append("-w")
+    if ignore_revs_file is not None:
+        args += ["--ignore-revs-file", str(ignore_revs_file)]
+    for start, end in _ranges(lines):
+        args += ["-L", f"{start},{end}"]
+    origins: list[tuple[str, str, int]] = []
+    sha, line_no = "", 0
+    for line in _git(repo, *args, rev, "--", path).splitlines():
+        if m := _LINE_HEADER.match(line):
+            sha, line_no = m.group(1), int(m.group(2))
+        elif line.startswith("filename ") and sha:
+            origins.append((sha, line.removeprefix("filename "), line_no))
+            sha = ""
+    return origins
+
+
 def run_szz(
     repo: Path,
     data_dir: Path,
