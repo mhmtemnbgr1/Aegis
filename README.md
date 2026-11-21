@@ -1,6 +1,6 @@
 # 🛡️ Aegis
 
-**Risk odaklı, hafızalı ve çok ajanlı PR inceleme sistemi.**
+**Risk odaklı ve hafızalı PR inceleme sistemi.**
 
 Aegis bir Pull Request açıldığında üç adımda çalışır:
 
@@ -8,7 +8,7 @@ Aegis bir Pull Request açıldığında üç adımda çalışır:
 2. Riskli PR'ları incelerken LLM'e **reponun kendi geçmiş hatalarını** hatırlatır.
 3. Bulguları diff'e karşı doğrular ve PR'a yorum olarak yazar; PR'ı asla bloklamaz. Tüm modeller **yerelde** (Ollama) çalışır, kod dışarı çıkmaz.
 
-> **Durum:** Geliştirme aşaması · **Hedef dil:** Python · **Teslim şekli:** GitHub Action + CLI
+> **Durum:** Faz 0–4 tamam; değerlendirmede LLM'siz sonuçlar hazır, LLM deneyleri koşuluyor · **Dil:** Python · **Kullanım:** GitHub Action + CLI · **Demo:** [httpie fork'u](https://github.com/mhmtemnbgr1/cli/pulls)
 
 ---
 
@@ -31,31 +31,45 @@ flowchart LR
     F --> PUB[PR yorumu]
 ```
 
-PR'da çıkan sonuç şöyle görünür:
+Demo fork'undaki [PR #3](https://github.com/mhmtemnbgr1/cli/pull/3)'e Aegis'in yazdığı gerçek yorum (httpie'nin 2023'te düzelttiği bir hata bilerek geri getirildi; GitHub runner'ında Ollama olmadığı için LLM analizi kapalı):
 
-> **🛡️ Aegis — Risk: 0.82 (yüksek)**
-> Neden: bu fonksiyonda geçmişte 2 hata düzeltilmiş · 3 alt sisteme yayılan değişiklik
-> Hafıza: `BC-0142` (#89, bağlantı havuzu sızıntısı)
-> Sonuç: 1 bulgu · 4.120 token
+> **🛡️ Aegis — Risk: 0.02 (orta)**
+> Neden: değişen dosyalarda geçmişte 4 hata düzeltilmiş (riski artırıyor) · bu dosyalar daha önce 31 commit'te değiştirilmiş (riski artırıyor) · model: mhmtemnbgr1__cli/lr-none
+>
+> 🧠 **Bu kodda geçmişte düzeltilmiş benzer hatalar:**
+> - `BC-44d3cff03f` 2023-05-19 — Fix log level display on newer Python · `httpie.context.Environment.config`
+> - …
+
+Hafıza, geri getirilen hatanın eski düzeltmesini ilk sırada gösteriyor. Ollama'ya erişilebilen bir runner'da LLM bulguları da satır yorumu olarak eklenir.
 
 ## Fazlar
 
-| Faz | İçerik | Sonuç |
+| Faz | İçerik | Durum |
 | --- | --- | --- |
-| 0 | Altyapı | CI, tip kontrolü, geliştirme ortamı |
-| 1 | **Uçtan uca iskelet** | Sezgisel gatekeeper + tek LLM çağrısı + PR yorumu. İlk günden demo yapılabilir. |
-| 2 | Repo madenciliği | PyDriller, fix-commit tespiti, SZZ, JIT metrikleri |
-| 3 | ML Gatekeeper | Sezgisel kuralın yerine eğitilmiş, açıklanabilir risk modeli gelir |
-| 4 | Bug-fix hafızası | Hata kartları, hibrit arama, analiz ajanına bağlam |
-| ~~5~~ | ~~Patch ve doğrulama~~ | Kapsam dışı (v2): gelecek çalışma |
-| 6 | Değerlendirme | RQ1 (gatekeeper) ve RQ2 (hafıza) ablation deneyleri |
-| 7 | Sunum ve belgeler | [docs/presentation.md](docs/presentation.md) |
+| 0 | Altyapı: CI, tip kontrolü, geliştirme ortamı | ✅ |
+| 1 | **Uçtan uca iskelet:** sezgisel gatekeeper, LLM çağrısı, kanıt doğrulama, PR yorumu, GitHub Action | ✅ |
+| 2 | Repo madenciliği: PyDriller, fix-commit tespiti, SZZ, Kamei metrikleri, artımlı tarama | ✅ |
+| 3 | ML gatekeeper: LR / RF / LightGBM, zaman sıralı doğrulama, kalibrasyon, açıklamalar | ✅ |
+| 4 | Bug-fix hafızası: hata kartları, hibrit arama, analiz ajanına bağlam, durum arşivi | ✅ |
+| ~~5~~ | ~~Patch ve doğrulama~~ | Kapsam dışı (gelecek çalışma) |
+| 6 | Değerlendirme: RQ1 (gatekeeper) ve RQ2 (hafıza) | LLM'siz kısım ✅ · LLM deneyleri koşuluyor |
+| 7 | Sunum ve belgeler: [docs/presentation.md](docs/presentation.md) | Sürüyor |
 
-Her faz bir önceki fazın çalışan sistemini derinleştirir. Teslim Aralık 2026 sonu; haftalık takvim ve kesme çizgileri [TODO.md](TODO.md) içinde. Ayrıntılı görevler [TODO.md](TODO.md) dosyasında ve [GitHub Issues](https://github.com/mhmtemnbgr1/Aegis/issues) altında.
+Her faz bir önceki fazın çalışan sistemini derinleştirir. Ayrıntılı görevler [TODO.md](TODO.md) dosyasında ve [GitHub Issues](https://github.com/mhmtemnbgr1/Aegis/issues) altında.
 
 ## Sonuçlar
 
-LLM gerektirmeyen tüm sonuçlar (veri, etiket kalitesi, risk modeli, maliyet–recall eğrisi, hafıza getirme) güven aralıkları ve testlerle [docs/results.md](docs/results.md) içinde; `uv run python eval/results.py` ile yeniden üretilir.
+Altı açık kaynak Python projesinin (black, luigi, sanic, scrapy, tornado, tqdm) tüm geçmişi üzerinde, zaman sıralı ve sızıntısız değerlendirme:
+
+| Ölçü | Sonuç |
+| --- | --- |
+| PR'ların %40'ı LLM'e gidince yakalanan hatalı PR | **%82** (sezgisel kural %75, rastgele %40; fark anlamlı) |
+| Maliyet odaklı ayar | PR'ların **%58**'i LLM'e hiç gitmiyor, hatalı PR'ların %82'si yine yakalanıyor |
+| Hafıza sinyalinin katkısı (dar bütçe) | +4 puan; aynı dağılımlı ama bilgisiz plasebo kazanç getirmiyor |
+| Hafıza getirme (hibrit) | İlgili eski hata vakaların %47'sinde ilk sırada, %64'ünde ilk 5'te |
+| Gerçek PR'larda süre (D4) | Medyan 0,02 sn, p95 4,3 sn; hiçbir PR engellenmedi |
+
+Tüm tablolar, güven aralıkları ve testler [docs/results.md](docs/results.md) içinde (`uv run python eval/results.py` ile yeniden üretilir). LLM'li deneyler (RQ1 ucuz LLM triage, RQ2 hafızalı inceleme) [docs/llm-experiments.md](docs/llm-experiments.md) kılavuzuyla koşuluyor. Bilinen sınırlama: SZZ etiketlerinin elle kontrolde yalnızca %19–31'i doğru; RQ2 bu yüzden hatalı örnekler için SZZ yerine tersine çevrilmiş gerçek düzeltmeleri kullanır ([eval/README.md](eval/README.md)).
 
 ## Kullanım
 
@@ -136,7 +150,11 @@ Tüm seçenekler: [`action.yml`](action.yml) · [`.aegis.toml.example`](.aegis.t
 | [docs/rad.md](docs/rad.md) | Gereksinim Analiz Dokümanı (RAD): kapsam, hedefler, FR/NFR, senaryolar, UML modelleri, arayüz taslakları |
 | [docs/setup.md](docs/setup.md) | Geliştirme ortamı: uv, Ollama |
 | [docs/architecture.md](docs/architecture.md) | Gereksinimler, katman ayrıntıları, şemalar, modüller, teknoloji yığını, güvenlik |
-| [docs/presentation.md](docs/presentation.md) | Proje özeti: katkılar, araştırma soruları, değerlendirme planı, demo, sık sorulan sorular |
+| [docs/presentation.md](docs/presentation.md) | Proje özeti: katkılar, araştırma soruları, değerlendirme planı, demo, sık sorulan sorular, kaynakça |
+| [docs/results.md](docs/results.md) | LLM'siz sonuçlar: veri, etiket kalitesi, risk modeli, maliyet–recall eğrisi, hafıza, gerçek PR'lar |
+| [docs/llm-experiments.md](docs/llm-experiments.md) | LLM deneylerini koşturma kılavuzu |
+| [docs/mining-schema.md](docs/mining-schema.md) | Madencilik çıktılarının şeması, SZZ ve etiket kalitesi |
+| [eval/README.md](eval/README.md) | Veri setleri (D1, D2, D4) ve değerlendirme betikleri |
 | [docs/target-repos.md](docs/target-repos.md) | Eğitim ve değerlendirmede kullanılan repolar |
 | [docs/ideas.md](docs/ideas.md) | Kapsam dışı fikirler |
 
