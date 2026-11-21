@@ -181,8 +181,8 @@ def section_labels() -> list[str]:
     ):
         rows = _labels(LABELS / file)
         h = [r["correct"] for r in rows]
-        o = [r["suggested_opus"] for r in rows]
-        s = [r["suggested_sonnet"] for r in rows]
+        o = [r["suggested_oneri1"] for r in rows]
+        s = [r["suggested_oneri2"] for r in rows]
         out.append(
             f"| {name} | {num(_kappa(h, o), 2)} | {num(_kappa(h, s), 2)} | {num(_kappa(o, s), 2)} |"
         )
