@@ -128,7 +128,7 @@ Düzeltme ve test ajanları, Docker sandbox, doğrulayıcı, BugsInPy ve suggest
 
 Gereklilikler: [docs/presentation.md](docs/presentation.md)
 
-- [ ] Kaynakçanın doğrulanması
+- [x] Kaynakçanın doğrulanması (künyeler yayıncı sayfalarıyla kontrol edildi, kullanılan yöntemler eklendi)
 - [x] Demo reposu ve demo PR'ları — fork'ta canlı çalışıyor (LLM'siz yorumlar); LLM bulguları yerel çalıştırmada (#98)
 - [ ] Canlı demo provası ve yedek video
 - [ ] Sık sorulan soruların sonuç rakamlarıyla güncellenmesi — LLM'siz rakamlar eklendi; LLM deneyleri bekliyor
