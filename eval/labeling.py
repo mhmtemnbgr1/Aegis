@@ -1,4 +1,4 @@
-"""Elle etiketleme setleri: örneklem, model paketleri ve inceleme sayfaları (#8, #9).
+"""Elle etiketleme setleri: örneklem, öneri paketleri ve inceleme sayfaları (#8, #9).
 
 İki set vardır:
 
@@ -8,14 +8,14 @@
   commit'ler (precision ve recall için). Sınıflandırıcının kararı pakette ve sayfada yer almaz.
   Soru: bu commit üretim kodundaki bir hatayı düzeltiyor mu?
 
-Akış: `sample` → `packet` (modellerin etiketlemesi için Markdown) → modeller
-`<set>-<model>.json` yazar (`{"<no>": [etiket, gerekçe]}`) → `page` (öneriler gösterilen HTML;
-kişi kendi kararını verir ve CSV indirir). Raporda yöntem: insan etiketi, LLM önerileri görülerek.
+Akış: `sample` → `packet` (öneri setleri için Markdown) → her öneri seti
+`<set>-<ad>.json` olarak yazılır (`{"<no>": [etiket, gerekçe]}`) → `page` (öneriler gösterilen
+HTML; son karar verilir ve CSV indirilir).
 
 Kullanım:
     uv run python eval/labeling.py sample
     uv run python eval/labeling.py packet
-    uv run python eval/labeling.py page [eval/labels/szz-opus.json ...]
+    uv run python eval/labeling.py page [eval/labels/szz-oneri1.json ...]
 """
 
 import html

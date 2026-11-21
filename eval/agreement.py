@@ -1,11 +1,11 @@
 """Etiketleme sonuçları: etiketleyiciler arası uyuşma (Cohen's κ) ve doğruluk ölçümleri (#8, #9).
 
-Girdi: inceleme sayfasından indirilen CSV (`correct` = insan, `suggested_<model>` = model
-önerisi). Yöntem notu: insan etiketleri, model önerileri sayfada görülerek verildi.
+Girdi: inceleme sayfasından indirilen CSV (`correct` = son karar, `suggested_<ad>` = öneri
+seti). Son kararlar öneriler sayfada görülerek verildi.
 
-- `szz`: SZZ eşlemesi doğruluğu = evet / (evet + hayır), insan etiketine göre; repo bazında da.
-- `fix`: sınıflandırıcının (fix-sample.csv'deki `classifier`) precision ve recall değeri, insan
-  etiketine göre. Örneklem yarı yarıya tabakalı olduğu için recall, tabakaların repo içindeki
+- `szz`: SZZ eşlemesi doğruluğu = evet / (evet + hayır), son karara göre; repo bazında da.
+- `fix`: sınıflandırıcının (fix-sample.csv'deki `classifier`) precision ve recall değeri, son
+  karara göre. Örneklem yarı yarıya tabakalı olduğu için recall, tabakaların repo içindeki
   gerçek paylarıyla ağırlıklandırılarak da verilir.
 
 Kullanım:
@@ -32,7 +32,7 @@ def kappa(a: list[str], b: list[str]) -> float:
 
 
 def agreement(rows: pl.DataFrame) -> list[str]:
-    raters = {"insan": rows["correct"].to_list()} | {
+    raters = {"karar": rows["correct"].to_list()} | {
         c.removeprefix("suggested_"): rows[c].to_list()
         for c in rows.columns
         if c.startswith("suggested_")
@@ -41,8 +41,8 @@ def agreement(rows: pl.DataFrame) -> list[str]:
     for (na, a), (nb, b) in combinations(raters.items(), 2):
         same = sum(x == y for x, y in zip(a, b, strict=True))
         out.append(f"| {na} – {nb} | {same}/{len(a)} | {kappa(a, b):.2f} |")
-    counts = ", ".join(f"{k} {v}" for k, v in sorted(Counter(raters["insan"]).items()))
-    return [f"İnsan etiketleri: {counts}", "", *out]
+    counts = ", ".join(f"{k} {v}" for k, v in sorted(Counter(raters["karar"]).items()))
+    return [f"Son kararlar: {counts}", "", *out]
 
 
 def szz(rows: pl.DataFrame) -> list[str]:
@@ -50,7 +50,7 @@ def szz(rows: pl.DataFrame) -> list[str]:
         "fix_sha", "inducing_sha", "repo"
     )
     rows = rows.join(sample, on=["fix_sha", "inducing_sha"], how="left")
-    out = ["", "## SZZ doğruluğu (insan etiketi; belirsizler hariç)", ""]
+    out = ["", "## SZZ doğruluğu (son karara göre; belirsizler hariç)", ""]
     out += ["| Kapsam | Evet | Hayır | Belirsiz | Doğruluk |", "| --- | --- | --- | --- | --- |"]
     for name, part in [("tümü", rows), *sorted(rows.group_by("repo"), key=lambda g: g[0])]:
         c = Counter(part["correct"].to_list())
@@ -71,7 +71,7 @@ def fix(rows: pl.DataFrame) -> list[str]:
     tp = int((truth & pred).sum())
     fp = int((~truth & pred).sum())
     fn = int((truth & ~pred).sum())
-    out = ["", "## Fix sınıflandırıcısı (insan etiketine göre; belirsizler hariç)", ""]
+    out = ["", "## Fix sınıflandırıcısı (son karara göre; belirsizler hariç)", ""]
     out.append(f"- Precision: {tp}/{tp + fp} = %{100 * tp / max(tp + fp, 1):.0f}")
     out.append(
         f"- Recall (tabakalı örneklemde): {tp}/{tp + fn} = %{100 * tp / max(tp + fn, 1):.0f}"
