@@ -19,9 +19,9 @@ Toplam 23.245 commit. 9.117 PR. Pencere: tüm geçmiş (#13).
 
 ## 2. Etiket kalitesi (#8, #9)
 
-Etiketler: Claude Opus 5.5 ve Claude Sonnet 5.5 bağımsız önerileri görülerek bir ekip üyesince verildi (yöntem ve sınırlamalar: `docs/mining-schema.md`, Etiket kalitesi).
+Son etiketler iki bağımsız öneri seti görülerek bir ekip üyesince verildi (yöntem ve sınırlamalar: `docs/mining-schema.md`, Etiket kalitesi).
 
-| Set | İnsan – Opus κ | İnsan – Sonnet κ | Opus – Sonnet κ |
+| Set | Karar – öneri 1 κ | Karar – öneri 2 κ | Öneri 1 – öneri 2 κ |
 | --- | --- | --- | --- |
 | SZZ eşlemeleri (50) | 0,87 | 0,76 | 0,67 |
 | Fix commit'leri (200) | 0,89 | 0,96 | 0,90 |

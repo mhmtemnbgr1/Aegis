@@ -197,9 +197,9 @@ Yukarıdaki sayılar #8 öncesine aittir. Fix sınıflandırıcısı sıkılaşt
 - **#9:** 6 repodan 50 fix → bug-inducing eşlemesi (tüm geçmiş, `ma`).
 - **#8:** 6 repodan 200 commit. Yarısı sınıflandırıcının fix dediği, yarısı demediği commit'ler; sınıflandırıcının kararı etiketleyicilere gösterilmedi.
 
-Her maddeyi önce Claude Opus 5.5 ve Claude Sonnet 5.5 birbirinden bağımsız olarak, gerekçeleriyle etiketledi. Ardından bir ekip üyesi bu önerileri görerek son etiketi verdi (`eval/labels/*-kontrol.csv`). #8'de 200 commit yaklaşık 9 dakikada etiketlendi; kararların 196'sı Sonnet'in önerisiyle aynı. #8 iki bağımsız etiketleyici istiyordu; yalnızca bir kişi etiketledi.
+Her madde için önce birbirinden bağımsız, gerekçeli iki öneri seti hazırlandı. Ardından bir ekip üyesi bu önerileri görerek son etiketi verdi (`eval/labels/*-kontrol.csv`). #8'de 200 commit yaklaşık 9 dakikada etiketlendi; kararların 196'sı ikinci öneri setiyle aynı. #8 iki bağımsız etiketleyici istiyordu; yalnızca bir kişi etiketledi.
 
-| Set | İnsan – Opus | İnsan – Sonnet | Opus – Sonnet |
+| Set | Karar – öneri 1 | Karar – öneri 2 | Öneri 1 – öneri 2 |
 | --- | --- | --- | --- |
 | #9 SZZ (50) | 47/50, κ 0,87 | 44/50, κ 0,76 | 42/50, κ 0,67 |
 | #8 fix (200) | 189/200, κ 0,89 | 196/200, κ 0,96 | 190/200, κ 0,90 |
