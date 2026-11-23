@@ -286,6 +286,50 @@ def section_rq1() -> list[str]:
             elim = [1 - r[m][point][1] for r in records]
             rec = [r[m][point][2] for r in records]
             out.append(f"| {title} | {labels[m]} | {fmt_ci(elim)} | {fmt_ci(rec)} |")
+    out += [
+        "",
+        "**Güvenlik eşiği alternatifleri** (aynı 25 pencere; ortalama [%95 bootstrap GA]):",
+        "",
+        "Eşikler yalnızca geçmiş pencerelerden seçilir. 90 günlük seçenek, PR tarihinden en az "
+        "90 gün önceki PR'ları kullanır ve etiketleri bu kesim tarihindeki bilgiyle belirler.",
+        "",
+        "| Kural | Yöntem | Eleme (LLM'e gitmeyen) | Gerçekleşen recall |",
+        "| --- | --- | --- | --- |",
+    ]
+    safety_options = {
+        "safety-k2": "Son 2 pencere, hedef recall %90",
+        "safety-k3": "Son 3 pencere, hedef recall %90",
+        "safety-95": "Son pencere, hedef recall %95",
+        "safety-known": "90 gün olgunlaşmış etiketler, hedef recall %90",
+    }
+    for point, title in safety_options.items():
+        for m in ("lr+m", "heuristic"):
+            elimination = [1 - r[m][point][1] for r in records]
+            recall = [r[m][point][2] for r in records]
+            out.append(f"| {title} | {labels[m]} | {fmt_ci(elimination)} | {fmt_ci(recall)} |")
+    eligible = []
+    for point, title in safety_options.items():
+        for m in ("lr+m", "heuristic"):
+            elimination = [1 - r[m][point][1] for r in records]
+            recall = [r[m][point][2] for r in records]
+            known = [value for value in recall if not math.isnan(value)]
+            if known and mean(known) >= 0.90:
+                eligible.append((mean(elimination), title, m, elimination, recall))
+    if eligible:
+        _, title, method, elimination, recall = max(eligible, key=lambda row: row[0])
+        out.append(
+            f"| **Seçilen: {title}** | **{labels[method]}** | "
+            f"**{fmt_ci(elimination)}** | **{fmt_ci(recall)}** |"
+        )
+    else:
+        out.append("| Seçilen | – | – | Hiçbir seçenek ortalama %90'a ulaşmadı |")
+    out += [
+        "",
+        "Ürün çalışma anında aynı recall temelli eşik isteğe bağlıdır: `[gatekeeper] "
+        'threshold_policy = "safety"` ve `safety_recall_target = 0.90`. Eşik, 90 günlük '
+        "etiket tamponunu geçmiş model doğrulama örneklerinden seçilir. Varsayılan `budget` "
+        "politikası değişmez.",
+    ]
     for share in (0.1, 0.2, 0.4):
         i = shares.index(share)
         pairs = [
