@@ -7,11 +7,11 @@
     uv run python eval/d2_labeling.py sayfa          # → eval/labels/d2-revert-review.html
 
     # 3. İki etiket seti, sayfadaki "CSV indir" ile d2-revert-kontrol-<ad>.csv olarak alınır:
-    uv run python eval/d2_labeling.py uyum eval/labels/d2-revert-kontrol-a.csv eval/labels/d2-revert-kontrol-b.csv
+    uv run python eval/d2_labeling.py uyum <etiket1.csv> <etiket2.csv>
 
 `uyum`, Cohen κ'yı (hatalı ve temiz için ayrı ayrı) ve anlaşmazlıkları yazar. `birlestir`, iki
-setin aynı cevabı verdiği örnekleri son etiket olarak `eval/labels/d2-revert-kontrol.csv` dosyasına yazar
-(farklı cevaplı örnekler alt kümeye girmez):
+setin aynı cevabı verdiği örnekleri son etiket olarak
+`eval/labels/d2-revert-kontrol.csv` dosyasına yazar (farklı cevaplı örnekler alt kümeye girmez):
 
     uv run python eval/d2_labeling.py birlestir \
         eval/labels/d2-revert-kontrol-1.csv eval/labels/d2-revert-kontrol-2.csv

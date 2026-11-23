@@ -155,9 +155,7 @@ def cmd_summary(args: argparse.Namespace) -> None:
         "Bilgi kesiminden sonraki commit'ler (#55)": lambda s: s.after_cutoff,
     }
     manual = Path(
-        "eval/labels/d2-kontrol.csv"
-        if args.set == "szz"
-        else "eval/labels/d2-revert-kontrol.csv"
+        "eval/labels/d2-kontrol.csv" if args.set == "szz" else "eval/labels/d2-revert-kontrol.csv"
     )
     if manual.is_file():
         import csv
@@ -172,8 +170,8 @@ def cmd_summary(args: argparse.Namespace) -> None:
         matched_buggy = {s.sha for s in samples if s.label == "buggy"} & matched
         matched_clean = {s.sha for s in samples if s.label == "clean"} & matched
         if matched == confirmed and matched_buggy and matched_clean:
-            subsets[f"Elle doğrulanmış {args.set} alt kümesi (#69)"] = (
-                lambda s, ids=matched: s.sha in ids
+            subsets[f"Elle doğrulanmış {args.set} alt kümesi (#69)"] = lambda s, ids=matched: (
+                s.sha in ids
             )
         else:
             lines += [
