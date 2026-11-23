@@ -114,7 +114,7 @@ Düzeltme ve test ajanları, Docker sandbox, doğrulayıcı, BugsInPy ve suggest
 
 ## Faz 6 — Değerlendirme · 6 Ara
 
-- [ ] D1, D2 ve D4 veri setlerinin tamamlanması — D1 ve D2 (300 + 300) hazır; 102 örneklik elle etiketleme bekliyor ([yönerge](eval/d2-etiketleme.md)); D4 bekliyor
+- [ ] D1, D2 ve D4 veri setlerinin tamamlanması — D2 (300 + 300) hazır; revert seti için 102 örneklik yeni insan incelemesi hazırlanıyor (eski SZZ etiketleri ayrı tutuluyor, [yönerge](eval/d2-etiketleme.md)); D4'te 54 çalıştırma / 28 PR var, hedef ≥30
 - [ ] RQ1: ucuz LLM triage taban çizgisi — betik ve 1.250 PR'lık örneklem hazır, Ollama koşusu bekliyor ([kılavuz](docs/llm-experiments.md))
 - [ ] RQ2: hafızasız / plasebo / vektör / hibrit karşılaştırması — betik, D2 ve hafıza hazırlığı hazır, Ollama koşusu bekliyor
 - [ ] Deneylerin tek komutla koşturulması — `eval/rq2.py` ve `eval/rq1_triage.py` (kuru koşu, kaldığı yerden devam)

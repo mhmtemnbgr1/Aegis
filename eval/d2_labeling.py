@@ -1,25 +1,26 @@
 """D2'nin elle etiketlenen alt kümesi (#69): örneklem, inceleme sayfası ve uyum.
 
     # 1. Örneklem: her D2 reposundan 10 hatalı + 7 temiz (≈100), sabit tohumla.
-    uv run python eval/d2_labeling.py ornekle        # → eval/labels/d2-sample.csv
+    uv run python eval/d2_labeling.py ornekle        # → eval/labels/d2-revert-sample.csv
 
     # 2. Tek dosyalık inceleme sayfası (klonlar gerekir; sayfa sonra her yerde açılır):
-    uv run python eval/d2_labeling.py sayfa          # → eval/labels/d2-review.html
+    uv run python eval/d2_labeling.py sayfa          # → eval/labels/d2-revert-review.html
 
-    # 3. İki etiket seti, sayfadaki "CSV indir" ile d2-kontrol-<ad>.csv olarak alınır:
-    uv run python eval/d2_labeling.py uyum eval/labels/d2-kontrol-a.csv eval/labels/d2-kontrol-b.csv
+    # 3. İki etiket seti, sayfadaki "CSV indir" ile d2-revert-kontrol-<ad>.csv olarak alınır:
+    uv run python eval/d2_labeling.py uyum eval/labels/d2-revert-kontrol-a.csv eval/labels/d2-revert-kontrol-b.csv
 
 `uyum`, Cohen κ'yı (hatalı ve temiz için ayrı ayrı) ve anlaşmazlıkları yazar. `birlestir`, iki
-setin aynı cevabı verdiği örnekleri son etiket olarak `eval/labels/d2-kontrol.csv` dosyasına yazar
+setin aynı cevabı verdiği örnekleri son etiket olarak `eval/labels/d2-revert-kontrol.csv` dosyasına yazar
 (farklı cevaplı örnekler alt kümeye girmez):
 
     uv run python eval/d2_labeling.py birlestir \
-        eval/labels/d2-kontrol-1.csv eval/labels/d2-kontrol-2.csv
+        eval/labels/d2-revert-kontrol-1.csv eval/labels/d2-revert-kontrol-2.csv
 
 Yönerge: `eval/d2-etiketleme.md`.
 """
 
 import csv
+import hashlib
 import json
 import random
 import sys
@@ -34,7 +35,7 @@ from aegis.mining.gitfiles import git
 
 D2 = Path("eval/datasets/d2.jsonl")
 DATA, CLONES, LABELS = Path(".aegis/data"), Path(".aegis/repos"), Path("eval/labels")
-SAMPLE, PAGE = LABELS / "d2-sample.csv", LABELS / "d2-review.html"
+SAMPLE, PAGE = LABELS / "d2-revert-sample.csv", LABELS / "d2-revert-review.html"
 TEMPLATE = Path(__file__).with_name("d2_review_template.html")
 PER_REPO = {"buggy": 10, "clean": 7}
 MAX_FIX_CHARS = 8_000
@@ -62,7 +63,7 @@ def cmd_sample() -> None:
         for i, s in enumerate(chosen, 1):
             w.writerow([i, s.repo, s.sha, s.label])
     counts = Counter(s.label for s in chosen)
-    print(f"{len(chosen)} örnek ({counts['buggy']} hatalı, {counts['clean']} temiz) → {SAMPLE}")
+    print(f"{len(chosen)} örnek ({counts['buggy']} hatalı, {counts['clean']} temiz) -> {SAMPLE}")
 
 
 def _commit_url(repo: str, sha: str) -> str:
@@ -101,6 +102,7 @@ def cmd_page() -> None:
                 "repo": s.repo,
                 "sha": s.sha,
                 "label": s.label,
+                "revert": s.revert,
                 "subject": info[s.sha]["message"].splitlines()[0] if info[s.sha]["message"] else "",
                 "date": s.date[:10],
                 "url": _commit_url(s.repo, s.sha),
@@ -110,8 +112,15 @@ def cmd_page() -> None:
             }
         )
     data = json.dumps(items, ensure_ascii=False).replace("</", "<\\/")
-    PAGE.write_text(TEMPLATE.read_text("utf-8").replace("__DATA__", data), "utf-8")
-    print(f"{len(items)} örnek → {PAGE} ({PAGE.stat().st_size // 1024} KB)")
+    dataset_id = hashlib.sha256("\n".join(row["sha"] for row in rows).encode()).hexdigest()[:12]
+    html = (
+        TEMPLATE.read_text("utf-8")
+        .replace("__DATA__", data)
+        .replace("__DATASET_ID__", dataset_id)
+        .replace("__EXPORT_PREFIX__", "d2-revert")
+    )
+    PAGE.write_text(html, "utf-8")
+    print(f"{len(items)} örnek -> {PAGE} ({PAGE.stat().st_size // 1024} KB)")
 
 
 def kappa(a: list[str], b: list[str]) -> float:
@@ -159,14 +168,16 @@ def cmd_merge(first: Path, second: Path) -> None:
     agreed = [
         r for r in load(first) if r["answer"] and b.get(r["sha"], {}).get("answer") == r["answer"]
     ]
-    out = LABELS / "d2-kontrol.csv"
+    marker = "-kontrol-"
+    prefix = first.stem.partition(marker)[0] if marker in first.stem else "d2"
+    out = LABELS / f"{prefix}-kontrol.csv"
     with out.open("w", encoding="utf-8", newline="") as fh:
         w = csv.writer(fh)
         w.writerow(["no", "repo", "sha", "label", "answer", "note", "labeler"])
         for r in agreed:
             w.writerow([r["no"], r["repo"], r["sha"], r["label"], r["answer"], "", "ortak"])
     counts = Counter((r["label"], r["answer"]) for r in agreed)
-    print(f"{len(agreed)} ortak etiket → {out}: {dict(sorted(counts.items()))}")
+    print(f"{len(agreed)} ortak etiket -> {out}: {dict(sorted(counts.items()))}")
 
 
 def main() -> None:

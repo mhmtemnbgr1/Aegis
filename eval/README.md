@@ -55,7 +55,7 @@ Satır biçimi (`d2.jsonl`, satır başına bir örnek):
 
 `date`, hafıza getirmede zamansal filtre için kullanılır: bu tarihten sonra düzeltilen hatalar hafızada görünmez.
 
-**Doğrulanmış alt küme (#69):** İlk D2 sürümünden 102 örnek iki etiket setiyle kontrol edildi (`labels/d2-kontrol-1.csv`, `-2.csv`; uyum κ 0,68 hatalı, 0,45 temiz). SZZ hatalılarının yalnızca 10/52'si hatayı gerçekten getirdiği için hatalı örnekler tersine çevrilmiş düzeltmelerle değiştirildi. Temiz örnekler aynı kaldı: iki setin "temiz" dediği 33 commit, RQ2 özetinde ayrı bir tablo olarak raporlanır. Ayrıntı: `d2-etiketleme.md`.
+**SZZ doğrulaması (#69):** İlk SZZ örnekleminden 102 örnek iki etiket setiyle kontrol edildi (`labels/d2-kontrol-1.csv`, `-2.csv`; uyum κ 0,68 hatalı, 0,45 temiz). Ortak etiketlerde 10 hatalı SZZ örneği ve 33 temiz örnek doğrulandı; bu alt küme yalnızca `--set szz` sonuçlarında kullanılır. Varsayılan revert seti için ayrı bir 102 örnekli inceleme hazırlanır (`d2-etiketleme.md`); eski SHA'lar yeni sete aktarılmaz.
 
 ## Betikler
 

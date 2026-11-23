@@ -1,23 +1,23 @@
 # D2 etiketleme yönergesi (#69)
 
-D2'deki "hatalı" etiketleri SZZ'den, "temiz" etiketleri de SZZ'nin o commit'i hiç suçlamamasından gelir. SZZ eşlemelerinin elle kontrolde yalnızca ~%31'i doğru çıktı (`docs/mining-schema.md`). Bu yüzden RQ2 sonuçları, otomatik etiketlerin yanında elle doğrulanmış bir alt kümede de raporlanır.
+D2'nin varsayılan `revert` setinde hatalı örnekler gerçek düzeltmelerin tersine çevrilmesidir. Bu örnekler için ayrı bir insan doğrulama seti hazırlanır ve RQ2 özetinde yalnızca bu set kullanılır. İlk SZZ örneklemi üzerindeki eski etiketleme SZZ gerçekçilik kontrolüne (`--set szz`) aittir; eski SZZ SHA'ları tersine çevrilmiş düzeltmelere uygulanmaz.
 
 ## Örneklem
 
-`eval/labels/d2-sample.csv`: her D2 reposundan 10 hatalı ve 7 temiz commit, toplam 102 örnek (sabit tohum, karışık sıra). Üretim: `uv run python eval/d2_labeling.py ornekle`.
+`eval/labels/d2-revert-sample.csv`: güncel revert D2 setinden her repoya 10 hatalı ve 7 temiz commit, toplam 102 örnek (sabit tohum, karışık sıra). Üretim: `uv run python eval/d2_labeling.py ornekle`. Önceki SZZ örneklemi ve etiket CSV'leri arşiv olarak korunur; üzerine yazılmaz.
 
 ## Nasıl etiketlenir
 
-1. `uv run python eval/d2_labeling.py sayfa` ile üretilen `eval/labels/d2-review.html` dosyasını tarayıcıda açın (tek dosya; internet gerekmez, GitHub bağlantıları isteğe bağlı).
-2. Üstteki **Ad** alanına adınızı yazın.
-3. Her örnek için bir seçenek işaretleyin. Kararlar tarayıcıda saklanır; sayfayı kapatıp sonra devam edebilirsiniz.
-4. Bitince **CSV indir** ile `d2-kontrol-<ad>.csv` dosyasını alın ve `eval/labels/` altına koyun.
+1. `uv run python eval/d2_labeling.py sayfa` ile üretilen `eval/labels/d2-revert-review.html` dosyasını tarayıcıda açın (tek dosya; internet gerekmez, GitHub bağlantıları isteğe bağlı).
+2. Üstteki **Ad** alanına benzersiz adınızı yazıp **Bu adla devam et** düğmesine basın. Yanıtlar ada göre ayrı saklanır; iki değerlendirici aynı tarayıcıyı kullansa da yanıtlar karışmaz.
+3. Her örnek için bir seçenek işaretleyin. Kararlar tarayıcıda saklanır; sayfayı kapatıp sonra aynı adla devam edebilirsiniz.
+4. Bitince **CSV indir** ile `d2-revert-kontrol-<ad>.csv` dosyasını alın ve `eval/labels/` altına koyun.
 
 **İki etiket seti birbirinden bağımsız hazırlanır.** Bitene kadar setler karşılaştırılmaz.
 
 ## Seçenekler
 
-**Hatalı (SZZ) örnekler.** Sayfada commit'in değişikliği (koyu yeşil: sonradan düzeltilen satırlar) ve hatayı düzelten commit(ler) gösterilir.
+**Hatalı (revert) örnekler.** Sayfada gerçek bir düzeltmenin tersine çevrilmiş diff'i gösterilir. Koyu yeşil satırlar düzeltmenin geri aldığı satırlardır; özgün düzeltme de karşılaştırma için gösterilir. Bu örneklerin makul bir hatayı yeniden oluşturup oluşturmadığını ve vurgulanan satırların hatayı gösterip göstermediğini değerlendirin.
 
 | Seçenek | Ne zaman |
 | --- | --- |
@@ -43,18 +43,18 @@ D2'deki "hatalı" etiketleri SZZ'den, "temiz" etiketleri de SZZ'nin o commit'i h
 ## Uyum ve son etiketler
 
 ```bash
-uv run python eval/d2_labeling.py uyum eval/labels/d2-kontrol-<a>.csv eval/labels/d2-kontrol-<b>.csv
+uv run python eval/d2_labeling.py uyum eval/labels/d2-revert-kontrol-<a>.csv eval/labels/d2-revert-kontrol-<b>.csv
 ```
 
 Komut, hatalı ve temiz örnekler için ayrı ayrı Cohen κ'yı ve farklı cevaplı örnekleri yazar. Son etiketler yalnızca iki setin aynı cevabı verdiği örneklerden oluşur:
 
 ```bash
-uv run python eval/d2_labeling.py birlestir eval/labels/d2-kontrol-1.csv eval/labels/d2-kontrol-2.csv
+uv run python eval/d2_labeling.py birlestir eval/labels/d2-revert-kontrol-1.csv eval/labels/d2-revert-kontrol-2.csv
 ```
 
-Sonuç `eval/labels/d2-kontrol.csv` (`labeler` = `ortak`). RQ2 özetindeki "doğrulanmış alt küme": son etiketi **Doğru** ya da **Kısmen** olan hatalı (commit hatayı getiriyor) ve **Temiz** olan temiz örnekler.
+Sonuç `eval/labels/d2-revert-kontrol.csv` (`labeler` = `ortak`). RQ2'nin varsayılan `revert` özeti yalnızca bu SHA'ları kullanır. Tarihsel `d2-kontrol.csv` eski SZZ örnekleminin etiketidir; yalnızca `eval/rq2.py ozet --set szz` bunu kullanır.
 
-## Sonuç (19 Kasım 2026)
+## Önceki SZZ örneklemi sonucu (19 Kasım 2026)
 
 | Tür | Aynı cevap | Cohen κ |
 | --- | --- | --- |
