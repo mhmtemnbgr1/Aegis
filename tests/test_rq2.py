@@ -7,6 +7,8 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
 from aegis.config import AegisConfig
 from aegis.experiments.rq2 import (
     done_keys,
@@ -14,6 +16,7 @@ from aegis.experiments.rq2 import (
     load_results,
     mcnemar,
     placebo_ids,
+    read_memory,
     run,
     score_sample,
     summarize,
@@ -137,7 +140,7 @@ def test_run_resumes_and_summarizes(tmp_path: Path) -> None:
     out = tmp_path / "results.jsonl"
     card = _card(9, ["geo.py"], 1)
 
-    def memory(sha: str, variant: str) -> list[BugCard]:
+    def memory(sample: D2Sample, variant: str) -> list[BugCard]:
         return [card] if variant == "hybrid" else []
 
     # Hafızasız: bulgu yok. Hibrit: hatalı commit'te doğru bulgu, temizde yanlış alarm yok.
@@ -171,7 +174,12 @@ def test_run_resumes_and_summarizes(tmp_path: Path) -> None:
     again = MockProvider([])
     assert run([BUGGY, CLEAN], memory, out, AegisConfig(), variants=["none", "hybrid"],
                provider_factory=_factory(again)) == 0  # fmt: skip
-    assert done_keys(out) == {("b1", "none"), ("b1", "hybrid"), ("c1", "none"), ("c1", "hybrid")}
+    assert done_keys(out) == {
+        ("b1", "buggy", "none"),
+        ("b1", "buggy", "hybrid"),
+        ("c1", "clean", "none"),
+        ("c1", "clean", "hybrid"),
+    }
 
     scores, detect, alarm = summarize([BUGGY, CLEAN], load_results(out))
     by = {s.variant: s for s in scores}
@@ -185,11 +193,58 @@ def test_run_resumes_and_summarizes(tmp_path: Path) -> None:
 def test_failed_runs_are_retried(tmp_path: Path) -> None:
     out = tmp_path / "results.jsonl"
     broken = MockProvider(["bu JSON değil"] * 3)
-    run([BUGGY], lambda sha, v: [], out, AegisConfig(), variants=["none"],
+    run([BUGGY], lambda s, v: [], out, AegisConfig(), variants=["none"],
         provider_factory=_factory(broken))  # fmt: skip
     assert json.loads(out.read_text("utf-8"))["status"] == "error"
     assert done_keys(out) == set()  # hata veren koşu tekrar denenir
     fixed = MockProvider([{"summary": "ok", "findings": []}])
-    assert run([BUGGY], lambda sha, v: [], out, AegisConfig(), variants=["none"],
+    assert run([BUGGY], lambda s, v: [], out, AegisConfig(), variants=["none"],
                provider_factory=_factory(fixed)) == 1  # fmt: skip
-    assert load_results(out)[("b1", "none")]["status"] == "ok"
+    assert load_results(out)[("b1", "buggy", "none")]["status"] == "ok"
+
+
+def test_same_commit_as_buggy_and_clean_sample(tmp_path: Path) -> None:
+    """Aynı commit D2'de hem hatalı (tersine çevrilmiş fix) hem temiz örnek olabilir."""
+    buggy, clean = _sample("buggy", "d1", [{"path": "geo.py", "line": 6}]), _sample("clean", "d1")
+    out = tmp_path / "results.jsonl"
+    provider = MockProvider(
+        [{"summary": "ok", "findings": [FINDING]}, {"summary": "ok", "findings": []}]
+    )
+    n = run([buggy, clean], lambda s, v: [], out, AegisConfig(), variants=["none"],
+            provider_factory=_factory(provider))  # fmt: skip
+    assert n == 2 and len(provider.requests) == 2  # ikinci örnek atlanmaz
+    assert done_keys(out) == {("d1", "buggy", "none"), ("d1", "clean", "none")}
+    scores, _, _ = summarize([buggy, clean], load_results(out))
+    assert (scores[0].samples, scores[0].detected, scores[0].false_alarms) == (2, 1, 0)
+
+
+def test_read_memory_keeps_cards_apart_for_same_commit(tmp_path: Path) -> None:
+    a, b = _card(1, ["a.py"], 1), _card(2, ["b.py"], 2)
+    cards = tmp_path / "cards.jsonl"
+    cards.write_text(a.model_dump_json() + "\n" + b.model_dump_json() + "\n", "utf-8")
+    buggy, clean = _sample("buggy", "d1"), _sample("clean", "d1")
+
+    # Eski biçim: etiket alanı yok, satırlar D2 sırasıyla eşlenir.
+    old = tmp_path / "old.jsonl"
+    old.write_text(
+        json.dumps({"repo": "r", "sha": "d1", "modes": {"hybrid": [a.id]}}) + "\n"
+        + json.dumps({"repo": "r", "sha": "d1", "modes": {"hybrid": [b.id]}}) + "\n",
+        "utf-8",
+    )  # fmt: skip
+    get = read_memory(old, cards, [buggy, clean])
+    assert [c.id for c in get(buggy, "hybrid")] == [a.id]
+    assert [c.id for c in get(clean, "hybrid")] == [b.id]
+
+    # Yeni biçim: satırda etiket var, sıra gerekmez.
+    new = tmp_path / "new.jsonl"
+    new.write_text(
+        json.dumps({"sha": "d1", "label": "clean", "modes": {"hybrid": [b.id]}}) + "\n"
+        + json.dumps({"sha": "d1", "label": "buggy", "modes": {"hybrid": [a.id]}}) + "\n",
+        "utf-8",
+    )  # fmt: skip
+    get = read_memory(new, cards)
+    assert [c.id for c in get(buggy, "hybrid")] == [a.id]
+    assert [c.id for c in get(clean, "hybrid")] == [b.id]
+
+    with pytest.raises(ValueError):
+        read_memory(old, cards, [clean])  # sıra D2 ile uyuşmuyor

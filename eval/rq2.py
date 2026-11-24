@@ -122,7 +122,8 @@ def cmd_run(args: argparse.Namespace) -> None:
             file=sys.stderr,
         )
 
-    n = run(samples, read_memory(memory, cards), out, config, variants=variants, on_result=progress)
+    memory_of = read_memory(memory, cards, read_d2(d2))
+    n = run(samples, memory_of, out, config, variants=variants, on_result=progress)
     print(f"{n} yeni koşu ({total} hedef) → {out}")
 
 
@@ -138,11 +139,10 @@ def cmd_summary(args: argparse.Namespace) -> None:
     if args.set != "revert":
         # Temiz örnekler iki sette aynı: sonuçları ana setten.
         main = read_d2(paths("revert")[0])
-        clean = {s.sha for s in main if s.label == "clean"}
         samples += [s for s in main if s.label == "clean"]
         main_results = model_dir(args.model) / "results.jsonl"
         if main_results.is_file():
-            results |= {k: v for k, v in load_results(main_results).items() if k[0] in clean}
+            results |= {k: v for k, v in load_results(main_results).items() if k[1] == "clean"}
     lines = [
         f"# RQ2 sonuçları ({args.set} seti) — {args.model}",
         "",
