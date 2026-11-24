@@ -110,6 +110,15 @@ Action, arşivi önce `actions/cache`'ten, yoksa Release'ten alır (`aegis fetch
 
 Bu repoda `.github/workflows/main-state.yml`, `main`'e push sonrası yeni commit'leri artımlı işler, hata kartlarını günceller ve durum Release/cache'ini yazar. `.github/workflows/weekly-train.yml` her pazartesi sürümlenmiş D1 üzerinden genel modeli yeniden eğitip Release asset'ini günceller. İkisi de `contents: write` izni kullanır.
 
+Dashboard (yerel, salt okunur):
+
+```bash
+uv sync --extra dashboard         # Streamlit isteğe bağlıdır; Action kurmaz
+aegis dashboard                   # http://localhost:8501
+```
+
+Dört ekran: gerçek PR çalıştırmaları (D4 ve `.aegis/runs.jsonl`), LLM bütçesine göre maliyet-recall eğrisi (RQ1 örneklemi), hata kartlarında arama ve deney özetleri. Yalnızca depodaki veri setlerini ve sonuçları okur; hiçbir dosyaya yazmaz.
+
 ### GitHub Action
 
 `.github/workflows/aegis.yml`:

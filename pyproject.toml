@@ -27,6 +27,9 @@ aegis = "aegis.cli:app"
 ollama = [
     "ollama>=0.6.3",
 ]
+dashboard = [
+    "streamlit>=1.40",
+]
 
 [dependency-groups]
 dev = [
