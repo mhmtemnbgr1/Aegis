@@ -99,7 +99,15 @@ def prepare_memory(
         for ids in modes.values():
             for card_id in ids:
                 used.setdefault(card_id, retriever.card(card_id))
-        rows.append({"repo": s.repo, "sha": s.sha, "before": when.isoformat(), "modes": modes})
+        rows.append(
+            {
+                "repo": s.repo,
+                "sha": s.sha,
+                "label": s.label,
+                "before": when.isoformat(),
+                "modes": modes,
+            }
+        )
     memory_out.parent.mkdir(parents=True, exist_ok=True)
     with memory_out.open("w", encoding="utf-8", newline="\n") as fh:
         for row in rows:
@@ -122,39 +130,57 @@ def slim(card: BugCard) -> BugCard:
     return card.model_copy(update=update)
 
 
-def read_memory(memory_path: Path, cards_path: Path) -> Callable[[str, str], list[BugCard]]:
-    """(sha, varyant) → kartlar."""
-    cards = {c.id: c for c in read_cards(cards_path)}
-    modes: dict[str, dict[str, list[str]]] = {}
-    with memory_path.open(encoding="utf-8") as fh:
-        for line in fh:
-            if line.strip():
-                row = json.loads(line)
-                modes[row["sha"]] = row["modes"]
+def sample_key(sample: D2Sample) -> tuple[str, str]:
+    """Örnek kimliği: aynı commit hem hatalı (tersine çevrilmiş fix) hem temiz örnek olabilir."""
+    return sample.sha, sample.label
 
-    def get(sha: str, variant: str) -> list[BugCard]:
-        return [cards[i] for i in modes.get(sha, {}).get(variant, [])]
+
+def read_memory(
+    memory_path: Path, cards_path: Path, samples: Sequence[D2Sample] | None = None
+) -> Callable[[D2Sample, str], list[BugCard]]:
+    """(örnek, varyant) → kartlar.
+
+    Satırlar (sha, etiket) ile eşlenir. Etiket alanı olmayan eski dosyalarda etiket, aynı sıradaki
+    D2 örneğinden alınır (`prepare_memory` satırları D2 sırasıyla yazar); bunun için `samples`
+    D2 dosyasının tamamı ve dosyadaki sırasıyla verilmelidir.
+    """
+    cards = {c.id: c for c in read_cards(cards_path)}
+    modes: dict[tuple[str, str], dict[str, list[str]]] = {}
+    with memory_path.open(encoding="utf-8") as fh:
+        rows = [json.loads(line) for line in fh if line.strip()]
+    for i, row in enumerate(rows):
+        label = row.get("label")
+        if label is None:
+            if samples is None or i >= len(samples) or samples[i].sha != row["sha"]:
+                raise ValueError(
+                    f"{memory_path}: etiketsiz satır {i + 1} D2 örnekleriyle eşleşmiyor"
+                )
+            label = samples[i].label
+        modes[(row["sha"], label)] = row["modes"]
+
+    def get(sample: D2Sample, variant: str) -> list[BugCard]:
+        return [cards[i] for i in modes.get(sample_key(sample), {}).get(variant, [])]
 
     return get
 
 
 # --- 2. Koşu ---------------------------------------------------------------------------------
-def done_keys(results: Path) -> set[tuple[str, str]]:
-    """Daha önce tamamlanmış (sha, varyant) çiftleri; hata veren koşular yeniden denenir."""
-    keys: set[tuple[str, str]] = set()
+def done_keys(results: Path) -> set[tuple[str, str, str]]:
+    """Daha önce tamamlanmış (sha, etiket, varyant) üçlüleri; hata veren koşular yeniden denenir."""
+    keys: set[tuple[str, str, str]] = set()
     if results.is_file():
         with results.open(encoding="utf-8") as fh:
             for line in fh:
                 if line.strip():
                     row = json.loads(line)
                     if row["status"] != "error":
-                        keys.add((row["sha"], row["variant"]))
+                        keys.add((row["sha"], row["label"], row["variant"]))
     return keys
 
 
 def run(
     samples: Sequence[D2Sample],
-    memory: Callable[[str, str], list[BugCard]],
+    memory: Callable[[D2Sample, str], list[BugCard]],
     results: Path,
     config: AegisConfig,
     *,
@@ -174,9 +200,9 @@ def run(
     with results.open("a", encoding="utf-8", newline="\n") as fh:
         for s in samples:
             for variant in variants:
-                if (s.sha, variant) in done:
+                if (*sample_key(s), variant) in done:
                     continue
-                cards = memory(s.sha, variant)
+                cards = memory(s, variant)
 
                 def source(c: list[BugCard] = cards) -> list[BugCard]:
                     return c
@@ -312,20 +338,20 @@ def holm(pvalues: Sequence[float]) -> list[float]:
     return adjusted
 
 
-def load_results(path: Path) -> dict[tuple[str, str], dict[str, Any]]:
-    """(sha, varyant) → son sonuç."""
-    rows: dict[tuple[str, str], dict[str, Any]] = {}
+def load_results(path: Path) -> dict[tuple[str, str, str], dict[str, Any]]:
+    """(sha, etiket, varyant) → son sonuç."""
+    rows: dict[tuple[str, str, str], dict[str, Any]] = {}
     with path.open(encoding="utf-8") as fh:
         for line in fh:
             if line.strip():
                 row = json.loads(line)
-                rows[(row["sha"], row["variant"])] = row
+                rows[(row["sha"], row["label"], row["variant"])] = row
     return rows
 
 
 def summarize(
     samples: Sequence[D2Sample],
-    results: dict[tuple[str, str], dict[str, Any]],
+    results: dict[tuple[str, str, str], dict[str, Any]],
     *,
     tol: int = LINE_TOLERANCE,
     only: Callable[[D2Sample], bool] | None = None,
@@ -338,21 +364,23 @@ def summarize(
 
     Yalnızca tüm varyantlarda başarılı sonucu olan örnekler sayılır (eşleştirilmiş tasarım).
     """
-    variants = [v for v in VARIANTS if any(k[1] == v for k in results)]
+    variants = [v for v in VARIANTS if any(k[2] == v for k in results)]
     pool = [s for s in samples if only is None or only(s)]
     complete = [
-        s for s in pool if all(results.get((s.sha, v), {}).get("status") == "ok" for v in variants)
+        s
+        for s in pool
+        if all(results.get((*sample_key(s), v), {}).get("status") == "ok" for v in variants)
     ]
     scores: list[VariantScore] = []
     detected: dict[str, list[bool]] = {}
     alarms: dict[str, list[bool]] = {}
     for v in variants:
-        per = [score_sample(s, results[(s.sha, v)]["findings"], tol) for s in complete]
+        per = [score_sample(s, results[(*sample_key(s), v)]["findings"], tol) for s in complete]
         buggy = [p for s, p in zip(complete, per, strict=True) if s.label == "buggy"]
         clean = [p for s, p in zip(complete, per, strict=True) if s.label == "clean"]
         detected[v] = [p["detected"] for p in buggy]
         alarms[v] = [p["false_alarm"] for p in clean]
-        rows = [results[(s.sha, v)] for s in complete]
+        rows = [results[(*sample_key(s), v)] for s in complete]
         scores.append(
             VariantScore(
                 variant=v,
@@ -365,7 +393,9 @@ def summarize(
                 buggy=len(buggy),
                 false_alarms=sum(alarms[v]),
                 clean=len(clean),
-                errors=sum(results.get((s.sha, v), {}).get("status") == "error" for s in pool),
+                errors=sum(
+                    results.get((*sample_key(s), v), {}).get("status") == "error" for s in pool
+                ),
                 seconds=sum(r["seconds"] for r in rows),
                 input_tokens=sum(r["input_tokens"] for r in rows),
             )
