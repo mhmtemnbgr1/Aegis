@@ -10,7 +10,10 @@ from aegis.llm.structured import SchemaStats, StructuredLLM, StructuredResult
 def create_provider(config: AgentConfig) -> LLMProvider:
     """Ajan ayarından sağlayıcı oluşturur."""
     return OllamaProvider(
-        config.model, temperature=config.temperature, timeout=config.timeout_seconds
+        config.model,
+        temperature=config.temperature,
+        timeout=config.timeout_seconds,
+        num_ctx=config.num_ctx,
     )
 
 

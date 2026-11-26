@@ -165,6 +165,19 @@ def read_memory(
 
 
 # --- 2. Koşu ---------------------------------------------------------------------------------
+MAX_CONSECUTIVE_ERRORS = 10
+"""Art arda bu kadar koşu hata verirse (ör. Ollama kapalı) koşu durur; boşuna sürmez."""
+
+
+def is_current(row: dict[str, Any]) -> bool:
+    """Bağlam penceresi kaydedilmiş satır mı?
+
+    İlk koşuda (Kasım 2026) bağlam penceresi ayarlanmadı ve Ollama uzun istemleri sessizce kesti;
+    o satırlarda `num_ctx` alanı yoktur. Bu satırlar ne tamamlanmış sayılır ne de özete girer.
+    """
+    return "num_ctx" in row
+
+
 def done_keys(results: Path) -> set[tuple[str, str, str]]:
     """Daha önce tamamlanmış (sha, etiket, varyant) üçlüleri; hata veren koşular yeniden denenir."""
     keys: set[tuple[str, str, str]] = set()
@@ -173,7 +186,7 @@ def done_keys(results: Path) -> set[tuple[str, str, str]]:
             for line in fh:
                 if line.strip():
                     row = json.loads(line)
-                    if row["status"] != "error":
+                    if row["status"] != "error" and is_current(row):
                         keys.add((row["sha"], row["label"], row["variant"]))
     return keys
 
@@ -188,15 +201,30 @@ def run(
     provider_factory: Any = None,
     on_result: Callable[[dict[str, Any]], None] | None = None,
 ) -> int:
-    """Eksik (örnek, varyant) çiftlerini koşturur ve `results`'a ekler; koşulan sayıyı döndürür."""
-    from aegis.review import ReviewStatus, run_review
+    """Eksik (örnek, varyant) çiftlerini koşturur ve `results`'a ekler; koşulan sayıyı döndürür.
+
+    Her satıra kullanılan bağlam penceresi (`num_ctx`) ve sıcaklık yazılır. Art arda
+    `MAX_CONSECUTIVE_ERRORS` hata olursa `RuntimeError` ile durur (yazılan satırlar korunur).
+    """
+    from aegis.llm import create_provider
+    from aegis.review import ANALYST, ReviewStatus, run_review
+
+    def default_factory(cfg: AegisConfig) -> Any:
+        return create_provider(cfg.agent(ANALYST))
+
+    factory = provider_factory if provider_factory is not None else default_factory
+    agent = config.agent(ANALYST)
+    used: list[Any] = []
+
+    def tracked(cfg: AegisConfig) -> Any:
+        provider = factory(cfg)
+        used.append(provider)
+        return provider
 
     done = done_keys(results)
     results.parent.mkdir(parents=True, exist_ok=True)
     count = 0
-    kwargs: dict[str, Any] = {}
-    if provider_factory is not None:
-        kwargs["provider_factory"] = provider_factory
+    errors_in_row = 0
     with results.open("a", encoding="utf-8", newline="\n") as fh:
         for s in samples:
             for variant in variants:
@@ -207,6 +235,7 @@ def run(
                 def source(c: list[BugCard] = cards) -> list[BugCard]:
                     return c
 
+                used.clear()
                 started = time.perf_counter()
                 review = run_review(
                     s.diff,
@@ -214,9 +243,10 @@ def run(
                     as_of=datetime.fromisoformat(s.date),
                     gatekeeper=FixedRisk(),
                     memory=source if variant != "none" else None,
-                    **kwargs,
+                    provider_factory=tracked,
                 )
                 ok = review.status is ReviewStatus.OK
+                contexts = [c for p in used if (c := getattr(p, "last_num_ctx", None))]
                 row = {
                     "repo": s.repo,
                     "sha": s.sha,
@@ -226,6 +256,8 @@ def run(
                     "error": review.error,
                     "model": review.model,
                     "prompt_version": review.prompt_version,
+                    "num_ctx": max(contexts) if contexts else agent.num_ctx,
+                    "temperature": agent.temperature,
                     "memory_cards": review.memory_cards,
                     "findings": [
                         {
@@ -251,6 +283,12 @@ def run(
                 count += 1
                 if on_result is not None:
                     on_result(row)
+                errors_in_row = 0 if ok else errors_in_row + 1
+                if errors_in_row >= MAX_CONSECUTIVE_ERRORS:
+                    raise RuntimeError(
+                        f"art arda {errors_in_row} koşu hata verdi, durduruldu; son hata: "
+                        f"{review.error}. Sorun giderilince aynı komut kaldığı yerden sürer."
+                    )
     return count
 
 
@@ -345,7 +383,8 @@ def load_results(path: Path) -> dict[tuple[str, str, str], dict[str, Any]]:
         for line in fh:
             if line.strip():
                 row = json.loads(line)
-                rows[(row["sha"], row["label"], row["variant"])] = row
+                if is_current(row):
+                    rows[(row["sha"], row["label"], row["variant"])] = row
     return rows
 
 
