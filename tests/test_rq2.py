@@ -9,8 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from aegis.config import AegisConfig
+from aegis.config import AegisConfig, AgentConfig
 from aegis.experiments.rq2 import (
+    MAX_CONSECUTIVE_ERRORS,
     done_keys,
     holm,
     load_results,
@@ -21,7 +22,7 @@ from aegis.experiments.rq2 import (
     score_sample,
     summarize,
 )
-from aegis.llm import LLMProvider, MockProvider
+from aegis.llm import LLMError, LLMProvider, MockProvider
 from aegis.memory.cards import BugCard
 from aegis.mining.d2 import D2Sample
 
@@ -248,3 +249,36 @@ def test_read_memory_keeps_cards_apart_for_same_commit(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError):
         read_memory(old, cards, [clean])  # sıra D2 ile uyuşmuyor
+
+
+def test_rows_record_context_and_old_rows_are_ignored(tmp_path: Path) -> None:
+    out = tmp_path / "results.jsonl"
+    # İlk koşunun satırı: bağlam penceresi kaydı yok (istemler kesilmişti).
+    old = {"sha": "b1", "label": "buggy", "variant": "none", "status": "ok", "findings": []}
+    out.write_text(json.dumps(old) + "\n", "utf-8")
+    assert done_keys(out) == set() and load_results(out) == {}
+
+    config = AegisConfig(agents={"analyst": AgentConfig(num_ctx=16384, temperature=0.0)})
+    provider = MockProvider([{"summary": "ok", "findings": []}])
+    assert run([BUGGY], lambda s, v: [], out, config, variants=["none"],
+               provider_factory=_factory(provider)) == 1  # fmt: skip
+    row = load_results(out)[("b1", "buggy", "none")]
+    assert (row["num_ctx"], row["temperature"]) == (16384, 0.0)
+    assert done_keys(out) == {("b1", "buggy", "none")}
+
+
+def test_run_stops_after_consecutive_errors(tmp_path: Path) -> None:
+    out = tmp_path / "results.jsonl"
+    samples = [_sample("buggy", f"s{i}") for i in range(MAX_CONSECUTIVE_ERRORS + 5)]
+
+    class Down:
+        name, model = "ollama", "q"
+
+        def complete(self, request: object) -> None:
+            raise LLMError("ollama: bağlantı yok", retryable=False)
+
+    broken = Down()  # her çağrı hata verir (ör. Ollama kapalı)
+    with pytest.raises(RuntimeError, match="art arda"):
+        run(samples, lambda s, v: [], out, AegisConfig(), variants=["none"],
+            provider_factory=_factory(broken))  # fmt: skip
+    assert len(out.read_text("utf-8").splitlines()) == MAX_CONSECUTIVE_ERRORS

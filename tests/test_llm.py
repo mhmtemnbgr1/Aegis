@@ -44,6 +44,42 @@ def test_ollama() -> None:
     assert [m["role"] for m in chat.kwargs["messages"]] == ["system", "user"]
 
 
+def _reply(prompt_tokens: int, output_tokens: int = 3) -> NS:
+    return NS(
+        message=NS(content='{"ok": true}'),
+        prompt_eval_count=prompt_tokens,
+        eval_count=output_tokens,
+    )
+
+
+def test_ollama_num_ctx_is_sent_and_recorded() -> None:
+    chat = Recorder(_reply(12))
+    provider = OllamaProvider("qwen", num_ctx=4096, client=NS(chat=chat))
+    provider.complete(REQ)
+    assert chat.kwargs["options"]["num_ctx"] == 4096
+    assert provider.last_num_ctx == 4096
+
+
+def test_ollama_num_ctx_grows_for_long_prompts() -> None:
+    chat = Recorder(_reply(12))
+    provider = OllamaProvider("qwen", num_ctx=4096, max_num_ctx=16384, client=NS(chat=chat))
+    long = LLMRequest(system="sys", prompt="x" * 20_000, max_tokens=4096)  # ~5.9k + 4k token
+    provider.complete(long)
+    assert chat.kwargs["options"]["num_ctx"] == 16384
+    huge = LLMRequest(system="sys", prompt="x" * 200_000, max_tokens=4096)
+    assert provider.context_for(huge) == 16384  # üst sınırı aşmaz
+
+
+def test_ollama_full_context_is_an_error() -> None:
+    """Ollama pencereyi aşan istemi sessizce keser; pencere dolmuşsa sonuç kullanılmaz."""
+    client = NS(chat=Recorder(_reply(4090, 10)))
+    with pytest.raises(LLMError, match="bağlam penceresi doldu") as exc:
+        OllamaProvider("q", num_ctx=4096, client=client).complete(REQ)
+    assert exc.value.retryable is False
+    # num_ctx verilmemişse (eski davranış) denetim yapılmaz.
+    assert OllamaProvider("q", client=client).complete(REQ).usage.input_tokens == 4090
+
+
 def test_sdk_errors_are_wrapped() -> None:
     client = NS(chat=Recorder(ConnectionError("bağlantı yok")))
     with pytest.raises(LLMError, match="ollama: bağlantı yok"):
@@ -71,6 +107,9 @@ def test_create_provider() -> None:
     created = create_provider(config)
     assert isinstance(created, OllamaProvider)
     assert (created.model, created.temperature) == ("qwen2.5-coder:7b", 0.2)
+    assert created.num_ctx is None
+    sized = create_provider(AgentConfig(num_ctx=16384))
+    assert isinstance(sized, OllamaProvider) and sized.num_ctx == 16384
 
 
 def test_cloud_providers_rejected() -> None:

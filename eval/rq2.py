@@ -22,12 +22,17 @@ commit'ler; gerçekçi ama etiketleri gürültülü). İki sette temiz örnekler
 yalnız hatalı örnekleri koşturur, özette temiz örneklerin sonuçlarını `revert` setinden alır.
 Sonuçlar `eval/results/rq2-szz/<model>/` altında.
 
+Bağlam penceresi koddan gelir (`NUM_CTX`, sıcaklık 0); komut satırında ayar verilmez. Her satıra
+kullanılan pencere yazılır; pencereyi dolduran (kesilmiş) yanıtlar hata sayılır. Bağlam penceresi
+kaydı olmayan eski satırlar (ilk koşu, istemler kesilmişti) yok sayılır, silmek gerekmez.
+
 Ollama sunucusu başka bir makinedeyse `OLLAMA_HOST` ortam değişkeni.
 `--limit`, repolar ve sınıflar arasında sırayla seçilen ilk N örneği koşturur; kuru koşu tam
 koşunun bir alt kümesi olduğundan sonuçlar tekrar kullanılır.
 """
 
 import argparse
+import os
 import sys
 import time
 from collections import defaultdict
@@ -46,6 +51,10 @@ from aegis.experiments.rq2 import (
 )
 from aegis.mining.d2 import D2Sample, read_d2
 
+NUM_CTX = 16_384
+"""RQ2 bağlam penceresi. D2 istemlerinin ~%99'u yanıt payıyla birlikte sığar; sığmayan birkaç
+istem için sağlayıcı pencereyi 32k'ya büyütür."""
+TIMEOUT_SECONDS = 1_800
 DATASETS = Path("eval/datasets")
 SETS = {
     "revert": ("d2.jsonl", "d2-memory.jsonl", "d2-cards.jsonl", Path("eval/results/rq2")),
@@ -95,8 +104,39 @@ def cmd_prepare(args: argparse.Namespace) -> None:
     print(f"{memory}, {cards}: {stats}")
 
 
+def gpu_note(model: str) -> str | None:
+    """Model ekran kartına tam sığmadıysa uyarı metni (Ollama `ps`); sığdıysa ya da bilinmiyorsa
+    None."""
+    try:
+        import ollama
+
+        loaded = ollama.Client(host=os.environ.get("OLLAMA_HOST")).ps().models
+    except Exception:
+        return None
+    for m in loaded:
+        if model in (m.model, m.name) and m.size:
+            share = (m.size_vram or 0) / m.size
+            if share < 0.99:
+                return (
+                    f"UYARI: model ekran kartına tam sığmadı (%{share * 100:.0f} GPU). Sonuçlar "
+                    "geçerli ama koşu yavaş olur. Hızlandırmak için Ollama'yı kapatıp "
+                    "OLLAMA_FLASH_ATTENTION=1 ve OLLAMA_KV_CACHE_TYPE=q8_0 ortam değişkenleriyle "
+                    "yeniden başlatın (docs/llm-experiments.md)."
+                )
+    return None
+
+
 def cmd_run(args: argparse.Namespace) -> None:
-    config = AegisConfig(agents={"analyst": AgentConfig(model=args.model, timeout_seconds=600)})
+    config = AegisConfig(
+        agents={
+            "analyst": AgentConfig(
+                model=args.model,
+                temperature=0.0,
+                timeout_seconds=TIMEOUT_SECONDS,
+                num_ctx=NUM_CTX,
+            )
+        }
+    )
     d2, memory, cards, _ = paths(args.set)
     samples = interleaved(read_d2(d2))
     if args.repo:
@@ -112,19 +152,33 @@ def cmd_run(args: argparse.Namespace) -> None:
     started = time.perf_counter()
     seen = [0]
 
+    errors = [0]
+
     def progress(row: dict[str, object]) -> None:
         seen[0] += 1
+        errors[0] += row["status"] == "error"
+        if seen[0] == 1 and (note := gpu_note(args.model)):
+            print(note, file=sys.stderr)
         rate = (time.perf_counter() - started) / seen[0]
         print(
             f"[{seen[0]}] {row['repo']} {str(row['sha'])[:8]} {row['label']:<5} "
             f"{row['variant']:<10} {row['status']:<5} bulgu={len(row['findings'])} "  # type: ignore[arg-type]
-            f"{row['seconds']} sn · ~{rate:.0f} sn/koşu",
+            f"ctx={row['num_ctx']} {row['seconds']} sn · ~{rate:.0f} sn/koşu",
             file=sys.stderr,
         )
 
     memory_of = read_memory(memory, cards, read_d2(d2))
-    n = run(samples, memory_of, out, config, variants=variants, on_result=progress)
-    print(f"{n} yeni koşu ({total} hedef) → {out}")
+    try:
+        n = run(samples, memory_of, out, config, variants=variants, on_result=progress)
+    except RuntimeError as exc:
+        raise SystemExit(f"DURDU: {exc}") from exc
+    print(f"{n} yeni koşu ({total} hedef), {errors[0]} hata → {out}")
+    if errors[0]:
+        print(
+            "Hata veren koşular aynı komut yeniden çalıştırılınca tekrar denenir. "
+            "Bağlam penceresi hataları tekrar ederse sonuçlarla birlikte bildirin.",
+            file=sys.stderr,
+        )
 
 
 def _pct(x: float) -> str:
