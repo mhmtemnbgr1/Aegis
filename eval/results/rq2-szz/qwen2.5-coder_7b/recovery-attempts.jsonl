@@ -1,0 +1,5 @@
+{"sha": "1db657f8333f17934da02d253456bb4a6409aed6", "repo": "tqdm__tqdm", "variant": "hybrid", "previous_status": "error", "max_tokens": 8192, "num_ctx": 8192, "temperature": 0.1, "status": "ok", "error": null, "seconds": 17.52}
+{"sha": "8103fd9a1400f34e01db42ca0addfd4749101f80", "repo": "spotify__luigi", "variant": "hybrid", "previous_status": "error", "max_tokens": 8192, "num_ctx": 8192, "temperature": 0.1, "status": "ok", "error": null, "seconds": 24.52}
+{"sha": "52d78121b1c6499b1a477c8f1f3a69cd896c6c55", "repo": "tqdm__tqdm", "variant": "placebo", "previous_status": "error", "max_tokens": 8192, "num_ctx": 8192, "temperature": 0.1, "status": "ok", "error": null, "seconds": 480.3}
+{"sha": "52d78121b1c6499b1a477c8f1f3a69cd896c6c55", "repo": "tqdm__tqdm", "variant": "hybrid", "previous_status": "error", "max_tokens": 8192, "num_ctx": 8192, "temperature": 0.1, "status": "ok", "error": null, "seconds": 62.24}
+{"sha": "69511c27839501b08b0de57fe13ce7319d1541f2", "repo": "sanic-org__sanic", "variant": "hybrid", "previous_status": "error", "max_tokens": 8192, "num_ctx": 8192, "temperature": 0.1, "status": "ok", "error": null, "seconds": 24.17}
