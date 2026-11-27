@@ -208,7 +208,9 @@ def cmd_summary(args: argparse.Namespace) -> None:
         "Tüm örnekler": None,
         "Bilgi kesiminden sonraki commit'ler (#55)": lambda s: s.after_cutoff,
     }
-    manual = Path("eval/labels/d2-kontrol.csv")  # elle doğrulanmış alt küme (#69)
+    manual = Path(
+        "eval/labels/d2-kontrol.csv" if args.set == "szz" else "eval/labels/d2-revert-kontrol.csv"
+    )
     if manual.is_file():
         import csv
 
@@ -218,7 +220,30 @@ def cmd_summary(args: argparse.Namespace) -> None:
             if (r["label"], r["answer"])
             in (("buggy", "dogru"), ("buggy", "kismen"), ("clean", "temiz"))
         }
-        subsets["Elle doğrulanmış alt küme (#69)"] = lambda s: s.sha in confirmed
+        matched = confirmed & {s.sha for s in samples}
+        matched_buggy = {s.sha for s in samples if s.label == "buggy"} & matched
+        matched_clean = {s.sha for s in samples if s.label == "clean"} & matched
+        if matched == confirmed and matched_buggy and matched_clean:
+            subsets[f"Elle doğrulanmış {args.set} alt kümesi (#69)"] = lambda s, ids=matched: (
+                s.sha in ids
+            )
+        else:
+            lines += [
+                "## Elle doğrulanmış alt küme",
+                "",
+                f"`{manual}` içindeki {len(confirmed)} kabul edilmiş SHA'nın "
+                f"{len(matched)} tanesi bu {args.set} setinde bulundu; eşleşen hatalı ve temiz "
+                "örneklerin ikisi birden tam değil. Alt küme raporlanmadı.",
+                "",
+            ]
+    elif args.set == "revert":
+        lines += [
+            "## Elle doğrulanmış alt küme",
+            "",
+            "Bu revert seti için henüz ortak cevaplı bir `d2-revert-kontrol.csv` yok; alt küme "
+            "raporlanmadı. Eski `d2-kontrol.csv` etiketleri SZZ setine aittir.",
+            "",
+        ]
     for title, only in subsets.items():
         scores, detect, alarm = summarize(samples, results, tol=args.tol, only=only)
         if not scores or not scores[0].samples:

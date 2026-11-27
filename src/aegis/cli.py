@@ -488,9 +488,9 @@ def _score_with_model(gk: "ModelGatekeeper") -> None:
     console.print(f"Risk: [bold {style}]{result.score:.2f} ({result.band})[/bold {style}]")
     console.print(
         f"[dim]Model: {path} · bantlar: düşük < {result.low_threshold:.2f} ≤ orta < "
-        f"{result.high_threshold:.2f} ≤ yüksek ({result.threshold_source}) · "
-        f"{len(commits)} commit[/dim]"
+        f"{result.high_threshold:.2f} ≤ yüksek ({result.threshold_source})[/dim]"
     )
+    console.print(f"[dim]{len(commits)} commit[/dim]")
     for explanation in result.explanations:
         console.print(f"  • {explanation.text}")
     for sha, subject, prob in result.commits:

@@ -93,10 +93,10 @@ Böylece model ne kadar iyi çıkarsa çıksın sonuç savunulabilir olur; ekip 
 | ID | Veri seti | Kaynak | Hedef boyut | RQ |
 | --- | --- | --- | --- | --- |
 | D1 | SZZ ile etiketlenmiş commit ve PR'lar | 6 hedef repo ([target-repos.md](target-repos.md)), tüm geçmiş | Tüm commit'ler (repo başına ≥ 200 pozitif) | RQ1 |
-| D2 | Tersine çevrilmiş gerçek düzeltmeler (düzeltmenin sildiği satırlar = beklenen bulgu) ve temiz commit'ler | D1 repolarından tabakalı örnekleme | 300 hatalı + 300 temiz; ~100'ü iki etiket setiyle kontrol edildi | RQ2, RQ4, RQ5 |
+| D2 | Tersine çevrilmiş gerçek düzeltmeler (düzeltmenin sildiği satırlar = beklenen bulgu) ve temiz commit'ler | D1 repolarından tabakalı örnekleme | 300 hatalı + 300 temiz; yeni set için 102 örneklik insan incelemesi hazırlanıyor | RQ2, RQ4, RQ5 |
 | D4 | Demo ve dogfooding PR'ları | Ekip | ≥ 30 PR | Maliyet, süre |
 
-> SZZ satırları gürültülü olduğu için (elle kontrolde %19–31 doğru) D2'nin hatalı örnekleri SZZ ile değil, gerçek düzeltmelerin tersine çevrilmesiyle kurulur: hatalı satırların yeri kesin bilinir. Temiz örneklerden ~100'ü iki etiket setiyle kontrol edildi ve doğrulanmış alt küme ayrıca raporlanır. Eşleştirilmiş McNemar testinde birkaç yüz örnek, orta büyüklükteki farkları yakalamak için yeterlidir.
+> SZZ satırları gürültülü olduğu için (elle kontrolde %19–31 doğru) D2'nin varsayılan hatalı örnekleri gerçek düzeltmelerin tersine çevrilmesiyle kurulur: hatalı satırların yeri kesin bilinir. Eski SZZ örneklerinden 102'si iki bağımsız etiket setiyle kontrol edildi; ortak etiketler yalnızca SZZ gerçekçilik setinde raporlanır. Revert seti için ayrı bir 102 örnekli insan değerlendirmesi hazırlanır. Eşleştirilmiş McNemar testinde birkaç yüz örnek, orta büyüklükteki farkları yakalamak için yeterlidir.
 
 ### 5.1.1 Kullanıcı Çalışması (RQ5, opsiyonel)
 

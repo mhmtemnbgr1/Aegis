@@ -90,6 +90,7 @@ kbd { border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 
   <div class="bar"><div id="bar"></div></div>
   <span class="stats" id="stats"></span>
   <label class="who">Ad <input type="text" id="who" placeholder="etiketleyen"></label>
+  <button id="setWho">Bu adla devam et</button>
   <button id="export">CSV indir</button>
 </header>
 <main>
@@ -97,7 +98,7 @@ kbd { border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 
     <summary>Nasıl karar veririm? (tıklayın; ayrıntı: eval/d2-etiketleme.md)</summary>
     <p>Her örnek bir commit. İki tür var:</p>
     <ul>
-      <li><b class="kind buggy">Hatalı (SZZ)</b>: Otomatik yöntem bu commit'in bir hata getirdiğini söylüyor. 1. kutu commit'in değişikliği; <span style="background:var(--add-hi)">koyu yeşil</span> satırlar sonradan düzeltilen satırlar (beklenen bulgu). Altındaki kutular hatayı düzelten commit'ler.
+      <li><b class="kind buggy">Hatalı</b>: Örnek, gerçek bir düzeltmenin tersine çevrilmesiyle oluşturuldu. 1. kutu tersine çevrilmiş değişikliktir; <span style="background:var(--add-hi)">koyu yeşil</span> satırlar düzeltmenin geri aldığı satırlardır (beklenen bulgu). Altında özgün düzeltme gösterilir.
         <ul>
           <li><b>Doğru</b>: commit gerçekten hata getiriyor ve vurgulu satırlar hatanın yerini gösteriyor.</li>
           <li><b>Kısmen</b>: commit hata getiriyor ama vurgulu satırlar hatanın yerini eksik ya da fazla gösteriyor.</li>
@@ -113,7 +114,8 @@ kbd { border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 
 </main>
 <script>
 const ITEMS = __DATA__;
-const KEY = "aegis-d2-etiket";
+const KEY = "aegis-d2-etiket-__DATASET_ID__";
+const EXPORT_PREFIX = "__EXPORT_PREFIX__";
 const OPTIONS = {
   buggy: [["dogru", "Doğru", "hata burada, satırlar doğru", "yes"],
           ["kismen", "Kısmen", "hata burada, satırlar eksik/fazla", "part"],
@@ -124,8 +126,15 @@ const OPTIONS = {
           ["belirsiz", "Belirsiz", "karar veremedim", "maybe"]],
 };
 let state = {answers: {}, notes: {}, who: "", cur: 0};
-try { state = Object.assign(state, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
-function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+function storageKey(who) {
+  const name = String(who || "").normalize("NFKC").trim().toLocaleLowerCase("tr-TR") || "default";
+  return `${KEY}:${name}`;
+}
+function save() {
+  try {
+    localStorage.setItem(storageKey(state.who), JSON.stringify(state));
+  } catch (e) {}
+}
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
 
 function renderDiff(diff, expected) {
@@ -163,15 +172,15 @@ function render() {
   const it = ITEMS[state.cur];
   const opts = OPTIONS[it.label];
   const ans = state.answers[it.sha];
-  const fixes = it.fixes.map(f => `<h3>Hatayı düzelten commit <span class="path">${esc(f.sha.slice(0, 10))}</span></h3>
+  const fixes = it.fixes.map(f => `<h3>Özgün düzeltme <span class="path">${esc(f.sha.slice(0, 10))}</span></h3>
     <p class="explain">${esc(f.subject)} · ${esc(f.date)} · <a href="${f.url}" target="_blank" rel="noopener">GitHub</a></p>
     ${renderDiff(f.diff, [])}`).join("");
   document.getElementById("item").innerHTML = `
     <div class="commit"><span class="tag">${state.cur + 1}/${ITEMS.length}</span>
-      <span class="title"><span class="kind ${it.label}">${it.label === "buggy" ? "Hatalı (SZZ)" : "Temiz"}</span> · ${esc(it.subject)}</span>
+      <span class="title"><span class="kind ${it.label}">${it.label === "buggy" ? "Hatalı (tersine çevrilmiş düzeltme)" : "Temiz"}</span> · ${esc(it.subject)}</span>
       <span class="meta">${esc(it.repo)} · ${esc(it.sha.slice(0, 10))} · ${esc(it.date)} · <a href="${it.url}" target="_blank" rel="noopener">GitHub</a></span></div>
     <h3>1. Commit'in değişikliği</h3>
-    ${it.label === "buggy" ? `<p class="explain">Koyu yeşil: sonradan düzeltilen satırlar (${it.expected.length}).</p>` : ""}
+    ${it.label === "buggy" ? `<p class="explain">Koyu yeşil: düzeltmenin geri aldığı ve ters diff'te eklenen satırlar (${it.expected.length}).</p>` : ""}
     ${renderDiff(it.diff, it.expected)}
     ${fixes}
     <div class="decide ${opts.length === 4 ? "four" : ""}">${opts.map(([v, t, s, c], i) =>
@@ -189,7 +198,10 @@ function render() {
     `<button class="chip ${state.answers[x.sha] || ""}${i === state.cur ? " cur" : ""}" data-i="${i}">${i + 1}</button>`).join("");
   document.querySelectorAll(".chip").forEach(c => c.onclick = () => { state.cur = +c.dataset.i; save(); render(); });
 }
-function choose(v) { state.answers[ITEMS[state.cur].sha] = v; save(); go(1); }
+function choose(v) {
+  if (!state.who) { alert("Önce adınızı yazıp 'Bu adla devam et' düğmesine basın."); return; }
+  state.answers[ITEMS[state.cur].sha] = v; save(); go(1);
+}
 function go(d) { state.cur = Math.min(ITEMS.length - 1, Math.max(0, state.cur + d)); save(); render(); window.scrollTo(0, 0); }
 document.addEventListener("keydown", e => {
   if (e.target.tagName === "INPUT") return;
@@ -200,15 +212,25 @@ document.addEventListener("keydown", e => {
 });
 const who = document.getElementById("who");
 who.value = state.who;
-who.oninput = () => { state.who = who.value.trim(); save(); };
+document.getElementById("setWho").onclick = () => {
+  const name = who.value.trim();
+  if (!name) { alert("Devam etmek için adınızı girin."); return; }
+  const next = {answers: {}, notes: {}, who: name, cur: 0};
+  try { Object.assign(next, JSON.parse(localStorage.getItem(storageKey(name)) || "{}")); } catch (e) {}
+  next.who = name;
+  state = next;
+  save();
+  render();
+};
 document.getElementById("export").onclick = () => {
+  if (!state.who) { alert("Önce adınızı yazıp 'Bu adla devam et' düğmesine basın."); return; }
   const q = s => '"' + String(s).replace(/"/g, '""') + '"';
   const rows = ["no,repo,sha,label,answer,note,labeler"].concat(ITEMS.map((x, i) =>
     [i + 1, x.repo, x.sha, x.label, state.answers[x.sha] || "", state.notes[x.sha] || "", state.who].map(q).join(",")));
   const blob = new Blob(["﻿" + rows.join("\n")], {type: "text/csv;charset=utf-8"});
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = `d2-kontrol-${(state.who || "etiketleyen").replace(/[^\w-]+/g, "_")}.csv`;
+  link.download = `${EXPORT_PREFIX}-kontrol-${(state.who || "etiketleyen").replace(/[^\w-]+/g, "_")}.csv`;
   link.click();
 };
 render();
