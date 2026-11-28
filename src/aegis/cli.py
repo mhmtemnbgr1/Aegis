@@ -940,6 +940,38 @@ def fetch_state_cmd(
         console.print(f"Hafıza indeksi kartlardan kuruldu: {len(index.ids)} kart")
 
 
+@app.command()
+def dashboard(
+    root: Path = typer.Option(Path("."), help="Veri setlerinin ve sonuçların okunacağı repo."),
+    port: int = typer.Option(8501, help="Yerel port."),
+    open_browser: bool = typer.Option(True, "--open/--no-open", help="Tarayıcıda aç."),
+) -> None:
+    """Yerel, salt okunur dashboard'u açar. `uv sync --extra dashboard` gerekir. (FR-60)"""
+    import importlib.util
+    import threading
+    import webbrowser
+
+    if importlib.util.find_spec("streamlit") is None:
+        console.print("[red]Dashboard için Streamlit gerekir: uv sync --extra dashboard[/red]")
+        raise typer.Exit(1)
+    app_path = Path(__file__).parent / "dashboard" / "app.py"
+    url = f"http://localhost:{port}"
+    # headless: Streamlit ilk açılışta terminalden e-posta sorar ve bekler; tarayıcıyı biz açarız.
+    command = [
+        sys.executable, "-m", "streamlit", "run", str(app_path),
+        "--server.headless", "true",
+        "--server.address", "localhost",
+        "--server.port", str(port),
+        "--browser.gatherUsageStats", "false",
+        "--client.toolbarMode", "minimal",
+    ]  # fmt: skip
+    env = {**os.environ, "AEGIS_ROOT": str(root.resolve())}
+    console.print(f"Aegis Dashboard: {url} (kapatmak için Ctrl+C)")
+    if open_browser:
+        threading.Timer(2.0, webbrowser.open, [url]).start()
+    raise typer.Exit(subprocess.call(command, env=env))
+
+
 @app.command(name="eval")
 def eval_() -> None:
     """Değerlendirme deneylerini koşturur. (Faz 7)"""
