@@ -115,10 +115,10 @@ Düzeltme ve test ajanları, Docker sandbox, doğrulayıcı, BugsInPy ve suggest
 ## Faz 6 — Değerlendirme · 6 Ara
 
 - [ ] D1, D2 ve D4 veri setlerinin tamamlanması — D1 ve D2 (300 + 300) hazır; 102 örneklik elle etiketleme bekliyor ([yönerge](eval/d2-etiketleme.md)); D4 bekliyor
-- [ ] RQ1: ucuz LLM triage taban çizgisi — betik ve 1.250 PR'lık örneklem hazır, Ollama koşusu bekliyor ([kılavuz](docs/llm-experiments.md))
-- [ ] RQ2: hafızasız / plasebo / vektör / hibrit karşılaştırması — betik, D2 ve hafıza hazırlığı hazır, Ollama koşusu bekliyor
-- [ ] Deneylerin tek komutla koşturulması — `eval/rq2.py` ve `eval/rq1_triage.py` (kuru koşu, kaldığı yerden devam)
-- [ ] İstatistiksel testler, tablolar, grafikler — LLM'siz kısım hazır (`docs/results.md`); LLM deneyleri bekliyor
+- [x] RQ1: ucuz LLM triage taban çizgisi — 1.250 PR, Qwen2.5-Coder 1.5B; risk modeli ve sezgisel kural her payda anlamlı derecede iyi (`docs/results.md` §7)
+- [ ] RQ2: hafızasız / plasebo / vektör / hibrit karşılaştırması — Qwen2.5-Coder 7B ile iki set koşuldu, hafıza anlamlı fark yaratmadı (`docs/results.md` §8); ikinci model bekliyor (#36)
+- [x] Deneylerin tek komutla koşturulması — `eval/rq2.py` ve `eval/rq1_triage.py` (kuru koşu, kaldığı yerden devam)
+- [ ] İstatistiksel testler, tablolar, grafikler — RQ1 ve RQ2 tabloları ve testleri `docs/results.md` içinde; RQ4 yapılmadı (isteğe bağlı)
 - [ ] Dogfooding verileri
 - [ ] *(opsiyonel)* RQ4: PR-Agent karşılaştırması (aynı yerel model)
 - [ ] *(opsiyonel)* RQ5: kör kullanıcı çalışması (6–10 geliştirici)
@@ -131,6 +131,6 @@ Gereklilikler: [docs/presentation.md](docs/presentation.md)
 - [x] Kaynakçanın doğrulanması (künyeler yayıncı sayfalarıyla kontrol edildi, kullanılan yöntemler eklendi)
 - [x] Demo reposu ve demo PR'ları — fork'ta canlı çalışıyor (LLM'siz yorumlar); LLM bulguları yerel çalıştırmada (#98)
 - [ ] Canlı demo provası ve yedek video
-- [ ] Sık sorulan soruların sonuç rakamlarıyla güncellenmesi — LLM'siz rakamlar eklendi; LLM deneyleri bekliyor
+- [x] Sık sorulan soruların sonuç rakamlarıyla güncellenmesi — LLM'siz ve LLM'li rakamlar eklendi
 - [ ] *(opsiyonel)* Veri setinin açık lisansla yayınlanması
 - [ ] *(opsiyonel)* Bildiri (UYMS veya benzeri)
