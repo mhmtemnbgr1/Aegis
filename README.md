@@ -52,7 +52,7 @@ Hafıza, geri getirilen hatanın eski düzeltmesini ilk sırada gösteriyor. Oll
 | 3 | ML gatekeeper: LR / RF / LightGBM, zaman sıralı doğrulama, kalibrasyon, açıklamalar | ✅ |
 | 4 | Bug-fix hafızası: hata kartları, hibrit arama, analiz ajanına bağlam, durum arşivi | ✅ |
 | ~~5~~ | ~~Patch ve doğrulama~~ | Kapsam dışı (gelecek çalışma) |
-| 6 | Değerlendirme: RQ1 (gatekeeper) ve RQ2 (hafıza) | LLM'siz kısım ✅ · LLM deneyleri koşuluyor |
+| 6 | Değerlendirme: RQ1 (gatekeeper) ve RQ2 (hafıza) | ✅ (LLM'siz ve yerel Ollama ile LLM'li deneyler) |
 | 7 | Sunum ve belgeler: [docs/presentation.md](docs/presentation.md) | Sürüyor |
 
 Her faz bir önceki fazın çalışan sistemini derinleştirir. Ayrıntılı görevler [TODO.md](TODO.md) dosyasında ve [GitHub Issues](https://github.com/mhmtemnbgr1/Aegis/issues) altında.
@@ -68,8 +68,10 @@ Altı açık kaynak Python projesinin (black, luigi, sanic, scrapy, tornado, tqd
 | Hafıza sinyalinin katkısı (dar bütçe) | +4 puan; aynı dağılımlı ama bilgisiz plasebo kazanç getirmiyor |
 | Hafıza getirme (hibrit) | İlgili eski hata vakaların %47'sinde ilk sırada, %64'ünde ilk 5'te |
 | Gerçek PR'larda süre (D4) | Medyan 0,02 sn, p95 4,3 sn; hiçbir PR engellenmedi |
+| Ucuz LLM triage (Qwen2.5-Coder 1.5B, %40 LLM payı) | Hatalı PR'ların %53'ü (risk modeli %85, sezgisel %74; ikisi de anlamlı derecede iyi) |
+| Hafızalı LLM incelemesi (Qwen2.5-Coder 7B) | Hafıza tespiti artırmadı: hafızasız %45, hibrit %37, plasebo %41 (revert seti; fark anlamlı değil) |
 
-Tüm tablolar, güven aralıkları ve testler [docs/results.md](docs/results.md) içinde (`uv run python eval/results.py` ile yeniden üretilir). LLM'li deneyler (RQ1 ucuz LLM triage, RQ2 hafızalı inceleme) [docs/llm-experiments.md](docs/llm-experiments.md) kılavuzuyla koşuluyor. Bilinen sınırlama: SZZ etiketlerinin elle kontrolde yalnızca %19–31'i doğru; RQ2 bu yüzden hatalı örnekler için SZZ yerine tersine çevrilmiş gerçek düzeltmeleri kullanır ([eval/README.md](eval/README.md)).
+Tüm tablolar, güven aralıkları ve testler [docs/results.md](docs/results.md) içinde (`uv run python eval/results.py` ile yeniden üretilir). LLM'li deneyler (RQ1 ucuz LLM triage, RQ2 hafızalı inceleme) [docs/llm-experiments.md](docs/llm-experiments.md) kılavuzuyla yerel Ollama'da koşuldu. Bilinen sınırlama: SZZ etiketlerinin elle kontrolde yalnızca %19–31'i doğru; RQ2 bu yüzden hatalı örnekler için SZZ yerine tersine çevrilmiş gerçek düzeltmeleri kullanır ([eval/README.md](eval/README.md)).
 
 ## Kullanım
 

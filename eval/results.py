@@ -1,11 +1,13 @@
-"""Sonuç belgesi: tüm LLM'siz sonuçları tek yerde toplar (#53) → `docs/results.md`.
+"""Sonuç belgesi: tüm sonuçları tek yerde toplar (#53) → `docs/results.md`.
 
 Girdiler (önce üretilmiş olmalı):
 - `.aegis/data/d1.json`, `d1.parquet`, `d1-pr.parquet` (veri),
 - `eval/labels/szz-kontrol.csv`, `fix-kontrol.csv` (etiket kalitesi),
 - `eval/reports/train-<repo>-none.json` ve `...-none-cross.json` (`aegis train`, repo içi / repolar arası),
 - `eval/reports/rq1/curves.json` (`eval/rq1_curve.py`),
-- `eval/reports/retrieval.json` (`eval/retrieval_eval.py`).
+- `eval/reports/retrieval.json` (`eval/retrieval_eval.py`),
+- `eval/results/rq1-triage/<model>/summary.md` ve `eval/results/rq2{,-szz}/<model>/summary.md`
+  (`eval/rq1_triage.py ozet`, `eval/rq2.py ozet`; LLM'li deneyler, bölüm 7–8).
 
 İstatistik: güven aralıkları birimler (repo × pencere ya da sorgu) üzerinden 10.000 tekrarlı
 yüzdelik bootstrap ile; eşleştirilmiş karşılaştırmalar Wilcoxon işaretli sıra testi, etki büyüklüğü
@@ -31,6 +33,8 @@ from scipy.stats import rankdata, wilcoxon
 
 DATA, REPORTS, LABELS = Path(".aegis/data"), Path("eval/reports"), Path("eval/labels")
 OUT = Path("docs/results.md")
+RESULTS = Path("eval/results")
+TRIAGE_MODEL, REVIEW_MODEL = "qwen2.5-coder:1.5b", "qwen2.5-coder:7b"
 RNG = np.random.default_rng(2026)
 BOOT = 10_000
 
@@ -426,13 +430,63 @@ def section_d4() -> list[str]:
     ]
 
 
+def _summary_body(path: Path, levels: int) -> list[str]:
+    """Deney betiğinin `ozet` çıktısı: ilk başlık atılır, alt başlıklar `levels` seviye iner."""
+    lines = path.read_text("utf-8").splitlines()
+    if lines and lines[0].startswith("# "):
+        lines = lines[1:]
+    return [("#" * levels + line) if line.startswith("#") else line for line in lines]
+
+
+def section_rq1_llm() -> list[str]:
+    """Ucuz LLM triage (#67), `eval/rq1_triage.py ozet` çıktısından."""
+    path = RESULTS / "rq1-triage" / TRIAGE_MODEL.replace(":", "_") / "summary.md"
+    if not path.is_file():
+        return []
+    return [
+        f"## 7. RQ1 — Ucuz LLM triage ({TRIAGE_MODEL})",
+        "",
+        "Bölüm 4'teki 25 pencerenin her birinden 50 PR örneklendi ve küçük bir yerel modele "
+        '"bu PR hatalı mı" diye puanlatıldı; aynı PR\'lar aynı paylarla risk modeli ve sezgisel '
+        "kuralla karşılaştırılır.",
+        *_summary_body(path, 1),
+    ]
+
+
+def section_rq2_llm() -> list[str]:
+    """LLM'li RQ2 (#36): hafıza varyantlarıyla inceleme, `eval/rq2.py ozet` çıktısından."""
+    sets = [
+        ("8.1. Revert seti", "rq2"),
+        ("8.2. SZZ seti (gerçekçilik; temiz örnekler revert setiyle ortak)", "rq2-szz"),
+    ]
+    paths = [
+        (title, RESULTS / folder / REVIEW_MODEL.replace(":", "_") / "summary.md")
+        for title, folder in sets
+    ]
+    if not any(p.is_file() for _, p in paths):
+        return []
+    out = [
+        f"## 8. RQ2 — Hafızalı LLM incelemesi ({REVIEW_MODEL})",
+        "",
+        "Her örnek dört varyantla incelendi: hafızasız (`none`), alakasız kartlar (`placebo`), "
+        "vektör getirmesi (`vector`) ve hibrit getirme (`hybrid`). Bağlam penceresi 16.384 token "
+        "(sığmayan istemlerde 32.768), sıcaklık 0. Tespit: hatalı commit'te en az bir bulgunun "
+        "beklenen hatalı satıra ±3 satır yakın olması; yanlış alarm: temiz commit'te herhangi bir "
+        "bulgu olması.",
+    ]
+    for title, path in paths:
+        if path.is_file():
+            out += ["", f"### {title}", *_summary_body(path, 2)]
+    return out
+
+
 def main() -> None:
     parts = [
-        "# Sonuçlar (LLM'siz)",
+        "# Sonuçlar",
         "",
-        "> Bu belge `eval/results.py` ile üretilir; elle düzenlemeyin. LLM gerektiren deneyler "
-        "(ucuz LLM triage #67, LLM'li RQ2, RQ4) burada yok. Yöntem ayrıntıları ve sınırlamalar "
-        "`docs/architecture.md` ve `docs/mining-schema.md` içinde.",
+        "> Bu belge `eval/results.py` ile üretilir; elle düzenlemeyin. Bölüm 1–6 LLM'siz, bölüm 7–8 "
+        "yerel Ollama modeliyle koşulan deneylerdir (`docs/llm-experiments.md`); RQ4 burada yok. "
+        "Yöntem ayrıntıları ve sınırlamalar `docs/architecture.md` ve `docs/mining-schema.md` içinde.",
         "",
     ]
     for section in (
@@ -442,10 +496,12 @@ def main() -> None:
         section_rq1,
         section_rq2,
         section_d4,
+        section_rq1_llm,
+        section_rq2_llm,
     ):
         parts += section() + [""]
     parts += [
-        "## 7. Geçerlilik notları",
+        "## 9. Geçerlilik notları",
         "",
         "- Etiketler SZZ'ye dayanır; elle kontrolde SZZ eşlemelerinin yalnızca ~%31'i doğru çıktı. "
         "Tüm RQ1 ve RQ2 sayıları bu gürültülü etiketlere göredir. Issue etiketi, taşınan satır ve "
@@ -455,6 +511,11 @@ def main() -> None:
         "kararların büyük çoğunluğu önerilerle aynı (`docs/mining-schema.md`).",
         "- Hafızanın vektör kolu nöral değil LSA'dır (yerel LLM kurulmadı).",
         "- Fix sınıflandırıcısı aynı 200 commit üzerinde ayarlandı; precision/recall iyimserdir.",
+        "- LLM'li deneyler (bölüm 7–8) tek model ve tek koşudur (sıcaklık 0); başka model ya da "
+        "prompt sonuçları değiştirebilir. Hata veren koşular (RQ2'de %1'in altında) eşleştirilmiş "
+        "tasarım gereği o örneğin tüm varyantlarıyla birlikte dışarıda kalır.",
+        "- RQ2'nin doğrulanmış alt kümesinde (#69) revert setinin hatalı örneği yoktur; alt küme "
+        "küçüktür (33–43 örnek) ve yalnızca yön gösterir.",
     ]
     OUT.write_text("\n".join(parts) + "\n", "utf-8")
     print(f"→ {OUT}")

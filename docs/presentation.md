@@ -119,6 +119,28 @@ Böylece model ne kadar iyi çıkarsa çıksın sonuç savunulabilir olur; ekip 
 - **Plasebo hafıza:** İyileşmenin prompt uzunluğundan değil, hafızanın içeriğinden geldiğini kanıtlar.
 - **PR-Agent:** "CodeRabbit'ten ne farkınız var?" sorusunun sayısal cevabıdır. Açık kaynak olduğu ve Ollama'yı desteklediği için aynı yerel model ve veriyle koşturulabilir.
 
+**RQ1 ucuz LLM triage sonucu (#67):** Qwen2.5-Coder 1.5B, aynı D1 test kümesindeki 1.250 PR'da LR ve sezgisel taban çizgileriyle karşılaştırıldı. Hücreler 25 zaman penceresindeki yakalanan hatalı PR oranının ortalaması ve %95 bootstrap güven aralığıdır. Efor payı, LLM'e gönderilen PR oranını gösterir.
+
+| LLM'e gönderilen PR | Ucuz LLM triage | LR (tam + hafıza) | Sezgisel |
+| ---: | ---: | ---: | ---: |
+| %10 | %9,2 [5,3; 13,5] | %37,5 [28,8; 47,5] | %24,8 [17,4; 34,2] |
+| %20 | %23,0 [15,7; 30,4] | %63,0 [55,4; 71,1] | %49,1 [40,6; 58,3] |
+| %40 | %53,3 [44,0; 62,1] | %84,9 [78,8; 90,6] | %74,1 [65,4; 81,3] |
+| %60 | %84,0 [76,6; 90,9] | %94,4 [90,7; 97,7] | %92,4 [88,3; 96,2] |
+
+LLM triage PR başına ortalama 0,8 sn, 1.308 girdi ve 61 çıktı tokenı kullandı. Eşleştirilmiş Wilcoxon testi, LLM'in her efor payında LR'dan anlamlı ölçüde düşük recall verdiğini (p ≤ 0,018), sezgisel taban çizgisinden de anlamlı ölçüde düşük olduğunu (p ≤ 0,003) gösterdi. [Ham sonuçlar ve ayrıntılı analiz](../eval/results/rq1-triage/qwen2.5-coder_1.5b/summary.md).
+
+**RQ2 hafızalı LLM incelemesi sonucu (#36):** Qwen2.5-Coder 7B, D2'nin her örneğini dört varyantla inceledi: hafızasız, plasebo (aynı repodan, commit'in dosyalarına dokunmayan kartlar), vektör getirmesi ve hibrit getirme. Bağlam penceresi 16.384 token, sıcaklık 0. Yalnızca dört varyantın da başarıyla tamamlandığı örnekler sayıldı (revert setinde 582/600). Tespit, en az bir bulgunun beklenen hatalı satıra ±3 satır yakın olmasıdır.
+
+| Varyant | Tespit, revert seti (288 hatalı) | Tespit, SZZ seti (294 hatalı) | Yanlış alarm (294 temiz) |
+| --- | ---: | ---: | ---: |
+| Hafızasız | 130 (%45,1) | 63 (%21,4) | 144 (%49,0) |
+| Plasebo | 117 (%40,6) | 76 (%25,9) | 127 (%43,2) |
+| Vektör | 106 (%36,8) | 75 (%25,5) | 130 (%44,2) |
+| Hibrit | 107 (%37,2) | 62 (%21,1) | 122 (%41,5) |
+
+McNemar testinde (Holm düzeltmeli) hiçbir varyant farkı anlamlı değil. Revert setinde hafızalı varyantlar hafızasız incelemeden daha az hata yakaladı (vektör − hafızasız p = 0,058; hibrit − hafızasız p = 0,070). Gerçek hafıza ile plasebo arasında ise fark yok (Holm düzeltmeli p ≥ 0,72). Yani bu modelde hafıza tespiti artırmıyor; görülen küçük etki kartların içeriğinden değil, uzayan bağlamdan geliyor. Yanlış alarmlar hafızayla biraz azalıyor ama bu fark da anlamlı değil. [Tüm tablolar](results.md#8-rq2--hafızalı-llm-incelemesi-qwen25-coder7b).
+
 ### 5.3 Metrikler
 
 | RQ | Metrikler |
@@ -174,10 +196,10 @@ Demo PR'ları [public HTTPie fork'unda](https://github.com/muratEfeErgin/cli) a�
 Üç fark var: Her PR'a LLM çağırmıyoruz (K1); LLM'e reponun kendi geçmiş hatalarını veriyoruz (K2); her şey yerelde çalışıyor, kod dışarı çıkmıyor ve API ücreti yok. K1 ve K2'nin etkisini ablation deneyleriyle (RQ1, RQ2) sayıyla gösteriyoruz.
 
 ### "Neden XGBoost/LightGBM? Küçük bir LLM de PR'ın riskli olup olmadığına karar veremez mi?"
-Bunu ölçüyoruz (RQ1, #67): RQ1 eğrisinin 25 zaman penceresinden alınan 1.250 PR'ı küçük bir yerel LLM'e (Qwen2.5-Coder 1.5B) "riskli mi?" diye soruyor, aynı PR'larda risk modeliyle karşılaştırıyoruz. LLM'siz kısım hazır: risk modeli PR'ların %40'ı LLM'e gidince hatalı PR'ların %82'sini yakalıyor, sezgisel kural %75'ini (fark anlamlı, p = 0,016). Model ayrıca çok daha ucuz (milisaniyeler, GPU yok), deterministik ve her skoru nedenleriyle açıklıyor. LLM triage sonucu deney bitince buraya eklenecek.
+Bunu ölçtük (RQ1, #67): RQ1 eğrisinin 25 zaman penceresinden alınan 1.250 PR'a yerel Qwen2.5-Coder 1.5B ile risk puanı verildi ve aynı PR'lardaki LR ve sezgisel taban çizgileriyle karşılaştırıldı. PR'ların %40'ı incelemeye ayrıldığında LLM triage hatalı PR'ların %53,3'ünü; LR %84,9'unu, sezgisel kural %74,1'ini yakaladı. LLM triage PR başına ortalama 0,8 sn ve 1.369 toplam token kullandı; LR puanlaması CPU'da milisaniyeler sürer. Ayrıntılar ve diğer efor payları §5.2'deki tabloda.
 
 ### "Hafızalı versiyonun iyi çıkması sadece prompt uzadığı için olamaz mı?"
-Bunu iki yerde plaseboyla sınıyoruz. LLM'siz ölçümde hafıza sinyali risk modeline eklenince dar bütçede (%10 LLM payı) yakalanan hatalı PR oranı 4 puan artıyor (p = 0,012); aynı dağılımda ama bilgisiz plasebo hiçbir kazanç getirmiyor. LLM'li RQ2'de (#36) hafızalı inceleme, aynı sayıda ilgisiz kart (aynı repodan, commit'in dosyalarına dokunmayan) verilen plasebo varyantıyla karşılaştırılıyor; bu deney koşturulmayı bekliyor.
+Bunu iki yerde plaseboyla sınıyoruz. LLM'siz ölçümde hafıza sinyali risk modeline eklenince dar bütçede (%10 LLM payı) yakalanan hatalı PR oranı 4 puan artıyor (p = 0,012); aynı dağılımda ama bilgisiz plasebo hiçbir kazanç getirmiyor. LLM'li RQ2'de (#36) hafızalı inceleme, aynı sayıda ilgisiz kart (aynı repodan, commit'in dosyalarına dokunmayan) verilen plasebo varyantıyla karşılaştırıldı. Qwen2.5-Coder 7B ile hafıza ne tespiti ne de yanlış alarmı anlamlı biçimde değiştirdi. Revert setinde hafızalı ve plasebolu varyantlar hafızasız incelemeden biraz daha az hata yakaladı (hafızasız %45,1, hibrit %37,2, plasebo %40,6; Holm düzeltmesiyle anlamlı değil). Hafıza ile plasebo arasında fark yok. Yani hafızanın değeri LLM'li incelemede bu modelle gösterilemedi; LLM'siz risk modelinde ise gösterildi. Ayrıntılar §5.2'deki tabloda.
 
 ### "JIT defect prediction zaten var. Yeni olan ne?"
 Bu modeller tek başına bir olasılık üretip bırakıyor. Biz bu olasılığı LLM için bir maliyet kapısı olarak, SZZ eşlemelerini de LLM'e bağlam olarak kullanıyoruz. Tahmin, açıklamalı ve somut bir inceleme yorumuna dönüşüyor.

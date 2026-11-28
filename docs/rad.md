@@ -8,6 +8,8 @@
 | Date | 2026-10-19 |
 | Status | Phase 0 (infrastructure) is complete. Phase 1 (end-to-end skeleton) is in progress. |
 
+The typeset version with all diagrams (use case, class, sequence, state and activity diagrams, interface mockups) is [`docs/rad/Aegis-RAD.pdf`](rad/Aegis-RAD.pdf); the images are in [`docs/rad/img/`](rad/img/). Both reflect the October 2026 draft: the scope was later narrowed, so patch generation, the patch state machine and cloud LLM providers are out of scope (see `TODO.md`).
+
 Each requirement has a fixed identifier (FR-xx for functional and NFR-xx for nonfunctional requirements) so that it can be traced to the use cases and to the project tasks. Identifiers are grouped by area, which is why the numbering has gaps.
 
 ## Contents

@@ -13,6 +13,76 @@ ollama pull qwen2.5-coder:1.5b     # RQ1 ucuz triage
 
 Ollama başka bir makinedeyse `OLLAMA_HOST=http://<adres>:11434` ortam değişkeni.
 
+## RQ2 yeniden koşusu (Kasım 2026) — adım adım
+
+İlk RQ2 koşusunda (#121) bağlam penceresi ayarlanmamıştı. Ollama varsayılan pencereyi (2048 ya da 4096 token) aşan istemleri hata vermeden kesti; hafızalı varyantların istemleri uzun olduğu için çok daha sık kesildi (revert setinde `none` %6, `hybrid` %56). Bu yüzden RQ2 baştan koşulur. RQ1 triage sonuçları geçerlidir, **RQ1 yeniden koşulmaz**.
+
+> **Durum:** Yeniden koşu tamamlandı (#124; ana set 2.400, SZZ seti 1.200 sonuç, hata oranı %1'in altında). Sonuçlar `docs/results.md` §8'de.
+
+Kod artık bağlam penceresini kendisi ayarlar (16.384 token; sığmayan birkaç istem için 32.768), sıcaklığı 0 verir, her satıra kullanılan pencereyi yazar ve pencereyi dolduran yanıtı hata sayar. Bağlam penceresi kaydı olmayan eski satırlar otomatik yok sayılır. **Komutlara ayar eklenmez, dosya silinmez ya da taşınmaz.**
+
+Bu adımları bir yapay zekâ asistanıyla yürütüyorsanız asistana bu bölümü olduğu gibi verin. Asistan kodu, veri setlerini, prompt'ları ya da ayarları değiştirmemeli; sonuç dosyalarını elle düzenlememelidir.
+
+**0. Ollama ayarı (bir kez, her makinede).** Bellek kullanımını azaltan iki Ollama ayarı tüm koşu boyunca açık olur; 6 GB'lık ekran kartlarında modelin karta sığmasını sağlar. Windows'ta PowerShell'de:
+
+```powershell
+setx OLLAMA_FLASH_ATTENTION 1
+setx OLLAMA_KV_CACHE_TYPE q8_0
+```
+
+Ardından Ollama'yı görev çubuğundaki simgesinden **Quit** ile tamamen kapatıp yeniden açın (ayar ancak yeniden başlatınca geçerli olur). Linux/macOS'ta aynı değişkenler `ollama serve` başlatılırken verilir.
+
+**1. Depoyu güncelleyin:**
+
+```bash
+git checkout main
+git pull
+uv sync --extra ollama
+ollama list            # qwen2.5-coder:7b görünmeli; yoksa: ollama pull qwen2.5-coder:7b
+```
+
+**2. Kuru koşu (~10–20 dk, 48 çağrı):**
+
+```bash
+uv run python eval/rq2.py kos --model qwen2.5-coder:7b --limit 12
+```
+
+Kontrol edin:
+
+- Son satır `48 yeni koşu (48 hedef), 0 hata` gibi olmalı. Birkaç hata sorun değildir; yarısından fazlası hataysa **durun** ve hata mesajını bildirin.
+- İlerleme satırlarında `ctx=16384` (bazen `ctx=32768`) görünmeli.
+- `UYARI: model ekran kartına tam sığmadı` yazısı çıkarsa 0. adım uygulanmamış ya da Ollama yeniden başlatılmamış demektir; düzeltip devam edin. Uyarı yine de çıkıyorsa koşu geçerlidir, yalnızca yavaştır; devam edin ve PR'da belirtin.
+- Art arda 10 hata olursa betik kendisi durur (`DURDU: ...`); genellikle Ollama kapalıdır. Ollama'yı açıp aynı komutu çalıştırın.
+
+Kuru koşunun sonuçları tam koşuda tekrar kullanılır, silinmez.
+
+**3. Ana set (~20 saat, 2.400 çağrı):**
+
+```bash
+uv run python eval/rq2.py kos --model qwen2.5-coder:7b
+uv run python eval/rq2.py ozet --model qwen2.5-coder:7b
+```
+
+**4. Szz seti (~14 saat, 1.200 çağrı).** Ana set bitmeden başlamayın; szz özeti temiz örnekleri ana setten alır.
+
+```bash
+uv run python eval/rq2.py kos --set szz --model qwen2.5-coder:7b
+uv run python eval/rq2.py ozet --set szz --model qwen2.5-coder:7b
+```
+
+Koşu yarıda kalırsa (elektrik, uyku, kapanma) **aynı komutu yeniden çalıştırın**; tamamlananlar atlanır, hatalılar yeniden denenir. Dizüstü bilgisayarda şarj kablosu takılı olmalı ve uyku kapalı olmalıdır. Bütün RQ2 aynı makinede koşulmalıdır.
+
+**5. Sonuçları gönderin:**
+
+```bash
+git checkout -b results/rq2-rerun
+git add eval/results/rq2 eval/results/rq2-szz
+git commit -m "results: RQ2 rerun with a fixed context window"
+git push -u origin results/rq2-rerun
+```
+
+PR açıklamasına yazın: makine ve ekran kartı, 0. adımın uygulanıp uygulanmadığı, uyarı çıkıp çıkmadığı, toplam süre, iki setin `ozet` çıktısındaki hata sayıları. Ana set bitince ara sonuç olarak gönderilebilir.
+
 ## RQ2 — hafızasız / plasebo / vektör / hibrit
 
 600 commit (300 hatalı + 300 temiz, `eval/datasets/d2.jsonl`) × 4 varyant = 2.400 inceleme.

@@ -108,6 +108,9 @@ class AgentConfig(_Section):
     model: str = "qwen2.5-coder:7b"
     temperature: float | None = Field(default=0.0, ge=0, le=2)
     timeout_seconds: float = Field(default=60, gt=0)
+    num_ctx: int | None = Field(default=None, ge=2048)
+    """Ollama bağlam penceresi (token). Boşsa Ollama'nın varsayılanı; varsayılanı aşan istemler
+    Ollama tarafından sessizce kesilir. Verilirse istem sığmadığında pencere büyütülür."""
 
 
 class StateConfig(_Section):
