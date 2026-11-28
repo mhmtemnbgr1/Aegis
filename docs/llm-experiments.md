@@ -17,6 +17,8 @@ Ollama başka bir makinedeyse `OLLAMA_HOST=http://<adres>:11434` ortam değişke
 
 İlk RQ2 koşusunda (#121) bağlam penceresi ayarlanmamıştı. Ollama varsayılan pencereyi (2048 ya da 4096 token) aşan istemleri hata vermeden kesti; hafızalı varyantların istemleri uzun olduğu için çok daha sık kesildi (revert setinde `none` %6, `hybrid` %56). Bu yüzden RQ2 baştan koşulur. RQ1 triage sonuçları geçerlidir, **RQ1 yeniden koşulmaz**.
 
+> **Durum:** Yeniden koşu tamamlandı (#124; ana set 2.400, SZZ seti 1.200 sonuç, hata oranı %1'in altında). Sonuçlar `docs/results.md` §8'de.
+
 Kod artık bağlam penceresini kendisi ayarlar (16.384 token; sığmayan birkaç istem için 32.768), sıcaklığı 0 verir, her satıra kullanılan pencereyi yazar ve pencereyi dolduran yanıtı hata sayar. Bağlam penceresi kaydı olmayan eski satırlar otomatik yok sayılır. **Komutlara ayar eklenmez, dosya silinmez ya da taşınmaz.**
 
 Bu adımları bir yapay zekâ asistanıyla yürütüyorsanız asistana bu bölümü olduğu gibi verin. Asistan kodu, veri setlerini, prompt'ları ya da ayarları değiştirmemeli; sonuç dosyalarını elle düzenlememelidir.
