@@ -58,24 +58,24 @@ Ortalama 6 repo üzerinden. Repolar arası genel model repo içi modelden geri k
 
 | Yöntem | %10 LLM | %20 LLM | %40 LLM | %60 LLM |
 | --- | --- | --- | --- | --- |
-| LR (tam + hafıza) | %37,6 [32,6; 43,1] | %59,1 [53,4; 64,6] | %82,0 [77,0; 86,8] | %94,1 [91,3; 96,7] |
-| RF (tam + hafıza) | %35,2 [30,6; 39,8] | %54,6 [49,3; 60,2] | %80,2 [75,3; 84,8] | %92,6 [89,3; 95,6] |
-| LR (tam) | %33,2 [27,6; 39,2] | %54,4 [47,7; 60,7] | %79,5 [74,3; 84,7] | %91,5 [87,6; 94,9] |
-| RF (tam) | %30,2 [26,2; 34,2] | %49,9 [45,2; 54,4] | %77,7 [72,5; 82,8] | %91,3 [88,3; 94,1] |
-| LR (Kamei) | %33,1 [28,3; 37,9] | %52,1 [46,4; 57,5] | %78,0 [72,9; 83,1] | %90,0 [86,2; 93,4] |
-| LR (hafıza plasebosu) | %33,5 [27,6; 39,6] | %54,7 [48,1; 60,8] | %79,6 [74,2; 84,8] | %91,3 [87,6; 94,4] |
-| RF (hafıza plasebosu) | %33,5 [28,7; 38,7] | %49,9 [43,5; 56,6] | %76,2 [71,1; 81,4] | %92,1 [89,1; 94,8] |
-| Sezgisel kural | %29,3 [24,9; 34,1] | %49,3 [43,6; 55,2] | %74,7 [70,2; 79,6] | %89,1 [85,3; 92,7] |
+| LR (tam + hafıza) | %37,6 [32,7; 43,1] | %59,1 [53,4; 64,7] | %82,0 [76,9; 86,8] | %94,1 [91,2; 96,6] |
+| RF (tam + hafıza) | %35,2 [30,5; 39,8] | %54,6 [49,3; 60,2] | %80,2 [75,3; 84,8] | %92,6 [89,2; 95,6] |
+| LR (tam) | %33,2 [27,5; 39,3] | %54,4 [48,0; 60,4] | %79,5 [74,2; 84,7] | %91,5 [87,7; 94,8] |
+| RF (tam) | %30,2 [26,1; 34,1] | %49,9 [45,2; 54,5] | %77,7 [72,7; 82,6] | %91,3 [88,3; 94,1] |
+| LR (Kamei) | %33,1 [28,3; 37,9] | %52,1 [46,5; 57,6] | %78,0 [72,7; 83,1] | %90,0 [86,1; 93,4] |
+| LR (hafıza plasebosu) | %33,5 [27,5; 39,7] | %54,7 [48,1; 60,8] | %79,6 [74,2; 84,7] | %91,3 [87,7; 94,5] |
+| RF (hafıza plasebosu) | %33,5 [28,6; 38,7] | %49,9 [43,6; 56,6] | %76,2 [71,0; 81,5] | %92,1 [89,2; 94,7] |
+| Sezgisel kural | %29,3 [24,8; 34,0] | %49,3 [43,7; 55,2] | %74,7 [70,1; 79,6] | %89,1 [85,3; 92,6] |
 | Rastgele | %10 | %20 | %40 | %60 |
 
 **İşletme noktaları** (eşik önceki pencereden, ölçüm mevcut pencerede):
 
 | Nokta | Yöntem | Eleme (LLM'e gitmeyen) | Recall |
 | --- | --- | --- | --- |
-| maliyet odaklı (hedef %60 eleme) | LR (tam + hafıza) | %58,3 [53,1; 63,1] | %82,2 [75,8; 88,0] |
-| maliyet odaklı (hedef %60 eleme) | Sezgisel kural | %57,7 [53,7; 61,6] | %75,0 [69,3; 80,7] |
-| güvenlik odaklı (hedef ≥ %90 recall) | LR (tam + hafıza) | %53,9 [46,0; 61,6] | %82,7 [74,8; 89,7] |
-| güvenlik odaklı (hedef ≥ %90 recall) | Sezgisel kural | %41,1 [33,1; 49,1] | %86,0 [79,4; 91,6] |
+| maliyet odaklı (hedef %60 eleme) | LR (tam + hafıza) | %58,3 [52,9; 63,1] | %82,2 [75,6; 87,9] |
+| maliyet odaklı (hedef %60 eleme) | Sezgisel kural | %57,7 [53,8; 61,7] | %75,0 [69,4; 80,7] |
+| güvenlik odaklı (hedef ≥ %90 recall) | LR (tam + hafıza) | %53,9 [46,2; 61,9] | %82,7 [74,7; 89,6] |
+| güvenlik odaklı (hedef ≥ %90 recall) | Sezgisel kural | %41,1 [33,0; 48,9] | %86,0 [79,3; 91,6] |
 
 **Güvenlik eşiği alternatifleri** (aynı 25 pencere; ortalama [%95 bootstrap GA]):
 
@@ -83,17 +83,19 @@ Eşikler yalnızca geçmiş pencerelerden seçilir. 90 günlük seçenek, PR tar
 
 | Kural | Yöntem | Eleme (LLM'e gitmeyen) | Gerçekleşen recall |
 | --- | --- | --- | --- |
-| Son 2 pencere, hedef recall %90 | LR (tam + hafıza) | %50,2 [44,2; 55,9] | %88,8 [84,7; 92,5] |
-| Son 2 pencere, hedef recall %90 | Sezgisel kural | %38,9 [33,1; 44,6] | %89,5 [85,4; 93,3] |
-| Son 3 pencere, hedef recall %90 | LR (tam + hafıza) | %49,5 [44,2; 54,8] | %89,5 [85,5; 93,3] |
-| Son 3 pencere, hedef recall %90 | Sezgisel kural | %37,6 [32,8; 42,4] | %91,2 [87,7; 94,4] |
-| Son pencere, hedef recall %95 | LR (tam + hafıza) | %48,2 [40,6; 56,3] | %86,6 [79,3; 92,6] |
-| Son pencere, hedef recall %95 | Sezgisel kural | %31,7 [23,6; 39,9] | %89,9 [83,1; 95,5] |
-| 90 gün olgunlaşmış etiketler, hedef recall %90 | LR (tam + hafıza) | %49,1 [43,4; 54,6] | %89,2 [85,4; 92,7] |
-| 90 gün olgunlaşmış etiketler, hedef recall %90 | Sezgisel kural | %36,2 [31,4; 41,2] | %92,1 [89,2; 94,8] |
-| **Seçilen: Son 3 pencere, hedef recall %90** | **Sezgisel kural** | **%37,6 [32,7; 42,4]** | **%91,2 [87,8; 94,4]** |
+| Son 2 pencere, hedef recall %90 | LR (tam + hafıza) | %50,2 [44,3; 55,9] | %88,8 [84,8; 92,7] |
+| Son 2 pencere, hedef recall %90 | Sezgisel kural | %38,9 [33,0; 44,6] | %89,5 [85,4; 93,3] |
+| Son 3 pencere, hedef recall %90 | LR (tam + hafıza) | %49,5 [44,3; 54,8] | %89,5 [85,4; 93,2] |
+| Son 3 pencere, hedef recall %90 | Sezgisel kural | %37,6 [32,8; 42,3] | %91,2 [87,6; 94,4] |
+| Son pencere, hedef recall %95 | LR (tam + hafıza) | %48,2 [40,6; 56,2] | %86,6 [79,3; 92,7] |
+| Son pencere, hedef recall %95 | Sezgisel kural | %31,7 [23,8; 39,9] | %89,9 [82,9; 95,5] |
+| 90 gün olgunlaşmış etiketler, hedef recall %90 | LR (tam + hafıza) | %49,1 [43,5; 54,7] | %89,2 [85,5; 92,6] |
+| 90 gün olgunlaşmış etiketler, hedef recall %90 | Sezgisel kural | %36,2 [31,2; 41,1] | %92,1 [89,2; 94,9] |
+| **En iyi gözlenen: Son 3 pencere, hedef recall %90** | **Sezgisel kural** | **%37,6 [32,7; 42,4]** | **%91,2 [87,9; 94,5]** |
 
-Ürün çalışma anında aynı recall temelli eşik isteğe bağlıdır: `[gatekeeper] threshold_policy = "safety"` ve `safety_recall_target = 0.90`. Eşik, 90 günlük etiket tamponunu geçmiş model doğrulama örneklerinden seçilir. Varsayılan `budget` politikası değişmez.
+En iyi kural, aynı test pencerelerinin sonuçlarına bakılarak seçilir (ortalama recall ≥ %90 olanlar içinde en yüksek eleme); bu seçim iyimserdir ve yeni veride doğrulanmamıştır. Güven aralığının alt sınırı %90'ın altında kalabilir; hedef her pencerede değil ortalamada tutar.
+
+Ürün çalışma anında aynı recall temelli eşik isteğe bağlıdır: `[gatekeeper] threshold_policy = "safety"` ve `safety_recall_target = 0.90`. Eşik, modelin doğrulama kümesinden (etiketleri 90 günlük tamponla bilinen commit'ler) seçilir ve PR skoruna uygulanır. PR skoru içindeki her commit'in skorundan düşük olamadığı için eşik PR düzeyinde temkinli yönde çalışır: daha çok PR gönderilir, eleme biraz azalabilir. Varsayılan `budget` politikası değişmez.
 
 **Eşleştirilmiş karşılaştırmalar, %10 LLM payında:**
 
@@ -137,11 +139,11 @@ Eşikler yalnızca geçmiş pencerelerden seçilir. 90 günlük seçenek, PR tar
 
 | Mod | Recall@1 | Recall@5 | MRR |
 | --- | --- | --- | --- |
-| Hibrit (RRF) | %47,1 [43,7; 50,3] | %63,8 [60,7; 67,0] | 0,540 [0,510; 0,570] |
-| Vektör (LSA) | %43,3 [40,1; 46,5] | %61,7 [58,4; 64,8] | 0,507 [0,477; 0,536] |
-| BM25 | %41,3 [38,1; 44,6] | %61,2 [58,1; 64,4] | 0,494 [0,466; 0,524] |
-| Yapısal | %42,7 [39,4; 46,1] | %58,0 [54,6; 61,1] | 0,490 [0,460; 0,520] |
-| Rastgele | %3,1 [2,0; 4,3] | %13,9 [11,7; 16,2] | 0,080 [0,067; 0,094] |
+| Hibrit (RRF) | %47,1 [43,7; 50,3] | %63,8 [60,7; 67,0] | 0,540 [0,511; 0,570] |
+| Vektör (LSA) | %43,3 [40,0; 46,5] | %61,7 [58,5; 64,8] | 0,507 [0,477; 0,536] |
+| BM25 | %41,3 [38,1; 44,6] | %61,2 [58,0; 64,5] | 0,494 [0,465; 0,523] |
+| Yapısal | %42,7 [39,5; 46,0] | %58,0 [54,7; 61,2] | 0,490 [0,460; 0,520] |
+| Rastgele | %3,1 [2,0; 4,3] | %13,9 [11,7; 16,3] | 0,080 [0,067; 0,094] |
 
 **Hibrit ile diğer modlar (sorgu başına ters sıra):**
 

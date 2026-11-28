@@ -49,7 +49,52 @@ SHOWN = ("lr+", "lr+m", "lr+mp", "rf+m", "heuristic")
 SEEDS = (0, 1, 2, 3, 4)
 MIN_PRS = 200
 COST_SHARE, SAFETY_RECALL = 0.4, 0.9
-SAFETY_POLICIES = ("safety-k2", "safety-k3", "safety-95", "safety-known")
+SAFETY_RULES = {
+    "safety-k2": "Son 2 pencere, hedef recall %90",
+    "safety-k3": "Son 3 pencere, hedef recall %90",
+    "safety-95": "Son pencere, hedef recall %95",
+    "safety-known": "90 gün olgunlaşmış etiketler, hedef recall %90",
+}
+"""Güvenlik eşiği alternatifleri (#107); eşikler yalnızca test penceresinden önceki PR'lardan."""
+SAFETY_METHODS = ("lr+m", "heuristic")
+SAFETY_SELECTION_NOTE = (
+    "En iyi kural, aynı test pencerelerinin sonuçlarına bakılarak seçilir (ortalama recall "
+    "≥ %90 olanlar içinde en yüksek eleme); bu seçim iyimserdir ve yeni veride doğrulanmamıştır."
+)
+
+
+def safety_rows(
+    records: list[dict[str, Any]],
+) -> list[tuple[str, str, list[float], list[float]]]:
+    """Her güvenlik kuralı × yöntem için (kural başlığı, yöntem, eleme, recall) pencere listeleri."""
+    if not records or "safety-k2" not in records[0][SAFETY_METHODS[0]]:
+        raise SystemExit(
+            "curves.json güvenlik eşiği alternatiflerini içermiyor (eski sürüm); "
+            "önce `uv run python eval/rq1_curve.py` ile yeniden üretin"
+        )
+    return [
+        (
+            title,
+            name,
+            [1 - r[name][point][1] for r in records],
+            [r[name][point][2] for r in records],
+        )
+        for point, title in SAFETY_RULES.items()
+        for name in SAFETY_METHODS
+        if name in records[0]
+    ]
+
+
+def best_safety_rule(
+    rows: list[tuple[str, str, list[float], list[float]]],
+) -> tuple[str, str, list[float], list[float]] | None:
+    """Ortalama recall'ı hedefi tutan satırlar içinde ortalama elemesi en yüksek olan."""
+    eligible = [
+        row
+        for row in rows
+        if (known := [v for v in row[3] if not math.isnan(v)]) and mean(known) >= SAFETY_RECALL
+    ]
+    return max(eligible, key=lambda row: mean(row[2])) if eligible else None
 _WORD = re.compile(r"[^a-z0-9]+")
 
 
@@ -239,35 +284,19 @@ def report(records: list[dict[str, Any]]) -> str:
     lines.append("\n## Güvenlik eşiği alternatifleri (aynı pencereler)")
     lines.append("\n| Kural | Yöntem | Eleme | Gerçekleşen recall |")
     lines.append("| --- | --- | --- | --- |")
-    titles = {
-        "safety-k2": "Son 2 pencere, hedef recall %90",
-        "safety-k3": "Son 3 pencere, hedef recall %90",
-        "safety-95": "Son pencere, hedef recall %95",
-        "safety-known": "90 gün olgunlaşmış etiketler, hedef recall %90",
-    }
-    for point, title in titles.items():
-        for name in ("lr+m", "heuristic"):
-            if name not in records[0]:
-                continue
-            elimination = [1 - r[name][point][1] for r in records]
-            recall = [r[name][point][2] for r in records]
-            lines.append(f"| {title} | {name} | {fmt(elimination, True)} | {fmt(recall, True)} |")
-    eligible = []
-    for point, title in titles.items():
-        for name in ("lr+m", "heuristic"):
-            elimination = [1 - r[name][point][1] for r in records]
-            recall = [r[name][point][2] for r in records]
-            known = [value for value in recall if not math.isnan(value)]
-            if known and mean(known) >= SAFETY_RECALL:
-                eligible.append((mean(elimination), title, name, elimination, recall))
-    if eligible:
-        _, title, name, elimination, recall = max(eligible, key=lambda row: row[0])
+    rows = safety_rows(records)
+    for title, name, elimination, recall in rows:
+        lines.append(f"| {title} | {name} | {fmt(elimination, True)} | {fmt(recall, True)} |")
+    best = best_safety_rule(rows)
+    if best:
+        title, name, elimination, recall = best
         lines.append(
-            f"| **Seçilen: {title}** | **{name}** | **{fmt(elimination, True)}** | "
+            f"| **En iyi gözlenen: {title}** | **{name}** | **{fmt(elimination, True)}** | "
             f"**{fmt(recall, True)}** |"
         )
     else:
-        lines.append("| Seçilen | – | – | Hiçbir seçenek ortalama %90'a ulaşmadı |")
+        lines.append("| En iyi gözlenen | – | – | Hiçbir kural ortalama %90'a ulaşmadı |")
+    lines.append(f"\n{SAFETY_SELECTION_NOTE}")
 
     lines.append(
         "\n## Wilcoxon işaretli sıra testi (repo × pencere eşleştirmeli, %40 LLM payında recall)\n"

@@ -26,6 +26,7 @@ from statistics import mean, median
 
 import numpy as np
 import polars as pl
+from rq1_curve import SAFETY_SELECTION_NOTE, best_safety_rule, safety_rows  # aynı klasördeki betik
 from scipy.stats import rankdata, wilcoxon
 
 DATA, REPORTS, LABELS = Path(".aegis/data"), Path("eval/reports"), Path("eval/labels")
@@ -296,39 +297,29 @@ def section_rq1() -> list[str]:
         "| Kural | Yöntem | Eleme (LLM'e gitmeyen) | Gerçekleşen recall |",
         "| --- | --- | --- | --- |",
     ]
-    safety_options = {
-        "safety-k2": "Son 2 pencere, hedef recall %90",
-        "safety-k3": "Son 3 pencere, hedef recall %90",
-        "safety-95": "Son pencere, hedef recall %95",
-        "safety-known": "90 gün olgunlaşmış etiketler, hedef recall %90",
-    }
-    for point, title in safety_options.items():
-        for m in ("lr+m", "heuristic"):
-            elimination = [1 - r[m][point][1] for r in records]
-            recall = [r[m][point][2] for r in records]
-            out.append(f"| {title} | {labels[m]} | {fmt_ci(elimination)} | {fmt_ci(recall)} |")
-    eligible = []
-    for point, title in safety_options.items():
-        for m in ("lr+m", "heuristic"):
-            elimination = [1 - r[m][point][1] for r in records]
-            recall = [r[m][point][2] for r in records]
-            known = [value for value in recall if not math.isnan(value)]
-            if known and mean(known) >= 0.90:
-                eligible.append((mean(elimination), title, m, elimination, recall))
-    if eligible:
-        _, title, method, elimination, recall = max(eligible, key=lambda row: row[0])
+    rows = safety_rows(records)
+    for title, m, elimination, recall in rows:
+        out.append(f"| {title} | {labels[m]} | {fmt_ci(elimination)} | {fmt_ci(recall)} |")
+    best = best_safety_rule(rows)
+    if best:
+        title, m, elimination, recall = best
         out.append(
-            f"| **Seçilen: {title}** | **{labels[method]}** | "
+            f"| **En iyi gözlenen: {title}** | **{labels[m]}** | "
             f"**{fmt_ci(elimination)}** | **{fmt_ci(recall)}** |"
         )
     else:
-        out.append("| Seçilen | – | – | Hiçbir seçenek ortalama %90'a ulaşmadı |")
+        out.append("| En iyi gözlenen | – | – | Hiçbir kural ortalama %90'a ulaşmadı |")
     out += [
         "",
+        SAFETY_SELECTION_NOTE + " Güven aralığının alt sınırı %90'ın altında kalabilir; hedef "
+        "her pencerede değil ortalamada tutar.",
+        "",
         "Ürün çalışma anında aynı recall temelli eşik isteğe bağlıdır: `[gatekeeper] "
-        'threshold_policy = "safety"` ve `safety_recall_target = 0.90`. Eşik, 90 günlük '
-        "etiket tamponunu geçmiş model doğrulama örneklerinden seçilir. Varsayılan `budget` "
-        "politikası değişmez.",
+        'threshold_policy = "safety"` ve `safety_recall_target = 0.90`. Eşik, modelin '
+        "doğrulama kümesinden (etiketleri 90 günlük tamponla bilinen commit'ler) seçilir ve PR "
+        "skoruna uygulanır. PR skoru içindeki her commit'in skorundan düşük olamadığı için eşik PR "
+        "düzeyinde temkinli yönde çalışır: daha çok PR gönderilir, eleme biraz azalabilir. "
+        "Varsayılan `budget` politikası değişmez.",
     ]
     for share in (0.1, 0.2, 0.4):
         i = shares.index(share)

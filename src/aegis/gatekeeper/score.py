@@ -176,6 +176,8 @@ def budget_bands(
     """
     gk = config.gatekeeper
     if gk.threshold_policy == "safety":
+        # Doğrulama kümesi commit düzeyindedir; eşik PR skoruna uygulanır. PR skoru içindeki her
+        # commit'in skorundan düşük olamadığından bu, PR düzeyinde temkinli yönde çalışır.
         scores = model.valid_scores
         labels = getattr(model, "valid_labels", [])
         if scores and len(scores) == len(labels):
