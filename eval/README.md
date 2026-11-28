@@ -57,14 +57,18 @@ Satır biçimi (`d2.jsonl`, satır başına bir örnek):
 
 **Doğrulanmış alt küme (#69):** İlk D2 sürümünden 102 örnek iki etiket setiyle kontrol edildi (`labels/d2-kontrol-1.csv`, `-2.csv`; uyum κ 0,68 hatalı, 0,45 temiz). SZZ hatalılarının yalnızca 10/52'si hatayı gerçekten getirdiği için hatalı örnekler tersine çevrilmiş düzeltmelerle değiştirildi. Temiz örnekler aynı kaldı: iki setin "temiz" dediği 33 commit, RQ2 özetinde ayrı bir tablo olarak raporlanır. Ayrıntı: `d2-etiketleme.md`.
 
+**Büyütülmüş doğrulama seti (#108):** 150 SZZ hatalı commit, 60 tersine çevrilmiş düzeltme ve 60 yeni temiz commit (`labels/dogrulama-sample.csv`), iki etiket setiyle kontrol edilir. Yönerge ve komutlar: `dogrulama-etiketleme.md`. Sonuçlar etiketleme bitince buraya ve `docs/mining-schema.md`'ye eklenecek.
+
 ## Betikler
 
 | Betik | Ne üretir |
 | --- | --- |
-| `results.py` | `docs/results.md` (tüm LLM'siz sonuçlar, güven aralıkları, testler) |
+| `results.py` | `docs/results.md` (tüm sonuçlar, güven aralıkları, testler) |
 | `rq1_curve.py` | RQ1 maliyet–recall eğrisi (PR düzeyi, kayan pencere) |
 | `retrieval_eval.py` | RQ2 LLM'siz: hafıza getirme Recall@k ve MRR |
 | `rq2.py` | RQ2 LLM deneyi: hazırlık, koşu, özet (`docs/llm-experiments.md`) |
 | `rq1_triage.py` | RQ1 ucuz LLM triage: hazırlık, koşu, özet |
 | `szz_variants.py` | SZZ süzgeçlerinin etiketli eşlemelerde ve veri miktarında etkisi |
 | `labeling.py`, `agreement.py`, `tune_fix.py` | Etiket kalitesi örneklemleri ve uyum ölçümleri (#8, #9) |
+| `d2_labeling.py` | D2'nin doğrulanmış alt kümesi: örneklem, inceleme sayfası, uyum (#69) |
+| `label_set.py` | Büyütülmüş doğrulama seti (~270 örnek): örneklem, inceleme sayfası, uyum, birleştirme, doğruluk tabloları (#108; `dogrulama-etiketleme.md`) |
