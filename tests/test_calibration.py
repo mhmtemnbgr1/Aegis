@@ -9,6 +9,7 @@ from aegis.gatekeeper.calibration import (
     ece,
     fit_calibrator,
     pr_score,
+    recall_threshold,
     reliability,
 )
 from aegis.gatekeeper.model import train_model
@@ -65,6 +66,24 @@ def test_budget_thresholds_with_ties() -> None:
     assert nothing > 0.5
     with pytest.raises(ValueError):
         budget_thresholds(scores, 0.0)
+
+
+def test_recall_threshold_selects_highest_threshold_meeting_target() -> None:
+    scores = [0.9, 0.8, 0.7, 0.6]
+    labels = [1, 0, 1, 0]
+    assert recall_threshold(scores, labels, 0.5) == 0.9
+    threshold = recall_threshold(scores, labels, 0.75)
+    assert threshold == 0.7
+    assert np.asarray(labels)[np.asarray(scores) >= threshold].sum() / sum(labels) == 1.0
+
+
+def test_recall_threshold_handles_ties_and_no_known_positives() -> None:
+    assert recall_threshold([0.9, 0.9, 0.4], [1, 0, 1], 1.0) == 0.4
+    assert recall_threshold([0.9, 0.4], [0, 0], 0.9) == 0.4
+    with pytest.raises(ValueError):
+        recall_threshold([0.1], [1], 0)
+    with pytest.raises(ValueError):
+        recall_threshold([0.1, 0.2], [1], 0.9)
 
 
 def test_pr_score() -> None:

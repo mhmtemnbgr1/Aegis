@@ -21,7 +21,7 @@ from aegis.features.history import ChangeHistory, FileChange, developer_id
 from aegis.features.kamei import kamei_metrics
 from aegis.features.memory import CardHistory
 from aegis.gatekeeper.base import RiskBand, band_for
-from aegis.gatekeeper.calibration import budget_thresholds
+from aegis.gatekeeper.calibration import budget_thresholds, recall_threshold
 from aegis.gatekeeper.explain import Explanation
 from aegis.gatekeeper.model import TrainedModel
 from aegis.mining.fixes import FixClassifier
@@ -175,6 +175,19 @@ def budget_bands(
     izler hem de commit değil PR düzeyindedir. Yeterli kayıt yoksa doğrulama skorları kullanılır.
     """
     gk = config.gatekeeper
+    if gk.threshold_policy == "safety":
+        # Doğrulama kümesi commit düzeyindedir; eşik PR skoruna uygulanır. PR skoru içindeki her
+        # commit'in skorundan düşük olamadığından bu, PR düzeyinde temkinli yönde çalışır.
+        scores = model.valid_scores
+        labels = getattr(model, "valid_labels", [])
+        if scores and len(scores) == len(labels):
+            low = recall_threshold(scores, labels, gk.safety_recall_target)
+            return (
+                low,
+                max(low, gk.high_threshold),
+                f"doğrulama (recall ≥ %{gk.safety_recall_target * 100:g})",
+            )
+        return gk.low_threshold, gk.high_threshold, "config (doğrulama etiketi yok)"
     if gk.max_llm_pr_ratio is None:
         return gk.low_threshold, gk.high_threshold, "config"
     recent = (recent_scores or [])[-gk.budget_window :]

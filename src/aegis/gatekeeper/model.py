@@ -148,6 +148,8 @@ class TrainedModel:
     calibrator: Calibrator = field(default_factory=lambda: Calibrator("none"))
     valid_scores: list[float] = field(default_factory=list)
     """Doğrulama kümesinin kalibre skorları; bütçe eşikleri bunlardan hesaplanır."""
+    valid_labels: list[int] = field(default_factory=list)
+    """Doğrulama kümesinin 90 günlük tamponla bilinen etiketleri; güvenlik eşiği içindir."""
     budget: dict[str, dict[str, float]] = field(default_factory=dict)
     """Test kümesinde, doğrulamadan seçilen bütçe eşiğiyle LLM'e giden pay ve yakalanan hatalar."""
     reliability: list[list[float]] = field(default_factory=list)
@@ -216,6 +218,7 @@ def train_model(
     model.calibrator = fit_calibrator(calibration, model.raw_proba(split.valid), y_valid)
     valid_prob = model.predict_proba(split.valid)
     model.valid_scores = [float(v) for v in valid_prob]
+    model.valid_labels = [int(v) for v in y_valid]
     model.threshold = best_f1_threshold(y_valid, valid_prob)
     model.valid = evaluate(y_valid, valid_prob, effort(split.valid), model.threshold)
     # Test kümesi boş olabilir (ör. kayan pencerede test ayrıca puanlanır, #21).

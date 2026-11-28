@@ -21,6 +21,8 @@ mode = "heuristic"               # heuristic | model (model ya da madencilik ge�
 # model_name = "lr"              # lr | rf | lightgbm
 low_threshold = 0.30             # altı: LLM çağrılmaz
 high_threshold = 0.70            # üstü: tam zincir (analiz + patch + test)
+# threshold_policy = "safety"    # model modunda, doğrulama etiketlerinden hedef recall eşiği
+# safety_recall_target = 0.90     # yalnızca threshold_policy = "safety" için; varsayılan bütçe
 # Eşikler yerine bütçe verilebilir (yalnızca model modunda; doğrulama skorlarından hesaplanır):
 # max_llm_pr_ratio = 0.4         # PR'ların en fazla %40'ı orta/yüksek banda düşer
 # high_share = 0.5               # LLM'e gidenlerin en riskli yarısı yüksek bant

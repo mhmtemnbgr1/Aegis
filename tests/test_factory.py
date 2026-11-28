@@ -104,3 +104,29 @@ def test_budget_bands_prefer_recent_scores(tmp_path: Path) -> None:
     assert source == "son 50 PR"  # budget_window varsayılanı
     window = np.asarray(recent[-50:])
     assert np.mean(window >= low) <= 0.2 and low <= high
+
+
+def test_safety_threshold_policy_uses_validation_labels(tmp_path: Path) -> None:
+    model = TrainedModel.load(_model(tmp_path))
+    model.valid_scores = [0.9, 0.8, 0.7, 0.6]
+    model.valid_labels = [1, 0, 1, 0]
+    config = AegisConfig(
+        gatekeeper=GatekeeperConfig(threshold_policy="safety", safety_recall_target=0.5)
+    )
+
+    low, high, source = budget_bands(model, config)
+    assert low == 0.9
+    assert high == max(low, config.gatekeeper.high_threshold)
+    assert source == "doğrulama (recall ≥ %50)"
+
+
+def test_safety_threshold_policy_falls_back_without_validation_labels(tmp_path: Path) -> None:
+    model = TrainedModel.load(_model(tmp_path))
+    model.valid_labels = []
+    config = AegisConfig(gatekeeper=GatekeeperConfig(threshold_policy="safety"))
+
+    assert budget_bands(model, config) == (
+        config.gatekeeper.low_threshold,
+        config.gatekeeper.high_threshold,
+        "config (doğrulama etiketi yok)",
+    )

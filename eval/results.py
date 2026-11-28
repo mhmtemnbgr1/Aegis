@@ -28,6 +28,7 @@ from statistics import mean, median
 
 import numpy as np
 import polars as pl
+from rq1_curve import SAFETY_SELECTION_NOTE, best_safety_rule, safety_rows  # aynı klasördeki betik
 from scipy.stats import rankdata, wilcoxon
 
 DATA, REPORTS, LABELS = Path(".aegis/data"), Path("eval/reports"), Path("eval/labels")
@@ -290,6 +291,40 @@ def section_rq1() -> list[str]:
             elim = [1 - r[m][point][1] for r in records]
             rec = [r[m][point][2] for r in records]
             out.append(f"| {title} | {labels[m]} | {fmt_ci(elim)} | {fmt_ci(rec)} |")
+    out += [
+        "",
+        "**Güvenlik eşiği alternatifleri** (aynı 25 pencere; ortalama [%95 bootstrap GA]):",
+        "",
+        "Eşikler yalnızca geçmiş pencerelerden seçilir. 90 günlük seçenek, PR tarihinden en az "
+        "90 gün önceki PR'ları kullanır ve etiketleri bu kesim tarihindeki bilgiyle belirler.",
+        "",
+        "| Kural | Yöntem | Eleme (LLM'e gitmeyen) | Gerçekleşen recall |",
+        "| --- | --- | --- | --- |",
+    ]
+    rows = safety_rows(records)
+    for title, m, elimination, recall in rows:
+        out.append(f"| {title} | {labels[m]} | {fmt_ci(elimination)} | {fmt_ci(recall)} |")
+    best = best_safety_rule(rows)
+    if best:
+        title, m, elimination, recall = best
+        out.append(
+            f"| **En iyi gözlenen: {title}** | **{labels[m]}** | "
+            f"**{fmt_ci(elimination)}** | **{fmt_ci(recall)}** |"
+        )
+    else:
+        out.append("| En iyi gözlenen | – | – | Hiçbir kural ortalama %90'a ulaşmadı |")
+    out += [
+        "",
+        SAFETY_SELECTION_NOTE + " Güven aralığının alt sınırı %90'ın altında kalabilir; hedef "
+        "her pencerede değil ortalamada tutar.",
+        "",
+        "Ürün çalışma anında aynı recall temelli eşik isteğe bağlıdır: `[gatekeeper] "
+        'threshold_policy = "safety"` ve `safety_recall_target = 0.90`. Eşik, modelin '
+        "doğrulama kümesinden (etiketleri 90 günlük tamponla bilinen commit'ler) seçilir ve PR "
+        "skoruna uygulanır. PR skoru içindeki her commit'in skorundan düşük olamadığı için eşik PR "
+        "düzeyinde temkinli yönde çalışır: daha çok PR gönderilir, eleme biraz azalabilir. "
+        "Varsayılan `budget` politikası değişmez.",
+    ]
     for share in (0.1, 0.2, 0.4):
         i = shares.index(share)
         pairs = [

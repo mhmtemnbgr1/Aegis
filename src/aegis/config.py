@@ -53,6 +53,10 @@ class GatekeeperConfig(_Section):
     mode: Literal["heuristic", "model"] = "heuristic"
     low_threshold: float = Field(default=0.30, ge=0, le=1)
     high_threshold: float = Field(default=0.70, ge=0, le=1)
+    threshold_policy: Literal["budget", "safety"] = "budget"
+    """Model modunda `budget` varsayılanı; `safety` doğrulama recall eşiğini seçer."""
+    safety_recall_target: float = Field(default=0.90, gt=0, le=1)
+    """`threshold_policy = "safety"` için doğrulama kümesinde hedeflenen recall."""
     max_llm_pr_ratio: float | None = Field(default=None, gt=0, le=1)
     """Verilirse (yalnızca `model` modunda) eşikler bütçeden hesaplanır: PR'ların en fazla bu
     payı orta/yüksek banda düşer ve LLM'e gider (FR-13)."""

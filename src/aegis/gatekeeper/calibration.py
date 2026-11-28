@@ -107,6 +107,29 @@ def budget_thresholds(
     return low, max(low, at_most(max_llm_ratio * high_share))
 
 
+def recall_threshold(scores: ArrayLike, y_true: ArrayLike, target_recall: float) -> float:
+    """En az `target_recall` doğrulama recall'ı veren en yüksek eşik.
+
+    Skoru eşik veya üstünde olan PR'lar/commit'ler gönderilir. Hata etiketi yoksa güvenli
+    varsayımla tüm örnekleri göndeririz. Aynı skor değerindeki örnekler birlikte tutulur.
+    """
+    if not 0 < target_recall <= 1:
+        raise ValueError("target_recall (0, 1] aralığında olmalı")
+    score = np.asarray(scores, dtype=float)
+    labels = np.asarray(y_true, dtype=bool)
+    if score.ndim != 1 or labels.ndim != 1 or score.size == 0 or score.size != labels.size:
+        raise ValueError("scores ve y_true boş olmayan, aynı uzunlukta 1 boyutlu diziler olmalı")
+    if not np.isfinite(score).all():
+        raise ValueError("scores sonlu olmalı")
+    if not labels.any():
+        return float(score.min())
+    for threshold in np.unique(score)[::-1]:
+        recall = float(labels[score >= threshold].sum() / labels.sum())
+        if recall + 1e-12 >= target_recall:
+            return float(threshold)
+    return float(score.min())
+
+
 def pr_score(commit_probs: ArrayLike) -> float:
     """PR'daki en az bir commit'in hatalı olma olasılığı (bağımsızlık varsayımıyla)."""
     p = np.clip(np.asarray(commit_probs, dtype=float), 0.0, 1.0)

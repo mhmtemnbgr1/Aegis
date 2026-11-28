@@ -77,6 +77,26 @@ Ortalama 6 repo üzerinden. Repolar arası genel model repo içi modelden geri k
 | güvenlik odaklı (hedef ≥ %90 recall) | LR (tam + hafıza) | %53,9 [46,2; 61,9] | %82,7 [74,7; 89,6] |
 | güvenlik odaklı (hedef ≥ %90 recall) | Sezgisel kural | %41,1 [33,0; 48,9] | %86,0 [79,3; 91,6] |
 
+**Güvenlik eşiği alternatifleri** (aynı 25 pencere; ortalama [%95 bootstrap GA]):
+
+Eşikler yalnızca geçmiş pencerelerden seçilir. 90 günlük seçenek, PR tarihinden en az 90 gün önceki PR'ları kullanır ve etiketleri bu kesim tarihindeki bilgiyle belirler.
+
+| Kural | Yöntem | Eleme (LLM'e gitmeyen) | Gerçekleşen recall |
+| --- | --- | --- | --- |
+| Son 2 pencere, hedef recall %90 | LR (tam + hafıza) | %50,2 [44,3; 55,9] | %88,8 [84,8; 92,7] |
+| Son 2 pencere, hedef recall %90 | Sezgisel kural | %38,9 [33,0; 44,6] | %89,5 [85,4; 93,3] |
+| Son 3 pencere, hedef recall %90 | LR (tam + hafıza) | %49,5 [44,3; 54,8] | %89,5 [85,4; 93,2] |
+| Son 3 pencere, hedef recall %90 | Sezgisel kural | %37,6 [32,8; 42,3] | %91,2 [87,6; 94,4] |
+| Son pencere, hedef recall %95 | LR (tam + hafıza) | %48,2 [40,6; 56,2] | %86,6 [79,3; 92,7] |
+| Son pencere, hedef recall %95 | Sezgisel kural | %31,7 [23,8; 39,9] | %89,9 [82,9; 95,5] |
+| 90 gün olgunlaşmış etiketler, hedef recall %90 | LR (tam + hafıza) | %49,1 [43,5; 54,7] | %89,2 [85,5; 92,6] |
+| 90 gün olgunlaşmış etiketler, hedef recall %90 | Sezgisel kural | %36,2 [31,2; 41,1] | %92,1 [89,2; 94,9] |
+| **En iyi gözlenen: Son 3 pencere, hedef recall %90** | **Sezgisel kural** | **%37,6 [32,7; 42,4]** | **%91,2 [87,9; 94,5]** |
+
+En iyi kural, aynı test pencerelerinin sonuçlarına bakılarak seçilir (ortalama recall ≥ %90 olanlar içinde en yüksek eleme); bu seçim iyimserdir ve yeni veride doğrulanmamıştır. Güven aralığının alt sınırı %90'ın altında kalabilir; hedef her pencerede değil ortalamada tutar.
+
+Ürün çalışma anında aynı recall temelli eşik isteğe bağlıdır: `[gatekeeper] threshold_policy = "safety"` ve `safety_recall_target = 0.90`. Eşik, modelin doğrulama kümesinden (etiketleri 90 günlük tamponla bilinen commit'ler) seçilir ve PR skoruna uygulanır. PR skoru içindeki her commit'in skorundan düşük olamadığı için eşik PR düzeyinde temkinli yönde çalışır: daha çok PR gönderilir, eleme biraz azalabilir. Varsayılan `budget` politikası değişmez.
+
 **Eşleştirilmiş karşılaştırmalar, %10 LLM payında:**
 
 | Karşılaştırma | Ortalama fark (puan) | Wilcoxon p (Holm) | Etki (r) |
@@ -119,11 +139,11 @@ Ortalama 6 repo üzerinden. Repolar arası genel model repo içi modelden geri k
 
 | Mod | Recall@1 | Recall@5 | MRR |
 | --- | --- | --- | --- |
-| Hibrit (RRF) | %47,1 [43,7; 50,3] | %63,8 [60,7; 67,0] | 0,540 [0,510; 0,570] |
-| Vektör (LSA) | %43,3 [40,1; 46,5] | %61,7 [58,4; 64,8] | 0,507 [0,477; 0,536] |
-| BM25 | %41,3 [38,1; 44,6] | %61,2 [58,1; 64,4] | 0,494 [0,466; 0,524] |
-| Yapısal | %42,7 [39,4; 46,1] | %58,0 [54,6; 61,1] | 0,490 [0,460; 0,520] |
-| Rastgele | %3,1 [2,0; 4,3] | %13,9 [11,7; 16,2] | 0,080 [0,067; 0,094] |
+| Hibrit (RRF) | %47,1 [43,7; 50,3] | %63,8 [60,7; 67,0] | 0,540 [0,511; 0,570] |
+| Vektör (LSA) | %43,3 [40,0; 46,5] | %61,7 [58,5; 64,8] | 0,507 [0,477; 0,536] |
+| BM25 | %41,3 [38,1; 44,6] | %61,2 [58,0; 64,5] | 0,494 [0,465; 0,523] |
+| Yapısal | %42,7 [39,5; 46,0] | %58,0 [54,7; 61,2] | 0,490 [0,460; 0,520] |
+| Rastgele | %3,1 [2,0; 4,3] | %13,9 [11,7; 16,3] | 0,080 [0,067; 0,094] |
 
 **Hibrit ile diğer modlar (sorgu başına ters sıra):**
 
