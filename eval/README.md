@@ -57,7 +57,15 @@ Satır biçimi (`d2.jsonl`, satır başına bir örnek):
 
 **Doğrulanmış alt küme (#69):** İlk D2 sürümünden 102 örnek iki etiket setiyle kontrol edildi (`labels/d2-kontrol-1.csv`, `-2.csv`; uyum κ 0,68 hatalı, 0,45 temiz). SZZ hatalılarının yalnızca 10/52'si hatayı gerçekten getirdiği için hatalı örnekler tersine çevrilmiş düzeltmelerle değiştirildi. Temiz örnekler aynı kaldı: iki setin "temiz" dediği 33 commit, RQ2 özetinde ayrı bir tablo olarak raporlanır. Ayrıntı: `d2-etiketleme.md`.
 
-**Büyütülmüş doğrulama seti (#108):** 150 SZZ hatalı commit, 60 tersine çevrilmiş düzeltme ve 60 yeni temiz commit (`labels/dogrulama-sample.csv`), iki etiket setiyle kontrol edilir. Yönerge ve komutlar: `dogrulama-etiketleme.md`. Sonuçlar etiketleme bitince buraya ve `docs/mining-schema.md`'ye eklenecek.
+**Büyütülmüş doğrulama seti (#108):** 150 SZZ hatalı commit, 60 tersine çevrilmiş düzeltme ve 60 yeni temiz commit (`labels/dogrulama-sample.csv`), iki etiket setiyle kontrol edildi. Yönerge ve komutlar: `dogrulama-etiketleme.md`. Son etiketler (iki setin aynı cevabı verdiği 258 örnek) `labels/dogrulanmis.csv` içinde; uyum κ 0,83 SZZ, 1,00 düzeltme, 0,76 temiz.
+
+| Tür | Ölçü | Oran [%95 GA] |
+| --- | --- | --- |
+| SZZ hatalı commit | hatayı getiriyor (doğru + kısmen) | 22/142 = %15,5 [10,5; 22,3] |
+| Tersine çevrilmiş düzeltme | gerçek hata düzeltmesi | 51/60 = %85,0 [73,9; 91,9] |
+| Temiz commit | temiz | 48/56 = %85,7 [74,3; 92,6] |
+
+SZZ'nin repo bazında doğruluğu %8 (sanic, tornado) ile %29 (scrapy) arasında. Ayrıntı: `docs/mining-schema.md`, Büyütülmüş doğrulama seti.
 
 ## Betikler
 

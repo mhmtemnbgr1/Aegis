@@ -504,7 +504,9 @@ def main() -> None:
         "## 9. Geçerlilik notları",
         "",
         "- Etiketler SZZ'ye dayanır; elle kontrolde SZZ eşlemelerinin yalnızca ~%31'i doğru çıktı. "
-        "Tüm RQ1 ve RQ2 sayıları bu gürültülü etiketlere göredir. Issue etiketi, taşınan satır ve "
+        "Büyütülmüş doğrulama setinde (#108) D1 pozitiflerinin %15,5'i [10,5; 22,3] eşlendiği "
+        "düzeltmenin hatasını getiriyor; tersine çevrilmiş düzeltmelerin %85'i [74; 92] gerçek hata "
+        "düzeltmesi. Tüm RQ1 ve RQ2 sayıları bu gürültülü etiketlere göredir. Issue etiketi, taşınan satır ve "
         "tarih süzgeçleri bu veride doğruluğu artırmadı ya da veriyi yok etti "
         "(`docs/mining-schema.md`, SZZ süzgeçleri).",
         "- Etiket kalitesi setlerini (#8, #9) tek kişi, iki öneri setini görerek etiketledi; "
