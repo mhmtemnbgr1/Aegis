@@ -232,6 +232,48 @@ Fix kuralları sıkılaştırıldıktan sonra fastapi (138) ve httpie (168) 200 
 
 D1 artık 23.245 commit ve 3.599 bug-inducing commit içeriyor; repo başına ayrıntı `eval/datasets/d1-report.md` dosyasında. Etiket kalitesi örneklemleri (#8, #9) eski altı repodan çekildi; luigi ve sanic için elle kontrol yok. D1'de kalan dört repodaki SZZ eşlemelerinde doğruluk, örneklemin tamamıyla benzer (yaklaşık üçte bir).
 
+### Büyütülmüş doğrulama seti (#108; 28 Kasım 2026)
+
+**Yöntem.** `eval/label_set.py`, D1'in 6 reposundan sabit tohumla (108) tabakalı 270 örnek çekti; daha önce kontrol edilen commit'ler dışarıda kaldı (`eval/labels/dogrulama-sample.csv`):
+
+- **SZZ hatalı commit** (repo başına 25 = 150): D1'in pozitifleri; her biri için rastgele bir düzelten commit. Soru: bu commit, düzelten commit'in giderdiği hatayı gerçekten getiriyor mu?
+- **Tersine çevrilmiş düzeltme** (repo başına 10 = 60): D2'nin `revert: true` örnekleri. Soru: bu commit gerçekten bir hata düzeltmesi mi?
+- **Temiz commit** (repo başına 10 = 60): D2'nin temiz örnekleri. Soru: değişiklikte açık bir hata var mı?
+
+Her örnek iki etiket setiyle etiketlendi (`etiket-seti-3.csv`, `etiket-seti-4.csv`; her kararın gerekçesi `note` sütununda). Son etiketler iki setin aynı cevabı verdiği örneklerdir (`eval/labels/dogrulanmis.csv`, 258/270); farklı cevaplı 12 örnek dışarıda kaldı. Yönerge: `eval/dogrulama-etiketleme.md`.
+
+| Tür | Aynı cevap | Cohen κ |
+| --- | --- | --- |
+| SZZ hatalı commit | 142/150 | 0,83 |
+| Tersine çevrilmiş düzeltme | 60/60 | 1,00 |
+| Temiz commit | 56/60 | 0,76 |
+
+**Doğruluk** (son etiketler, belirsizler hariç; %95 Wilson GA; `eval/label_set.py sonuc`):
+
+| Tür | Ölçü | Oran [%95 GA] |
+| --- | --- | --- |
+| SZZ hatalı commit | hatayı getiriyor (doğru) | 18/142 = %12,7 [8,2; 19,1] |
+| SZZ hatalı commit | hatayı getiriyor (doğru + kısmen) | 22/142 = %15,5 [10,5; 22,3] |
+| Tersine çevrilmiş düzeltme | gerçek hata düzeltmesi | 51/60 = %85,0 [73,9; 91,9] |
+| Temiz commit | temiz | 48/56 = %85,7 [74,3; 92,6] |
+
+| Repo | SZZ doğru + kısmen [%95 GA] |
+| --- | --- |
+| black | 4/24 = %16,7 [6,7; 35,9] |
+| sanic | 2/25 = %8,0 [2,2; 25,0] |
+| scrapy | 7/24 = %29,2 [14,9; 49,2] |
+| luigi | 3/24 = %12,5 [4,3; 31,0] |
+| tornado | 2/24 = %8,3 [2,3; 25,8] |
+| tqdm | 4/21 = %19,0 [7,7; 40,0] |
+
+**Yorum.**
+
+- **SZZ:** D1 pozitiflerinin yalnızca ~%16'sı, eşlendiği düzeltmenin hatasını gerçekten getiriyor. Bu oran #9'daki eşleme doğruluğundan (%31, 48 eşleme) düşük, ama #9 farklı bir birimi ölçüyordu (rastgele eşleme, burada rastgele pozitif commit) ve luigi ile sanic'i içermiyordu. Etiket burada eşleme düzeyindedir: "yanlış" bir commit başka bir hatayı getiriyor olabilir, bu yüzden temiz sayılmaz.
+- **Tersine çevrilmiş düzeltmeler:** Gerçek kesinlik %85; #8'in iyimser tahmini olan %96'nın altında. Hata düzeltmesi olmayan 9 commit; bağımlılık ya da sürüm güncellemesi (3), tip açıklaması (2), biçim, örnek dosya, eski bir geçici çözümü kaldırma ve performans değişikliği (birer). RQ2'nin revert setindeki hatalı örneklerin yaklaşık yedide biri bu yüzden gerçek bir hata içermiyor olabilir.
+- **Temiz commit'ler:** %86'sı temiz; SZZ'nin suçlamadığı commit'lerin ~%14'ünde diff'ten görülebilen bir hata var.
+
+**#109 için:** `dogrulanmis.csv` içindeki `label` sütunu: SZZ **doğru/kısmen** → `buggy` (22), temiz **temiz** → `clean` (48), temiz **hata** → `buggy` (8). Diğerleri boştur (SZZ **yanlış** ve düzeltme soruları commit etiketi vermez).
+
 ### SZZ süzgeçleri (19 Kasım 2026)
 
 Literatürdeki üç standart iyileştirme, elle etiketli 48 eşlemede (#9, belirsizler hariç) tek tek ve birlikte denendi (`eval/szz_variants.py`):
