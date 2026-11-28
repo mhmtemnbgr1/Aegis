@@ -66,7 +66,7 @@ SAFETY_SELECTION_NOTE = (
 def safety_rows(
     records: list[dict[str, Any]],
 ) -> list[tuple[str, str, list[float], list[float]]]:
-    """Her güvenlik kuralı × yöntem için (kural başlığı, yöntem, eleme, recall) pencere listeleri."""
+    """Her güvenlik kuralı × yöntem için (başlık, yöntem, eleme, recall) pencere listeleri."""
     if not records or "safety-k2" not in records[0][SAFETY_METHODS[0]]:
         raise SystemExit(
             "curves.json güvenlik eşiği alternatiflerini içermiyor (eski sürüm); "
@@ -95,6 +95,8 @@ def best_safety_rule(
         if (known := [v for v in row[3] if not math.isnan(v)]) and mean(known) >= SAFETY_RECALL
     ]
     return max(eligible, key=lambda row: mean(row[2])) if eligible else None
+
+
 _WORD = re.compile(r"[^a-z0-9]+")
 
 
